@@ -22,20 +22,21 @@ pub struct ShdrData {
 pub struct ShaderEntryData {
     pub name: String,
     pub shader_stage: ShaderStage,
-    pub meta_data: MetaData,
+    pub meta_data: Metadata,
 }
 
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[derive(Debug)]
-pub struct MetaData {
+pub struct Metadata {
     pub buffers: Vec<Buffer>,
     pub uniforms: Vec<Uniform>,
     pub inputs: Vec<Attribute>,
     pub outputs: Vec<Attribute>,
+    pub constant_buffer: Vec<f32>,
 }
 
-impl MetaData {
+impl Metadata {
     fn new<R: Read + Seek>(reader: &mut R, shader: &ShaderBinary) -> Self {
         // TODO: Avoid unwrap.
         Self {
@@ -67,6 +68,7 @@ impl MetaData {
                 .iter()
                 .map(|e| Attribute::new(reader, &shader.header, e))
                 .collect(),
+            constant_buffer: shader.constant_buffer.clone(),
         }
     }
 }
@@ -144,7 +146,7 @@ impl Attribute {
 }
 
 // TODO: Shader binary to binary data
-impl MetaData {
+impl Metadata {
     pub fn from_file<P: AsRef<std::path::Path>>(
         path: P,
     ) -> Result<Self, Box<dyn std::error::Error>> {
@@ -178,10 +180,18 @@ pub struct ShaderBinary {
     #[br(temp, seek_before = SeekFrom::Start(2504))]
     code_length: u32,
 
-    // TODO: header size of 80 bytes (0x50)?
+    pub unk1: u32,
+    pub constant_buffer_offset: u32,
+    pub unk3: u32,
+
+    // TODO: xv4 header size of 48 bytes
+    // TODO: does this have an offset relative to the xv4 header?
     #[br(seek_before = SeekFrom::Start(2896), count = code_length)]
     pub program_code: Vec<u8>,
-    // float constants?
+
+    #[br(seek_before = SeekFrom::Start(2848 + constant_buffer_offset as u64))]
+    #[br(count = 64)]
+    pub constant_buffer: Vec<f32>,
 }
 
 impl ShaderBinary {
@@ -405,7 +415,7 @@ impl TryFrom<&Shdr> for ShdrData {
                         ShaderEntryData {
                             name: s.name.to_string_lossy(),
                             shader_stage: s.shader_stage,
-                            meta_data: MetaData::new(&mut reader, &shader),
+                            meta_data: Metadata::new(&mut reader, &shader),
                         }
                     })
                     .collect(),
