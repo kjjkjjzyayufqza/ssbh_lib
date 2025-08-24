@@ -101,4 +101,9 @@ fn main() {
         // Assume anything else is an SSBH file.
         _ => read_data_write_json(cli.input, cli.output, SsbhFile::from_file),
     };
+    
+    //debug past \30.numatb as args
+    // let input = "E:\\gundamV材质研究\\201stage201_base__maya__.numshb";
+    // let output = "E:\\gundamV材质研究\\model.json";
+    // read_data_write_json(input, Some(output.to_string()), SsbhFile::from_file);
 }

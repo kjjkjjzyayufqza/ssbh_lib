@@ -180,6 +180,21 @@ impl SsbhFile {
     /// Tries to read one of the SSBH types from `reader`.
     /// For best performance when opening from a file, use `from_file` instead.
     pub fn read<R: Read + Seek>(reader: &mut R) -> Result<Self, ReadSsbhError> {
+        // Log the file position before reading
+        let start_pos = reader.stream_position()?;
+        println!("Starting to read SSBH file at position: {:#x}", start_pos);
+        
+        // Try to read the HBSS magic
+        let mut magic = [0u8; 4];
+        reader.read_exact(&mut magic)?;
+        println!("Read magic at {:#x}: {:?}", start_pos, std::str::from_utf8(&magic).unwrap_or("Invalid UTF-8"));
+        
+        if &magic != b"HBSS" {
+            return Err(ReadSsbhError::InvalidSsbhType);
+        }
+        
+        // Reset position and read the full file
+        reader.seek(SeekFrom::Start(start_pos))?;
         let ssbh = reader.read_le::<SsbhFile>()?;
 
         Ok(ssbh)
@@ -411,6 +426,25 @@ impl<P, T> core::ops::DerefMut for Ptr<P, T> {
 pub struct RelPtr64<T>(Option<T>);
 
 impl<T> RelPtr64<T> {
+    /// Creates a relative offset for `value` that is not null.
+    pub fn new(value: T) -> Self {
+        Self(Some(value))
+    }
+
+    /// Creates a relative offset for a null value.
+    pub fn null() -> Self {
+        Self(None)
+    }
+}
+
+/// A 64 bit file pointer relative to the start of the pointer type.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
+#[derive(Debug)]
+#[repr(transparent)]
+pub struct RelPtr32<T>(Option<T>);
+
+impl<T> RelPtr32<T> {
     /// Creates a relative offset for `value` that is not null.
     pub fn new(value: T) -> Self {
         Self(Some(value))

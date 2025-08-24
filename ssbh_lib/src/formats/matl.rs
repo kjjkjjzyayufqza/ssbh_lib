@@ -100,7 +100,8 @@ pub struct AttributeV16 {
 ssbh_enum!(
     /// A material parameter value.
     ParamV15,
-    1u64 =>  Float(f32),
+    0u64 =>  Float(f32),
+    1u64 =>  Float1(f32),
     2u64 =>  Boolean(u32),
     /// A vector for storing RGBA colors, XYZW values, or up to four [f32] parameters.
     5u64 =>  Vector4(Vector4),
@@ -118,7 +119,8 @@ ssbh_enum!(
 ssbh_enum!(
     /// A material parameter value.
     ParamV16,
-    1u64 =>  Float(f32),
+    0u64 =>  Float(f32),
+    1u64 =>  Float1(f32),
     2u64 =>  Boolean(u32),
     /// A vector for storing RGBA colors, XYZW values, or up to four [f32] parameters.
     5u64 =>  Vector4(Vector4),

@@ -272,6 +272,11 @@ impl Attribute for AttributeV8 {
             AttributeUsageV8::Tangent => format!("Tangent{}", self.subindex),
             AttributeUsageV8::TextureCoordinate => format!("TextureCoordinate{}", self.subindex),
             AttributeUsageV8::ColorSet => format!("colorSet{}", self.subindex),
+            AttributeUsageV8::Binormal => format!("Binormal{}", self.subindex),
+            AttributeUsageV8::Unk6 => format!("Unk6_{}", self.subindex),
+            AttributeUsageV8::Unk7 => format!("Unk7_{}", self.subindex),
+            AttributeUsageV8::HalfFloat2 => format!("HalfFloat2_{}", self.subindex),
+            AttributeUsageV8::Unk9 => format!("Unk9_{}", self.subindex),
         };
 
         MeshAttribute {
@@ -289,6 +294,11 @@ impl Attribute for AttributeV8 {
             AttributeUsageV8::Tangent => AttributeUsage::Tangent,
             AttributeUsageV8::TextureCoordinate => AttributeUsage::TextureCoordinate,
             AttributeUsageV8::ColorSet => AttributeUsage::ColorSet,
+            AttributeUsageV8::Binormal => AttributeUsage::Binormal,
+            AttributeUsageV8::Unk6 => AttributeUsage::TextureCoordinate, // Map unknown usage 6 to TextureCoordinate as fallback
+            AttributeUsageV8::Unk7 => AttributeUsage::TextureCoordinate, // Map unknown usage 7 to TextureCoordinate as fallback
+            AttributeUsageV8::HalfFloat2 => AttributeUsage::TextureCoordinate, // Map HalfFloat2 to TextureCoordinate as it's typically used for UVs
+            AttributeUsageV8::Unk9 => AttributeUsage::TextureCoordinate, // Map unknown usage 9 to TextureCoordinate as fallback
         }
     }
 }
