@@ -2080,7 +2080,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
-            create_attributes_v10,
+            |data| create_attributes_v10(data, false),
         )
         .unwrap();
 
@@ -2113,7 +2113,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
-            create_attributes_v10,
+            |data| create_attributes_v10(data, false),
         );
 
         assert!(matches!(
@@ -2145,7 +2145,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
-            create_attributes_v10,
+            |data| create_attributes_v10(data, false),
         )
         .unwrap();
     }
@@ -2174,7 +2174,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
-            create_attributes_v10,
+            |data| create_attributes_v10(data, false),
         );
 
         assert!(matches!(
@@ -2209,7 +2209,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
-            create_attributes_v10,
+            |data| create_attributes_v10(data, false),
         );
 
         assert!(matches!(
@@ -2237,7 +2237,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
-            create_attributes_v10,
+            |data| create_attributes_v10(data, false),
         );
 
         assert!(matches!(
