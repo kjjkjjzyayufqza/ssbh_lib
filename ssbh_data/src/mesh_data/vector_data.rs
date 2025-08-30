@@ -265,9 +265,15 @@ impl VectorDataV8 {
         match self {
             VectorDataV8::Float2(v) => write_vector_data(buffer, v, offset, stride, write_f32)?,
             VectorDataV8::Float3(v) => write_vector_data(buffer, v, offset, stride, write_f32)?,
-            VectorDataV8::Float4(v) => write_vector_data(buffer, v, offset, stride, write_f32)?,
-            VectorDataV8::HalfFloat4(v) => write_vector_data(buffer, v, offset, stride, write_f16)?,
-            VectorDataV8::Byte4(v) => write_vector_data(buffer, v, offset, stride, write_u8)?,
+            VectorDataV8::Float4(v) => {
+                write_vector_data(buffer, v, offset, stride, write_f32)?;
+            }
+            VectorDataV8::HalfFloat4(v) => {
+                write_vector_data(buffer, v, offset, stride, write_f16)?;
+            }
+            VectorDataV8::Byte4(v) => {
+                write_vector_data(buffer, v, offset, stride, write_u8)?;
+            }
         }
         Ok(())
     }
@@ -284,7 +290,8 @@ impl VectorDataV8 {
         match data {
             VectorData::Vector2(v) => VectorDataV8::Float2(v.clone()),
             VectorData::Vector3(v) => VectorDataV8::Float3(v.clone()),
-            VectorData::Vector4(v) => VectorDataV8::HalfFloat4(get_f16_vectors(v)),
+            // VectorData::Vector4(v) => VectorDataV8::HalfFloat4(get_f16_vectors(v)),
+            VectorData::Vector4(v) => VectorDataV8::Float4(v.clone()),
         }
     }
 

@@ -64,18 +64,35 @@ fn create_attributes_from_data<
 // TODO: More efficient to just take ownership of the vector data?
 // TODO: Struct for the return type?
 pub fn create_attributes_v8(data: &MeshObjectData, is_vs2: bool) -> MeshAttributes<AttributeV8> {
-    // Create a flattened list of attributes grouped by usage.
-    // This ensures the attribute order matches existing conventions.
-    let buffer0_data = get_positions_v8(&data.positions, AttributeUsageV8::Position)
-        .chain(get_vectors_v8(&data.normals, AttributeUsageV8::Normal))
-        .chain(get_vectors_v8(&data.tangents, AttributeUsageV8::Tangent))
+    // Create interleaved binormal and tangent attributes to match target hex order
+    // Order: Position → Normal → Binormal0 → Tangent0 → Binormal1 → Tangent1 → ...
+    let mut buffer0_data = get_positions_v8(&data.positions, AttributeUsageV8::Position)
+        .chain(get_vectors_v8_buffer0(&data.normals, AttributeUsageV8::Normal))
         .collect_vec();
+    
+    // Interleave binormals and tangents
+    let max_count = std::cmp::max(data.binormals.len(), data.tangents.len());
+    for i in 0..max_count {
+        if i < data.binormals.len() {
+            buffer0_data.extend(get_vectors_v8_buffer0(&data.binormals[i..i+1], AttributeUsageV8::Binormal));
+        }
+        if i < data.tangents.len() {
+            buffer0_data.extend(get_vectors_v8_buffer0(&data.tangents[i..i+1], AttributeUsageV8::Tangent));
+        }
+    }
+
+    // Separate texture coordinates and HalfFloat2 data based on naming convention
+    let (half_float2_data, regular_texture_coords): (Vec<_>, Vec<_>) = data.texture_coordinates
+        .iter()
+        .cloned()
+        .partition(|attr| attr.name.contains("HalfFloat2"));
 
     let buffer1_data = get_vectors_v8(
-        &data.texture_coordinates,
+        &regular_texture_coords,
         AttributeUsageV8::TextureCoordinate,
     )
     .chain(get_colors_v8(&data.color_sets, AttributeUsageV8::ColorSet))
+    .chain(get_vectors_v8(&half_float2_data, AttributeUsageV8::HalfFloat2))
     .collect_vec();
 
     create_attributes_from_data(
@@ -156,6 +173,19 @@ fn get_attributes<U: Copy, V, F: Fn(&VectorData) -> V>(
         .map(move |(i, a)| (a.name.as_str(), i, usage, f(&a.data)))
 }
 
+// Special version for V8 format that uses zero subindex for buffer0 attributes
+fn get_attributes_v8_buffer0<U: Copy, V, F: Fn(&VectorData) -> V>(
+    attributes: &[AttributeData],
+    usage: U,
+    f: F,
+) -> impl Iterator<Item = (&str, usize, U, V)> {
+    // For the target hex format, all buffer0 attributes should have subindex = 0
+    attributes
+        .iter()
+        .enumerate()
+        .map(move |(_, a)| (a.name.as_str(), 0, usage, f(&a.data)))
+}
+
 fn get_positions_v10(
     attributes: &[AttributeData],
     usage: AttributeUsageV9,
@@ -202,7 +232,7 @@ fn get_positions_v8(
     attributes: &[AttributeData],
     usage: AttributeUsageV8,
 ) -> impl Iterator<Item = (&str, usize, AttributeUsageV8, VectorDataV8)> {
-    get_attributes(attributes, usage, VectorDataV8::from_positions)
+    get_attributes_v8_buffer0(attributes, usage, VectorDataV8::from_positions)
 }
 
 fn get_vectors_v8(
@@ -210,6 +240,13 @@ fn get_vectors_v8(
     usage: AttributeUsageV8,
 ) -> impl Iterator<Item = (&str, usize, AttributeUsageV8, VectorDataV8)> {
     get_attributes(attributes, usage, VectorDataV8::from_vectors)
+}
+
+fn get_vectors_v8_buffer0(
+    attributes: &[AttributeData],
+    usage: AttributeUsageV8,
+) -> impl Iterator<Item = (&str, usize, AttributeUsageV8, VectorDataV8)> {
+    get_attributes_v8_buffer0(attributes, usage, VectorDataV8::from_vectors)
 }
 
 fn get_colors_v8(

@@ -977,10 +977,12 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
 
     let vertex_indices = convert_indices(&data.vertex_indices);
 
-    let draw_element_type = match vertex_indices {
-        VertexIndices::UnsignedInt(_) => DrawElementType::UnsignedInt,
-        VertexIndices::UnsignedShort(_) => DrawElementType::UnsignedShort,
-    };
+    // let draw_element_type = match vertex_indices {
+    //     VertexIndices::UnsignedInt(_) => DrawElementType::UnsignedInt,
+    //     VertexIndices::UnsignedShort(_) => DrawElementType::UnsignedShort,
+    // };
+    // for vs2
+    let draw_element_type = DrawElementType::UnsignedShort;
 
     let vertex_buffer0_offset = buffers[0].position();
     let vertex_buffer1_offset = buffers[1].position();
@@ -1027,7 +1029,8 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
         parent_bone_name: data.parent_bone_name.clone().into(),
         vertex_count: vertex_count as u32,
         vertex_index_count: data.vertex_indices.len() as u32,
-        unk2: 3, // TODO: Does this mean triangle faces?
+        // unk2: 3, // TODO: Does this mean triangle faces?
+        unk2: 2, // for vs2
         vertex_buffer0_offset: vertex_buffer0_offset as u32,
         vertex_buffer1_offset: vertex_buffer1_offset as u32,
         vertex_buffer2_offset: *vertex_buffer2_offset as u32,
