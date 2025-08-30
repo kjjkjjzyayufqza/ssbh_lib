@@ -22,7 +22,7 @@ fn create_attributes_from_data<
     A: binrw::BinRead,
     U,
     V,
-    F1: Fn(Vec<(&str, usize, U, V)>, u32) -> Vec<(A, V)>,
+    F1: Fn(Vec<(&str, usize, U, V)>, u32, bool) -> Vec<(A, V)>,
     F2: Fn(&A) -> usize + Copy,
     F3: Fn(Vec<V>) -> VersionedVectorData,
 >(
@@ -32,10 +32,11 @@ fn create_attributes_from_data<
     create_buffer_attributes: F1,
     size_in_bytes: F2,
     versioned_vectors: F3,
+    is_vs2: bool,
 ) -> MeshAttributes<A> {
     // Calculate attribute offsets and buffer data in the appropriate format.
-    let buffer0_attributes = create_buffer_attributes(buffer0_data, 0);
-    let buffer1_attributes = create_buffer_attributes(buffer1_data, 1);
+    let buffer0_attributes = create_buffer_attributes(buffer0_data, 0, is_vs2);
+    let buffer1_attributes = create_buffer_attributes(buffer1_data, 1, is_vs2);
 
     // Separate the mesh attributes from the buffer data.
     let (attributes0, vector_data0): (Vec<_>, Vec<_>) = buffer0_attributes.into_iter().unzip();
@@ -62,7 +63,7 @@ fn create_attributes_from_data<
 
 // TODO: More efficient to just take ownership of the vector data?
 // TODO: Struct for the return type?
-pub fn create_attributes_v8(data: &MeshObjectData) -> MeshAttributes<AttributeV8> {
+pub fn create_attributes_v8(data: &MeshObjectData, is_vs2: bool) -> MeshAttributes<AttributeV8> {
     // Create a flattened list of attributes grouped by usage.
     // This ensures the attribute order matches existing conventions.
     let buffer0_data = get_positions_v8(&data.positions, AttributeUsageV8::Position)
@@ -84,10 +85,11 @@ pub fn create_attributes_v8(data: &MeshObjectData) -> MeshAttributes<AttributeV8
         create_buffer_attributes_v8,
         |a: &AttributeV8| a.data_type.get_size_in_bytes_v8(),
         VersionedVectorData::V8,
+        is_vs2,
     )
 }
 
-pub fn create_attributes_v9(data: &MeshObjectData) -> MeshAttributes<AttributeV9> {
+pub fn create_attributes_v9(data: &MeshObjectData, is_vs2: bool) -> MeshAttributes<AttributeV9> {
     // Create a flattened list of attributes grouped by usage.
     // This ensures the attribute order matches existing conventions.
     let buffer0_data = get_positions_v9(&data.positions, AttributeUsageV9::Position)
@@ -110,10 +112,11 @@ pub fn create_attributes_v9(data: &MeshObjectData) -> MeshAttributes<AttributeV9
         create_buffer_attributes_v9,
         |a: &AttributeV9| a.data_type.get_size_in_bytes_v8(),
         VersionedVectorData::V8,
+        is_vs2,
     )
 }
 
-pub fn create_attributes_v10(data: &MeshObjectData) -> MeshAttributes<AttributeV10> {
+pub fn create_attributes_v10(data: &MeshObjectData, is_vs2: bool) -> MeshAttributes<AttributeV10> {
     // Create a flattened list of attributes grouped by usage.
     // This ensures the attribute order matches existing conventions.
     let buffer0_data = get_positions_v10(&data.positions, AttributeUsageV9::Position)
@@ -136,6 +139,7 @@ pub fn create_attributes_v10(data: &MeshObjectData) -> MeshAttributes<AttributeV
         create_buffer_attributes_v10,
         |a: &AttributeV10| a.data_type.get_size_in_bytes_v10(),
         VersionedVectorData::V10,
+        is_vs2,
     )
 }
 
@@ -220,7 +224,7 @@ fn create_buffer_attributes<
     Usage: Copy,
     VectorData,
     DataType,
-    F1: Fn(&str, usize, u32, Usage, DataType, usize) -> Attribute,
+    F1: Fn(&str, usize, u32, Usage, DataType, usize, bool) -> Attribute,
     F2: Fn(&VectorData) -> DataType,
     F3: Fn(&Attribute) -> usize,
 >(
@@ -229,13 +233,14 @@ fn create_buffer_attributes<
     create_attribute: F1,
     data_type: F2,
     size_in_bytes: F3,
+    is_vs2: bool,
 ) -> Vec<(Attribute, VectorData)> {
     // For tightly packed data, the offset is a cumulative sum of size.
     let buffer_attributes = buffer_data
         .into_iter()
         .scan(0, |offset, (name, i, usage, data)| {
             let attribute =
-                create_attribute(name, i, buffer_index, usage, data_type(&data), *offset);
+                create_attribute(name, i, buffer_index, usage, data_type(&data), *offset, is_vs2);
 
             *offset += size_in_bytes(&attribute);
 
@@ -247,6 +252,7 @@ fn create_buffer_attributes<
 fn create_buffer_attributes_v8(
     buffer_data: Vec<(&str, usize, AttributeUsageV8, VectorDataV8)>,
     buffer_index: u32,
+    is_vs2: bool,
 ) -> Vec<(AttributeV8, VectorDataV8)> {
     create_buffer_attributes(
         buffer_data,
@@ -254,12 +260,14 @@ fn create_buffer_attributes_v8(
         create_attribute_v8,
         VectorDataV8::data_type,
         |a: &AttributeV8| a.data_type.get_size_in_bytes_v8(),
+        is_vs2,
     )
 }
 
 fn create_buffer_attributes_v9(
     buffer_data: Vec<(&str, usize, AttributeUsageV9, VectorDataV8)>,
     buffer_index: u32,
+    is_vs2: bool,
 ) -> Vec<(AttributeV9, VectorDataV8)> {
     create_buffer_attributes(
         buffer_data,
@@ -267,12 +275,14 @@ fn create_buffer_attributes_v9(
         create_attribute_v9,
         VectorDataV8::data_type,
         |a: &AttributeV9| a.data_type.get_size_in_bytes_v8(),
+        is_vs2,
     )
 }
 
 fn create_buffer_attributes_v10(
     buffer_data: Vec<(&str, usize, AttributeUsageV9, VectorDataV10)>,
     buffer_index: u32,
+    is_vs2: bool,
 ) -> Vec<(AttributeV10, VectorDataV10)> {
     create_buffer_attributes(
         buffer_data,
@@ -280,6 +290,7 @@ fn create_buffer_attributes_v10(
         create_attribute_v10,
         VectorDataV10::data_type,
         |a: &AttributeV10| a.data_type.get_size_in_bytes_v10(),
+        is_vs2,
     )
 }
 
@@ -290,7 +301,9 @@ fn create_attribute_v8(
     usage: AttributeUsageV8,
     data_type: AttributeDataTypeV8,
     buffer_offset: usize,
+    _is_vs2: bool,
 ) -> AttributeV8 {
+    // V8 doesn't have attribute names, so is_vs2 doesn't affect anything
     AttributeV8 {
         usage,
         data_type,
@@ -307,6 +320,7 @@ fn create_attribute_v9(
     usage: AttributeUsageV9,
     data_type: AttributeDataTypeV8,
     buffer_offset: usize,
+    is_vs2: bool,
 ) -> AttributeV9 {
     AttributeV9 {
         usage,
@@ -314,8 +328,13 @@ fn create_attribute_v9(
         buffer_index,
         buffer_offset: buffer_offset as u32,
         subindex: subindex as u64,
-        name: calculate_attribute_name(usage, subindex, name),
-        attribute_names: SsbhArray::from_vec(vec![name.into()]),
+        name: calculate_attribute_name(usage, subindex, name, is_vs2),
+        attribute_names: if is_vs2 {
+            // For VS2 format, don't write attribute names to save space
+            SsbhArray::from_vec(vec![])
+        } else {
+            SsbhArray::from_vec(vec![name.into()])
+        },
     }
 }
 
@@ -326,6 +345,7 @@ fn create_attribute_v10(
     usage: AttributeUsageV9,
     data_type: AttributeDataTypeV10,
     buffer_offset: usize,
+    is_vs2: bool,
 ) -> AttributeV10 {
     AttributeV10 {
         usage,
@@ -333,18 +353,29 @@ fn create_attribute_v10(
         buffer_index,
         buffer_offset: buffer_offset as u32,
         subindex: subindex as u64,
-        name: calculate_attribute_name(usage, subindex, name),
-        attribute_names: SsbhArray::from_vec(vec![name.into()]),
+        name: calculate_attribute_name(usage, subindex, name, is_vs2),
+        attribute_names: if is_vs2 {
+            // For VS2 format, don't write attribute names to save space
+            SsbhArray::from_vec(vec![])
+        } else {
+            SsbhArray::from_vec(vec![name.into()])
+        },
     }
 }
 
-fn calculate_attribute_name(usage: AttributeUsageV9, subindex: usize, name: &str) -> SsbhString {
-    match (usage, subindex) {
-        // This is likely due to which UVs were used to generate the tangents/binormals.
-        (AttributeUsageV9::Tangent, 0) => "map1".into(),
-        (AttributeUsageV9::Binormal, 0) => "map1".into(),
-        (AttributeUsageV9::Binormal, 1) => "uvSet".into(),
-        _ => name.into(),
+fn calculate_attribute_name(usage: AttributeUsageV9, subindex: usize, name: &str, is_vs2: bool) -> SsbhString {
+    if is_vs2 {
+        // For VS2 format, use the original name without any renaming
+        name.into()
+    } else {
+        // Original behavior for compatibility with existing games
+        match (usage, subindex) {
+            // This is likely due to which UVs were used to generate the tangents/binormals.
+            (AttributeUsageV9::Tangent, 0) => "map1".into(),
+            (AttributeUsageV9::Binormal, 0) => "map1".into(),
+            (AttributeUsageV9::Binormal, 1) => "uvSet".into(),
+            _ => name.into(),
+        }
     }
 }
 
@@ -557,7 +588,7 @@ mod tests {
             buffer_info: [(stride0, _), (stride1, _), (stride2, _), (stride3, _)],
             attributes,
             use_buffer2,
-        } = create_attributes_v8(&data);
+        } = create_attributes_v8(&data, false);
         assert_eq!(32, stride0);
         assert_eq!(24, stride1);
         assert_eq!(32, stride2);
@@ -700,7 +731,7 @@ mod tests {
             buffer_info: [(stride0, _), (stride1, _), (stride2, _), (stride3, _)],
             attributes,
             use_buffer2,
-        } = create_attributes_v9(&data);
+        } = create_attributes_v9(&data, false);
         assert_eq!(56, stride0);
         assert_eq!(24, stride1);
         assert_eq!(32, stride2);
@@ -893,7 +924,7 @@ mod tests {
             buffer_info: [(stride0, _), (stride1, _), (stride2, _), (stride3, _)],
             attributes,
             use_buffer2,
-        } = create_attributes_v10(&data);
+        } = create_attributes_v10(&data, false);
         assert_eq!(56, stride0);
         assert_eq!(16, stride1);
         assert_eq!(32, stride2);

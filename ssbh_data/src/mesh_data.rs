@@ -107,8 +107,7 @@ pub mod error {
         NonTriangulatedFaces { vertex_index_count: usize },
 
         /// `vertex_index` exceeds the representable limit for skin weight indices.
-        /// Version 1.8 and 1.9 have a limit of [u32::MAX].
-        /// Version 1.10 has a limit of [u16::MAX].
+        /// All versions now have a limit of [u32::MAX].
         #[error(
             "vertex index {} exceeds the limit of {} supported by mesh version {}.{}",
             vertex_index,
@@ -379,11 +378,19 @@ impl Weight for SsbhByteBuffer {
         let mut elements = Vec::new();
         let mut reader = Cursor::new(&self.elements);
         // TODO: Handle errors before reaching eof?
-        while let Ok(influence) = reader.read_le::<ssbh_lib::formats::mesh::VertexWeightV10>() {
-            elements.push(VertexWeight {
-                vertex_index: influence.vertex_index as u32,
-                vertex_weight: influence.vertex_weight,
-            });
+        // Read as u32 + f32 instead of using VertexWeightV10 struct
+        while reader.position() + 8 <= self.elements.len() as u64 {
+            if let (Ok(vertex_index), Ok(vertex_weight)) = (
+                reader.read_le::<u32>(),
+                reader.read_le::<f32>()
+            ) {
+                elements.push(VertexWeight {
+                    vertex_index,
+                    vertex_weight,
+                });
+            } else {
+                break;
+            }
         }
         elements
     }
@@ -495,6 +502,8 @@ pub struct MeshData {
     pub major_version: u16,
     pub minor_version: u16,
     pub objects: Vec<MeshObjectData>,
+    /// Controls whether to use VS2 format (no attribute name strings)
+    pub is_vs2: bool,
 }
 
 impl TryFrom<MeshData> for Mesh {
@@ -530,6 +539,7 @@ impl TryFrom<&Mesh> for MeshData {
             major_version,
             minor_version,
             objects: read_mesh_objects(mesh)?,
+            is_vs2: true, // Default to legacy format for compatibility
         })
     }
 }
@@ -696,20 +706,21 @@ fn create_mesh(data: &MeshData) -> Result<Mesh, error::Error> {
         })
         .collect();
 
+    let is_vs2 = data.is_vs2;
     match (data.major_version, data.minor_version) {
         (1, 10) => Ok(Mesh::V10(create_mesh_inner(
             &all_positions,
-            create_mesh_objects(&data.objects, create_attributes_v10)?,
+            create_mesh_objects(&data.objects, |obj| create_attributes_v10(obj, is_vs2))?,
             data,
         )?)),
         (1, 8) => Ok(Mesh::V8(create_mesh_inner(
             &all_positions,
-            create_mesh_objects(&data.objects, create_attributes_v8)?,
+            create_mesh_objects(&data.objects, |obj| create_attributes_v8(obj, is_vs2))?,
             data,
         )?)),
         (1, 9) => Ok(Mesh::V9(create_mesh_inner(
             &all_positions,
-            create_mesh_objects(&data.objects, create_attributes_v9)?,
+            create_mesh_objects(&data.objects, |obj| create_attributes_v9(obj, is_vs2))?,
             data,
         )?)),
         _ => Err(error::Error::UnsupportedVersion {
@@ -831,15 +842,8 @@ fn create_vertex_weights_v10(
 ) -> Result<SsbhByteBuffer, error::Error> {
     let mut bytes = Cursor::new(Vec::new());
     for weight in vertex_weights {
-        let index: u16 = weight.vertex_index.try_into().map_err(|_| {
-            error::Error::SkinWeightVertexIndexExceedsLimit {
-                vertex_index: weight.vertex_index as usize,
-                limit: u16::MAX as usize,
-                major_version: 1,
-                minor_version: 10,
-            }
-        })?;
-        bytes.write_all(&index.to_le_bytes())?;
+        // Use u32 instead of u16 for vertex index
+        bytes.write_all(&weight.vertex_index.to_le_bytes())?;
         bytes.write_all(&weight.vertex_weight.to_le_bytes())?;
     }
     Ok(bytes.into_inner().into())
@@ -1410,7 +1414,7 @@ mod tests {
         ];
 
         let result = create_vertex_weights_v10(&weights).unwrap();
-        assert_eq!(&result.elements[..], &hex!("0000 00000000 01000 000803f"));
+        assert_eq!(&result.elements[..], &hex!("00000000 0000803f 01000000 0000803f"));
     }
 
     #[test]
@@ -1562,6 +1566,7 @@ mod tests {
             major_version: 1,
             minor_version: 10,
             objects: Vec::new(),
+            is_vs2: true,
         })
         .unwrap();
         assert!(matches!(mesh,
@@ -1576,6 +1581,7 @@ mod tests {
             major_version: 1,
             minor_version: 8,
             objects: Vec::new(),
+            is_vs2: true,
         })
         .unwrap();
 
@@ -1591,6 +1597,7 @@ mod tests {
             major_version: 1,
             minor_version: 9,
             objects: Vec::new(),
+            is_vs2: true,
         })
         .unwrap();
 
@@ -1606,6 +1613,7 @@ mod tests {
             major_version: 2,
             minor_version: 301,
             objects: Vec::new(),
+            is_vs2: true,
         });
 
         assert!(matches!(
@@ -1622,6 +1630,7 @@ mod tests {
         let mesh = create_mesh(&MeshData {
             major_version: 1,
             minor_version: 10,
+            is_vs2: true,
             objects: vec![
                 MeshObjectData {
                     name: "a".to_owned(),
@@ -1690,10 +1699,12 @@ mod tests {
     }
 
     #[test]
-    fn create_mesh_1_10_too_many_vertices() {
+    fn create_mesh_1_10_large_vertex_index() {
+        // Test that version 1.10 now supports u32 vertex indices (no longer limited to u16)
         let mesh = create_mesh(&MeshData {
             major_version: 1,
             minor_version: 10,
+            is_vs2: true,
             objects: vec![MeshObjectData {
                 positions: vec![AttributeData {
                     name: String::new(),
@@ -1710,16 +1721,8 @@ mod tests {
             }],
         });
 
-        // TODO: Test version 1.8 and 1.9?
-        assert!(matches!(
-            mesh,
-            Err(error::Error::SkinWeightVertexIndexExceedsLimit {
-                vertex_index: 65536,
-                limit: 65535,
-                major_version: 1,
-                minor_version: 10,
-            })
-        ));
+        // This should now succeed since we support u32 indices for version 1.10
+        assert!(mesh.is_ok());
     }
 
     #[test]
@@ -1727,6 +1730,7 @@ mod tests {
         let mesh = create_mesh(&MeshData {
             major_version: 1,
             minor_version: 10,
+            is_vs2: true,
             objects: vec![
                 MeshObjectData {
                     name: "a".to_owned(),
@@ -1759,6 +1763,7 @@ mod tests {
         let mesh = create_mesh(&MeshData {
             major_version: 1,
             minor_version: 8,
+            is_vs2: true,
             objects: vec![
                 MeshObjectData {
                     name: "a".to_owned(),
@@ -1830,6 +1835,7 @@ mod tests {
         let mesh = create_mesh(&MeshData {
             major_version: 1,
             minor_version: 9,
+            is_vs2: true,
             objects: vec![
                 MeshObjectData {
                     name: "a".to_owned(),
