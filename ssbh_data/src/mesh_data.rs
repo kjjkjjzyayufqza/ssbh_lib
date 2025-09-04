@@ -821,7 +821,8 @@ fn create_rigging_buffers<W: Weight>(
 
         let buffer = RiggingGroup {
             mesh_object_name: mesh_object.name.clone().into(),
-            mesh_object_subindex: mesh_object.subindex,
+            // mesh_object_subindex: mesh_object.subindex,
+            mesh_object_subindex: 0, // for vs2  they don't have subindices
             flags,
             buffers: buffers.into(),
         };
@@ -1025,12 +1026,12 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
 
     let mesh_object = MeshObject {
         name: data.name.clone().into(),
-        subindex: data.subindex,
+        // subindex: data.subindex,
+        subindex: 0, // for vs2
         parent_bone_name: data.parent_bone_name.clone().into(),
         vertex_count: vertex_count as u32,
         vertex_index_count: data.vertex_indices.len() as u32,
-        // unk2: 3, // TODO: Does this mean triangle faces?
-        unk2: 2, // for vs2
+        unk2: 3, // TODO: Does this mean triangle faces?
         vertex_buffer0_offset: vertex_buffer0_offset as u32,
         vertex_buffer1_offset: vertex_buffer1_offset as u32,
         vertex_buffer2_offset: *vertex_buffer2_offset as u32,
