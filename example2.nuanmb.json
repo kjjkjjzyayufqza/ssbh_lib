@@ -1,0 +1,620 @@
+{
+  "Anim": {
+    "V21": {
+      "final_frame_index": 52.0,
+      "unk1": 1,
+      "unk2": 3,
+      "name": "E01ThrownF.nuanmx",
+      "groups": [
+        {
+          "group_type": "Transform",
+          "nodes": [
+            {
+              "name": "ArmL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 3648,
+                  "data_size": 416
+                }
+              ]
+            },
+            {
+              "name": "ArmR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 5120,
+                  "data_size": 423
+                }
+              ]
+            },
+            {
+              "name": "Bust",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1536,
+                  "data_size": 496
+                }
+              ]
+            },
+            {
+              "name": "ClavicleC",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 2560,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "ClavicleL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 2624,
+                  "data_size": 410
+                }
+              ]
+            },
+            {
+              "name": "ClavicleR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 4480,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FootL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 7104,
+                  "data_size": 509
+                }
+              ]
+            },
+            {
+              "name": "FootR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 8704,
+                  "data_size": 516
+                }
+              ]
+            },
+            {
+              "name": "HandL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 4096,
+                  "data_size": 330
+                }
+              ]
+            },
+            {
+              "name": "HandR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 5568,
+                  "data_size": 363
+                }
+              ]
+            },
+            {
+              "name": "Head",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 2112,
+                  "data_size": 397
+                }
+              ]
+            },
+            {
+              "name": "Hip",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      0,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 128,
+                  "data_size": 874
+                }
+              ]
+            },
+            {
+              "name": "KneeL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 6592,
+                  "data_size": 450
+                }
+              ]
+            },
+            {
+              "name": "KneeR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 8192,
+                  "data_size": 456
+                }
+              ]
+            },
+            {
+              "name": "LegC",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 5952,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "LegL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 6016,
+                  "data_size": 516
+                }
+              ]
+            },
+            {
+              "name": "LegR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 7680,
+                  "data_size": 509
+                }
+              ]
+            },
+            {
+              "name": "Neck",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 2048,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "Rot",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 64,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "ShoulderL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 3072,
+                  "data_size": 522
+                }
+              ]
+            },
+            {
+              "name": "ShoulderR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 4544,
+                  "data_size": 516
+                }
+              ]
+            },
+            {
+              "name": "Throw",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      0,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 9344,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "ToeL",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 7616,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "ToeR",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 9280,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "Trans",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      0,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 0,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "Waist",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "Compressed"
+                  },
+                  "frame_count": 53,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1024,
+                  "data_size": 489
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "buffer": "0000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f000000000000803f000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000e00a0006500cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f100000000000000059f99d3e598a0c3f0f0000000000000068045b3e2504db3e0f000000000000000f47ff3ebd00433f0f00000000000000b70a623d52263d3f1100000000000000d5edac3c8a76b3401400000000000000d21c093ecf66034012000000000000000000803f0000803f0000803f59f99d3e68045b3ebd00433f5e2d073f8bc1033e4030794087df8d3e00000000000000c0ff1fe186bdc59e3101000000f8ff23dcb0b7d8332600000000ff7f841b83130c9802000000e0ff8f70e3ec93871800000000fcff116e042a330000062a0902fcbe6a8a66b27ebc43a250a790659fa9e0e0e57981d96a231ff6d74304620e1fc351ff7f3ec4871900c0ffff23234cf0f6ff0700fcff3fd6c3ffff09defeff0080ffff0000f0ff3fc1dbff1f00f0ff1f0000feff2778fbff0300feff0300c0ffff046fff7f00c0ff7f0000f8ff9fe0edff0f00f8ff0f0000ffff13bcfdff0100ffff0100e0ff7f82b7ff3f00e0ff3f0000fcff4ff0f6ff0700fcff070080ffff09defeff0080ffff0000f0ff3fc1dbff1f00f0ff1f0000feff2778fbff0300feff0300c0ffff046fff7f00c0ff7f0000f8ff9fe0edff0f00f8ff0f0000ffff13bcfdff0100ffff0100e0ff7f82b7ff3f00e0ff3f0000fcff4ff0f6ff0700fcff070080ffff09defeff0080ffff0000f0ff3fc1dbff1f00f0ff1f0000feff2778fbff0300feff0300c0ffff046fff7f00c0ff7f0000f8ff9fe0edff0f00f8ff0f0000ffff13bcfdff0100ffff0100e0ff7f82b7ff3f00e0ff3f0000fcff4ff0f6ff0700fcff070080ffff09defeff0080ffff0000f0ff3fc1dbff1f00f0ff1f0000feff2778fbff0300feff0300c0ffff046fff7f00c0ff7f0000f8ff9fe0edff0f00f8ff0f0000ffff13bcfdff0100ffff0100e0ff7f82b7ff3f00e0ff3f0000fcff4ff0f6ff0700fcff070080ffff09defeff0080ffff0000f0ff3fc1dbff1f00f0ff1f0000feff2778fbff0300feff0300c0ffff046fff7f00c0ff7f0000f8ff9fe0edff0f00f8ff0f0000ffff13bcfdff0100ffff0100e0ff7f82b7ff3f00e0ff3f0000fcff4ff0f6ff0700fcff070080ffff09defeff0080ffff0000f0ff3fc1dbff1f00f0ff1f0000feff2778fbff0300feff0300c0ffff000000000000000000000000000000000000000000000004000600a0002b00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000d0eef03de09f123e0c00000000000000247f80bea238713d0f00000000000000ead069befa369e3d0f000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803fe09f123ef77861be5437173dc3d4763f00000000000000000000000000000000ff7fcbd0785bfd3a05059cb76f1bcee7b61b676090f7cac800e6be020600fcff153000e0ffaf800100ff7f050c00f8ff0380ff3f000000fcff010000e0ff0f000000ff7f000000f8ff030000c0ff1f000000feff000000f0ff07000080ff3f000000fcff010000e0ff0f000000ff7f000000f8ff030000c0ff1f000000feff000000f0ff07000080ff3f000000fcff010000e0ff0f000000ff7f000000f8ff030000c0ff1f000000feff000000f0ff07000080ff3f000000fcff010000e0ff0f000000ff7f000000f8ff030000c0ff1f000000feff000000f0ff07000080ff3f000000fcff010000e0ff0f000000ff7f000000f8ff030000c0ff1f000000feff000000f0ff07000080ff3f000000fcff010000e0ff0f000000ff7f0000000000000000000000000000000000000000000000000004000600a0002c00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000e4dbab3dcd053e3e0e00000000000000b2641ebe987f9ebd0d0000000000000001dc0cbe986dbf3e10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f64b13d3ef22ba1bdb379a43e86e46c3f00000000000000000000000000000000cb7fdd372d27ffffff5e74ffffe5c77b27fe03faa67b673f3957ec47f0abefff7f04bffafeff47f0abefff7f04bffafeff070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803fdcb7afbd1bf5f03d05a849bef833783f00000000000000000000000000000000000000000000000000000000000000000000000004000600a0001d00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f100000000000000083f60abeaa0b08be0c000000000000004ed1513dea86573d08000000000000002159b8be425eb7be08000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f83f60abeea86573d425eb7bec6186c3f0000000000000000000000000000000000f0ff0f04f4dfc9807db818a0d7e601f6de20007f1c04e08f8300fc7110803feeff0100fc3f0080ff0700f0ff0000fe1f00c0ff0300f87f0000ff0f00e0ff0100fc3f0080ff0700f0ff0000fe1f00c0ff0300f87f0000ff0f00e0ff0100fc3f0080ff0700f0ff0000fe1f00c0ff0300f87f0000ff0f00e0ff0100fc3f0080ff0700f0ff0000fe1f00c0ff0300f87f0000ff0f00e0ff0100fc3f0080ff0700f0ff0000fe1f00c0ff0300f87f0000ff0f00e0ff0100fc3f0080ff0700f0ff0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f00000000000000000000000000000000000000000000000000000000000000000000000004000600a0001f00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f100000000000000051c1fc3ce2fb073d0800000000000000e7a734bf0ddf2ebf0c00000000000000e2c7fd3c13af173d0a000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803fe2fb073d0ddf2ebf13af173d05883a3f00000000000000000000000000000000ffffffbfffffffdfffffffeffffffff7ffffff1b9f71c781eee7a0a42c2a291436f104000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000600a0003000cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f10000000000000001c7cd9be41d3a23e1100000000000000874f82be828e06be0e000000000000000038a6bdc1c8c33e10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f1805c1beaad75dbe85076ebb3788663f00000000000000000000000000000000f02060a76815b916183f5d0f9a0b48dc4208320360f569020000fe7f0000b82b16576a0d58a03a13da301a3a0100de5d04c21fabff7ffffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047dfffff769047d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000600a0002000cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000ca25e13a5a1a703b08000000000000006d5bef3a654f273b07000000000000009d0eb43ec79f303f10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f5a1a703b6d5bef3ac79f303fb14e393f00000000000000000000000000000000ff80ff7fd5a7296ea152935775f0a443627c063b5b7ae7344871bb252ee14e1215460000007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11007f7b11000000000000000000000000000000000000000000000000000000000000000004000600a0001300cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000d767363fb27f363f0600000000000000ec4e9839cb68a7390500000000000000f244adb9cbb99db907000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f986e363fb8ad9a39e0fda2b97498333f0000000000000000000000000000000052a1fac05d1bfe7223f6a725be35c51247d417d107007602b013809d00ec046027003b01d809c04e007602b013809d00ec046027003b01d809c04e007602b013809d00ec046027003b01d809c04e007602b013809d00ec046027003b01d809c04e007602b013809d00ec046027003b01d809c04e007602b013809d00ec040000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f2d1afcbc0ed9343f2d1afc3c0ed9343f00000000000000000000000000000000000000000000000000000000000000000000000004000600a0002f00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000e23a76be2385f2bd0e0000000000000065c8213e7bbf213f1000000000000000020f00bffc21d1bc10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f1c414abe1710823efc21d1bcdc4b723f0000000000000000000000000000000085d6f8ccff3ffcaa94445adba4c43281e00ab1692b084544ad0000b8e4611bba3bf4c700003a66823cfeabde5b471118fd68fc0c87ffffff1f00c0ffffff0f00e0ffffff0700f0ffffff0300f8ffffff0100fcffffff0000feffff7f0000ffffff3f0080ffffff1f00c0ffffff0f00e0ffffff0700f0ffffff0300f8ffffff0100fcffffff0000feffff7f0000ffffff3f0080ffffff1f00c0ffffff0f00e0ffffff0700f0ffffff0300f8ffffff0100fcffffff0000feffff7f0000ffffff3f0080ffffff1f00c0ffffff0f00e0ffffff0700f0ffffff0300f8ffffff0100fcffffff0000feffff7f0000ffffff3f0080ffffff1f00c0ffffff0f00e0ffffff0700f0ffffff0300f8ffffff0100fcffffff0000feffff7f0000ffffff3f0080ffffff1f00c0ffffff0f00e0ffffff0700f0ffffff03000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000600a0002100cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000586f54bbe81700bb0800000000000000f7e03dbbb91e9eba0800000000000000198cc13e3f74393f10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f8d3427bbf7e03dbb73811f3f713b483f00000000000000000000000000000000890017b5d820ee952995c48f7bc171bf4712f4ff4f82e91d1d005d05ab90dcb02b7fff0000feb7f53cfc6feb79f8dfd6f3f0bfade7e17f5bcfc3ffb69e87ff6d3d0fffdb7a1efeb7f53cfc6feb79f8dfd6f3f0bfade7e17f5bcfc3ffb69e87ff6d3d0fffdb7a1efeb7f53cfc6feb79f8dfd6f3f0bfade7e17f5bcfc3ffb69e87ff6d3d0fffdb7a1efeb7f53cfc6feb79f8dfd6f3f0bfade7e17f5bcfc3ffb69e87ff6d3d0fffdb7a1efeb7f53cfc6feb79f8dfd6f3f0bfade7e17f5bcfc3ffb69e87ff6d3d0fffdb7a1efeb7f53cfc6feb79f8dfd6f3f0bfade7010000000000000000000000000000000000000000000000000004000600a0001800cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000674435bfbbef34bf0800000000000000aebaa1b9fe8164b9070000000000000038b2a4b925ef69b908000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f8d2835bfaebaa1b938b2a4b950e1343f000000000000000000000000000000005400003d04052187080a880a008a0b1a8b0a579515a4bb32e36c6effff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7fffff7f0000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f00000000000000000000000000000000000000000000000000000000000000000000000004000600a0002f00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f100000000000000032775d3efbc9043f0f000000000000009885d6becf2e3fbe0f000000000000008508d83ea9f66d3f10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803fbd3a033f0d538bbe1f4cea3e8f722c3f000000000000000000000000000000006b7d77687f84ff3fd430fc400b1ee9436580761e7bc80ec023070000007030330d2806603bc71f8b04dc67c11c130660a87596e50400c0ffffff1f00e0ffffff0f00f0ffffff0700f8ffffff0300fcffffff0100feffffff0000ffffff7f0080ffffff3f00c0ffffff1f00e0ffffff0f00f0ffffff0700f8ffffff0300fcffffff0100feffffff0000ffffff7f0080ffffff3f00c0ffffff1f00e0ffffff0f00f0ffffff0700f8ffffff0300fcffffff0100feffffff0000ffffff7f0080ffffff3f00c0ffffff1f00e0ffffff0f00f0ffffff0700f8ffffff0300fcffffff0100feffffff0000ffffff7f0080ffffff3f00c0ffffff1f00e0ffffff0f00f0ffffff0700f8ffffff0300fcffffff0100feffffff0000ffffff7f0080ffffff3f00c0ffffff1f00e0ffffff0f00f0ffffff0700f8ffffff0300000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000600a0002500cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f10000000000000002869993cd82dc23c0a0000000000000033fd923b97b8443c0a00000000000000172e5b3e1a16573f10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f08119f3c20cf2e3c1a16573fe1b60a3f000000000000000000000000000000008e24fdff0f00b87fff0161f796bd1f00df822784df61ee26c11b905d3a9c8fa7bbeb79ff70bdfd8fe0ed7f000000fc0f000080ff010000f03f000000fe070000c0ff000000f81f000000ff030000e07f000000fc0f000080ff010000f03f000000fe070000c0ff000000f81f000000ff030000e07f000000fc0f000080ff010000f03f000000fe070000c0ff000000f81f000000ff030000e07f000000fc0f000080ff010000f03f000000fe070000c0ff000000f81f000000ff030000e07f000000fc0f000080ff010000f03f000000fe070000c0ff000000f81f000000ff030000e07f000000fc0f000080ff010000f03f00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000600a0002e00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000bda36b3d8a1e783e0f00000000000000741b5e3db4ca5c3e0e00000000000000419f18bec093ee3e10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803fde200a3eb4ca5c3ece49a9bdfbac763f0000000000000000000000000000000097b5ff5f74436b71f9d6029199b5308b4998a887b4ae14f56f35eb600575fc921214c19587839026fcffdf18580338793c070000000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f000000f8ff07000000feff01000080ff7f000000e0ff1f0000000000803f0000803f0000803fb8f71a3d7e7f193d6bf333bf1092353f00000000000000000000000000000000000000000000000000000000000000000000000004000600a0002e00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f10000000000000000bb586be821eeabd0e00000000000000b3ec91bec34a85bc0f000000000000006d72183f01307e3f10000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803f0bb586be034461be6d72183f66fa393f000000000000000000000000000000000000be0700408a61ea381850191937702790679507430ecd1e0080f70335984a08cee14e166874cd64b15e3424467eb042b04cd3ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff3f00000004000600a0002600cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000e7abbfbc2cfc8fbc0a00000000000000ba1542bc630e02bb0a00000000000000381bc63d83a7603f11000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803ff4be96bc1b551dbc83a7603fc442f53e000000000000000000000000000000006ea7f3ffdfffd954fe47fe3655f4adffcd6e7bd7ab33bb9ecbcec07bd7251ca9c27186829b664c01805c1800ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f000000ff030000c0ff000000f03f000000fc0f0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000004000600a0002f00cc000000350000000000803f0000803f10000000000000000000803f0000803f10000000000000000000803f0000803f1000000000000000ccffb5bdfa80703e0f000000000000004759afbe8b6e5dbe0e00000000000000dcf4e7be9a22b03e11000000000000000000000000000000100000000000000000000000000000001000000000000000000000000000000010000000000000000000803f0000803f0000803fccffb5bd04c7a5bed864b5bea46e5f3f000000000000000000000000000000000000bd04ee877e863f60aec390a61701e301bfc4a834f300e6d244787608014a10362a84700180d80746eb0283be00ff7fac02000086edffffff1fc3f6ffffff8f61fbffffffc7b0fdffffff63d8feffffff316cffffffff18b6ffffff7f0cdbffffff3f86edffffff1fc3f6ffffff8f61fbffffffc7b0fdffffff63d8feffffff316cffffffff18b6ffffff7f0cdbffffff3f86edffffff1fc3f6ffffff8f61fbffffffc7b0fdffffff63d8feffffff316cffffffff18b6ffffff7f0cdbffffff3f86edffffff1fc3f6ffffff8f61fbffffffc7b0fdffffff63d8feffffff316cffffffff18b6ffffff7f0cdbffffff3f86edffffff1fc3f6ffffff8f61fbffffffc7b0fdffffff63d8feffffff316cffffffff18b6ffffff7f0cdbffffff3f86edffffff1fc3f6ffffff8f61fbffffffc7b0fdffffff030000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803fc3fa1abd6d8219bd6bf333bf1092353f0000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000002bc11a6e90be0000000000000000000000000000000000000000",
+      "unk_data": {
+        "unk1": [],
+        "unk2": []
+      }
+    }
+  }
+}

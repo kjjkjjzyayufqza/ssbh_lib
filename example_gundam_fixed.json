@@ -1,0 +1,539 @@
+{
+  "Anim": {
+    "V12": {
+      "name": "001hito_001gundam_001gundam_001_kamae_sht_air_fr.nuanmx.scaled",
+      "unk1": 0.98333335,
+      "final_frame_index": 60.0,
+      "unk2": 59.0,
+      "unk3": 0.0,
+      "tracks": [
+        {
+          "name": "ASHI_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 59
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 58
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 60
+            }
+          ]
+        },
+        {
+          "name": "ASHI_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 71
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 70
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 72
+            }
+          ]
+        },
+        {
+          "name": "ATAMA",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 47
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 46
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 48
+            }
+          ]
+        },
+        {
+          "name": "BASE",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 11
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 9
+            },
+            {
+              "name": "Translate",
+              "buffer_index": 10
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 12
+            }
+          ]
+        },
+        {
+          "name": "CENTER_RT",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 7
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 5
+            },
+            {
+              "name": "Translate",
+              "buffer_index": 6
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 8
+            }
+          ]
+        },
+        {
+          "name": "GBL_RT",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 3
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 1
+            },
+            {
+              "name": "Scale",
+              "buffer_index": 0
+            },
+            {
+              "name": "Translate",
+              "buffer_index": 2
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 4
+            }
+          ]
+        },
+        {
+          "name": "HIZA_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 56
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 55
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 57
+            }
+          ]
+        },
+        {
+          "name": "HIZA_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 68
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 67
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 69
+            }
+          ]
+        },
+        {
+          "name": "KATA_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 23
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 22
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 24
+            }
+          ]
+        },
+        {
+          "name": "KATA_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 35
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 34
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 36
+            }
+          ]
+        },
+        {
+          "name": "KOSHI",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 50
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 49
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 51
+            }
+          ]
+        },
+        {
+          "name": "KUBI",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 44
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 43
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 45
+            }
+          ]
+        },
+        {
+          "name": "MOMO_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 53
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 52
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 54
+            }
+          ]
+        },
+        {
+          "name": "MOMO_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 65
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 64
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 66
+            }
+          ]
+        },
+        {
+          "name": "MUNE1",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 14
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 13
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 15
+            }
+          ]
+        },
+        {
+          "name": "MUNE2",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 17
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 16
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 18
+            }
+          ]
+        },
+        {
+          "name": "SAKOTSU_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 20
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 19
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 21
+            }
+          ]
+        },
+        {
+          "name": "SAKOTSU_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 32
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 31
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 33
+            }
+          ]
+        },
+        {
+          "name": "TE_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 29
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 28
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 30
+            }
+          ]
+        },
+        {
+          "name": "TE_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 41
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 40
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 42
+            }
+          ]
+        },
+        {
+          "name": "TSUMASAKI_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 62
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 61
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 63
+            }
+          ]
+        },
+        {
+          "name": "TSUMASAKI_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 74
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 73
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 75
+            }
+          ]
+        },
+        {
+          "name": "UDE_L",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 26
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 25
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 27
+            }
+          ]
+        },
+        {
+          "name": "UDE_R",
+          "track_type": "Transform",
+          "properties": [
+            {
+              "name": "CompensateScale",
+              "buffer_index": 38
+            },
+            {
+              "name": "Rotate",
+              "buffer_index": 37
+            },
+            {
+              "name": "Visibility",
+              "buffer_index": 39
+            }
+          ]
+        }
+      ],
+      "buffers": [
+        "033000000000803f0000803f0000803f",
+        "034000000000000000000000000000000000803f",
+        "03300000000000000000000000000000",
+        "131000000000",
+        "13100000ff7f",
+        "034000000000000000000000000000000000803f",
+        "03300000000000000000204100000000",
+        "131000000000",
+        "13100000ff7f",
+        "034000000000000000000000000000000000803f",
+        "03300000000000000000404000000000",
+        "131000000000",
+        "13100000ff7f",
+        "034000003fadda3ee943c73e9c53193f41ef0d3f",
+        "131000000000",
+        "13100000ff7f",
+        "0340000008967ebc72cfe7bba513893d6f637f3f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000412abdbe202abdbe2e581abf2e581a3f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000f8c2f4bea6f0883e8ec906bf5871263f",
+        "131000000000",
+        "13100000ff7f",
+        "034000000000000000000000e141f3bec442613f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000c5e72e3f1aceabbd6d0bb53dc24f383f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000977212bf2fa50e3fc1e4de3e10cdd43e",
+        "131000000000",
+        "13100000ff7f",
+        "034000004c3804bf6309e3be8a21f13ef0a20f3f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000000000000000000009a4fcbee7a95e3f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000e944323f4678fb3d4678fbbde944323f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000e620683d49be0ebc5ca5013a31947f3f",
+        "131000000000",
+        "13100000ff7f",
+        "0340000040a2113f2046d83effca023fb935f93e",
+        "131000000000",
+        "13100000ff7f",
+        "0340000010cdd4be10cdd43e977212bfa872123f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000817af3bd685a12be7730e2becdad603f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000000000000000000003b4513fbfd5123f",
+        "131000000000",
+        "13100000ff7f",
+        "0340000014364dbc9e9cdbbbdc0c18bc90f67f3f",
+        "131000000000",
+        "13100000ff7f",
+        "034000000000000000000000f70435bff704353f",
+        "131000000000",
+        "13100000ff7f",
+        "0340000029d68f3d3aa78e3d739c3bbeb7637a3f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000000000000000000008cde63ea983643f",
+        "131000000000",
+        "13100000ff7f",
+        "03400000b7f9f5bc6c55373c001b303e5f0d7c3f",
+        "131000000000",
+        "13100000ff7f",
+        "034000000000000000000000f70435bff704353f",
+        "131000000000",
+        "13100000ff7f"
+      ]
+    }
+  }
+}

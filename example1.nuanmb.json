@@ -1,0 +1,570 @@
+{
+  "Anim": {
+    "V20": {
+      "final_frame_index": 1.0,
+      "unk1": 1,
+      "unk2": 3,
+      "name": "A00ItemHandGrip.nuanmx",
+      "groups": [
+        {
+          "group_type": "Transform",
+          "nodes": [
+            {
+              "name": "FingerR10",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 0,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR11",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1024,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR12",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1088,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR13",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1152,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR14_eff",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1216,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR20",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 64,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR21",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 768,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR22",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 832,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR23",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 896,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR24_eff",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 960,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR30",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 128,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR31",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 512,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR32",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 576,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR33",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 640,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR34_eff",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 704,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR40",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 192,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR41",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 256,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR42",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 320,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR43",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 384,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR44_eff",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 448,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR51",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1280,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR52",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1344,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR53",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1408,
+                  "data_size": 44
+                }
+              ]
+            },
+            {
+              "name": "FingerR54_eff",
+              "tracks": [
+                {
+                  "name": "Transform",
+                  "flags": {
+                    "track_type": "Transform",
+                    "compression_type": "ConstTransform"
+                  },
+                  "frame_count": 1,
+                  "transform_flags": {
+                    "bytes": [
+                      1,
+                      0,
+                      0,
+                      0
+                    ]
+                  },
+                  "data_offset": 1472,
+                  "data_size": 44
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "buffer": "0000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f00000000bd3786b5000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f5b1c9f3cff6bba3d94faaa3eeb1f703f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f000000000000000069c5f73e1407603f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000c6f8003e23f67d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803fec1bb13b41bf0a3df41abb3ec9216e3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f000000000000000016a6033f2a8e5b3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000e0da093e6dab7d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f1ffdc83bd6743d3c1d3dc63e3a026c3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000bb7e053f09705a3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f00000000000000007efe0b3eaf987d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f55ac85bda03404be6d73c33e5fb2693f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000dbbe0f3f45d5533f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f00000000000000006210183e56297d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f2cba39bf3d9b19bf603c433e65538e3e0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803fa4c3a2bb8400aebb2b6ad03d08aa7e3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000e8319a3e5c1d743f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000"
+    }
+  }
+}
