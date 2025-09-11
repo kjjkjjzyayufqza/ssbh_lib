@@ -1,570 +1,900 @@
 {
-  "Anim": {
-    "V20": {
-      "final_frame_index": 1.0,
-      "unk1": 1,
-      "unk2": 3,
-      "name": "A00ItemHandGrip.nuanmx",
-      "groups": [
+  "major_version": 2,
+  "minor_version": 0,
+  "final_frame_index": 1.0,
+  "groups": [
+    {
+      "group_type": "Transform",
+      "nodes": [
         {
-          "group_type": "Transform",
-          "nodes": [
+          "name": "FingerR10",
+          "tracks": [
             {
-              "name": "FingerR10",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 0,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": false,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR11",
+          "tracks": [
             {
-              "name": "FingerR11",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1024,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": -0.0652701,
+                      "y": -0.129107,
+                      "z": 0.38174,
+                      "w": 0.912878
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR12",
+          "tracks": [
             {
-              "name": "FingerR12",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1088,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.561506,
+                      "w": 0.827473
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR13",
+          "tracks": [
             {
-              "name": "FingerR13",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1152,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.1485,
+                      "w": 0.988912
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR14_eff",
+          "tracks": [
             {
-              "name": "FingerR14_eff",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1216,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR20",
+          "tracks": [
             {
-              "name": "FingerR20",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 64,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR21",
+          "tracks": [
             {
-              "name": "FingerR21",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 768,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.00613369,
+                      "y": 0.0115635,
+                      "z": 0.387185,
+                      "w": 0.921909
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR22",
+          "tracks": [
             {
-              "name": "FingerR22",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 832,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.521465,
+                      "w": 0.853272
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR23",
+          "tracks": [
             {
-              "name": "FingerR23",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 896,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.136713,
+                      "w": 0.990611
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR24_eff",
+          "tracks": [
             {
-              "name": "FingerR24_eff",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 960,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR30",
+          "tracks": [
             {
-              "name": "FingerR30",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 128,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR31",
+          "tracks": [
             {
-              "name": "FingerR31",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 512,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.00540494,
+                      "y": 0.0338738,
+                      "z": 0.36544,
+                      "w": 0.930203
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR32",
+          "tracks": [
             {
-              "name": "FingerR32",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 576,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.514253,
+                      "w": 0.857638
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR33",
+          "tracks": [
             {
-              "name": "FingerR33",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 640,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.134624,
+                      "w": 0.990897
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR34_eff",
+          "tracks": [
             {
-              "name": "FingerR34_eff",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 704,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR40",
+          "tracks": [
             {
-              "name": "FingerR40",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 192,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": -0.000001,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR41",
+          "tracks": [
             {
-              "name": "FingerR41",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 256,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0194227,
+                      "y": 0.0910263,
+                      "z": 0.333943,
+                      "w": 0.937987
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR42",
+          "tracks": [
             {
-              "name": "FingerR42",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 320,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.483928,
+                      "w": 0.875108
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR43",
+          "tracks": [
             {
-              "name": "FingerR43",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 384,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.125949,
+                      "w": 0.992037
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR44_eff",
+          "tracks": [
             {
-              "name": "FingerR44_eff",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 448,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR51",
+          "tracks": [
             {
-              "name": "FingerR51",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1280,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": -0.725497,
+                      "y": -0.600025,
+                      "z": 0.19066,
+                      "w": 0.27798
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR52",
+          "tracks": [
             {
-              "name": "FingerR52",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1344,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": -0.00496717,
+                      "y": -0.00531012,
+                      "z": 0.101765,
+                      "w": 0.994782
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR53",
+          "tracks": [
             {
-              "name": "FingerR53",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1408,
-                  "data_size": 44
-                }
-              ]
-            },
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.301162,
+                      "w": 0.953573
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "FingerR54_eff",
+          "tracks": [
             {
-              "name": "FingerR54_eff",
-              "tracks": [
-                {
-                  "name": "Transform",
-                  "flags": {
-                    "track_type": "Transform",
-                    "compression_type": "ConstTransform"
-                  },
-                  "frame_count": 1,
-                  "transform_flags": {
-                    "bytes": [
-                      1,
-                      0,
-                      0,
-                      0
-                    ]
-                  },
-                  "data_offset": 1472,
-                  "data_size": 44
-                }
-              ]
+              "name": "Transform",
+              "compensate_scale": true,
+              "transform_flags": {
+                "override_translation": true,
+                "override_rotation": false,
+                "override_scale": false,
+                "override_compensate_scale": false
+              },
+              "values": {
+                "Transform": [
+                  {
+                    "scale": {
+                      "x": 1.0,
+                      "y": 1.0,
+                      "z": 1.0
+                    },
+                    "rotation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0,
+                      "w": 1.0
+                    },
+                    "translation": {
+                      "x": 0.0,
+                      "y": 0.0,
+                      "z": 0.0
+                    }
+                  }
+                ]
+              }
             }
           ]
         }
-      ],
-      "buffer": "0000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000000000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f00000000bd3786b5000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f5b1c9f3cff6bba3d94faaa3eeb1f703f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f000000000000000069c5f73e1407603f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000c6f8003e23f67d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803fec1bb13b41bf0a3df41abb3ec9216e3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f000000000000000016a6033f2a8e5b3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000e0da093e6dab7d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f1ffdc83bd6743d3c1d3dc63e3a026c3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000bb7e053f09705a3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f00000000000000007efe0b3eaf987d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f55ac85bda03404be6d73c33e5fb2693f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000dbbe0f3f45d5533f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f00000000000000006210183e56297d3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f2cba39bf3d9b19bf603c433e65538e3e0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803fa4c3a2bb8400aebb2b6ad03d08aa7e3f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000e8319a3e5c1d743f0000000000000000000000000100000000000000000000000000000000000000000000000000803f0000803f0000803f0000000000000000000000000000803f0000000000000000000000000100000000000000000000000000000000000000"
+      ]
     }
-  }
+  ]
 }

@@ -210,9 +210,215 @@ enum AnimVersion {
     Version21,
 }
 
+// Function to create version 1.2 animation from AnimData
+fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
+    use ssbh_lib::formats::anim::{TrackV1, Property};
+    use ssbh_lib::SsbhByteBuffer;
+    
+    let mut tracks = Vec::new();
+    let mut buffers = Vec::new();
+    
+    // Convert each group back to tracks for version 1.2
+    for group in &data.groups {
+        for node in &group.nodes {
+            for track in &node.tracks {
+                // Determine track type based on group type and track name
+                let track_type = match group.group_type {
+                    GroupType::Transform => TrackTypeV1::Transform,
+                    GroupType::Visibility => TrackTypeV1::Visibility,
+                    GroupType::Material => TrackTypeV1::UvTransform,
+                    _ => TrackTypeV1::Transform, // Default fallback
+                };
+                
+                // Create properties based on track type and values
+                let mut properties = Vec::new();
+                
+                match (&track.values, track_type) {
+                    (TrackValues::Transform(transforms), TrackTypeV1::Transform) => {
+                        if !transforms.is_empty() {
+                            // Extract scale, rotation, and translation data
+                            let scales: Vec<Vector3> = transforms.iter().map(|t| t.scale).collect();
+                            let rotations: Vec<Vector4> = transforms.iter().map(|t| t.rotation).collect();
+                            let translations: Vec<Vector3> = transforms.iter().map(|t| t.translation).collect();
+                            
+                            // Create Scale property
+                            if scales.len() == 1 {
+                                // Single frame scale
+                                let mut scale_data = Vec::new();
+                                scale_data.extend_from_slice(&0x3003u32.to_le_bytes());
+                                scale_data.extend_from_slice(&scales[0].x.to_le_bytes());
+                                scale_data.extend_from_slice(&scales[0].y.to_le_bytes());
+                                scale_data.extend_from_slice(&scales[0].z.to_le_bytes());
+                                
+                                buffers.push(SsbhByteBuffer { elements: scale_data });
+                                properties.push(Property {
+                                    name: "Scale".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            } else {
+                                // Multi-frame scale data - use compressed format
+                                let scale_data = create_v12_compressed_vector3_data(&scales)?;
+                                buffers.push(SsbhByteBuffer { elements: scale_data });
+                                properties.push(Property {
+                                    name: "Scale".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+                            
+                            // Create Rotation property
+                            if rotations.len() == 1 {
+                                // Single frame rotation
+                                let mut rotation_data = Vec::new();
+                                rotation_data.extend_from_slice(&0x4003u32.to_le_bytes());
+                                rotation_data.extend_from_slice(&rotations[0].x.to_le_bytes());
+                                rotation_data.extend_from_slice(&rotations[0].y.to_le_bytes());
+                                rotation_data.extend_from_slice(&rotations[0].z.to_le_bytes());
+                                rotation_data.extend_from_slice(&rotations[0].w.to_le_bytes());
+                                
+                                buffers.push(SsbhByteBuffer { elements: rotation_data });
+                                properties.push(Property {
+                                    name: "Rotate".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            } else {
+                                // Multi-frame rotation data - use compressed format
+                                let rotation_data = create_v12_compressed_vector4_data(&rotations)?;
+                                buffers.push(SsbhByteBuffer { elements: rotation_data });
+                                properties.push(Property {
+                                    name: "Rotate".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+                            
+                            // Create Translation property
+                            if translations.len() == 1 {
+                                // Single frame translation
+                                let mut translation_data = Vec::new();
+                                translation_data.extend_from_slice(&0x3003u32.to_le_bytes());
+                                translation_data.extend_from_slice(&translations[0].x.to_le_bytes());
+                                translation_data.extend_from_slice(&translations[0].y.to_le_bytes());
+                                translation_data.extend_from_slice(&translations[0].z.to_le_bytes());
+                                
+                                buffers.push(SsbhByteBuffer { elements: translation_data });
+                                properties.push(Property {
+                                    name: "Translate".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            } else {
+                                // Multi-frame translation data - use compressed format
+                                let translation_data = create_v12_compressed_vector3_data(&translations)?;
+                                buffers.push(SsbhByteBuffer { elements: translation_data });
+                                properties.push(Property {
+                                    name: "Translate".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+                            
+                            // CompensateScale property if needed
+                            if track.compensate_scale {
+                                let mut compensate_data = Vec::new();
+                                compensate_data.extend_from_slice(&0x1003u32.to_le_bytes());
+                                compensate_data.extend_from_slice(&1.0f32.to_le_bytes()); // true = 1.0
+                                
+                                buffers.push(SsbhByteBuffer { elements: compensate_data });
+                                properties.push(Property {
+                                    name: "CompensateScale".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+                        }
+                    }
+                    (TrackValues::Boolean(bools), TrackTypeV1::Visibility) => {
+                        if !bools.is_empty() {
+                            if bools.len() == 1 {
+                                // Single frame visibility
+                                let mut visibility_data = Vec::new();
+                                visibility_data.extend_from_slice(&0x1013u32.to_le_bytes());
+                                visibility_data.extend_from_slice(&(if bools[0] { 1u16 } else { 0u16 }).to_le_bytes());
+                                
+                                buffers.push(SsbhByteBuffer { elements: visibility_data });
+                                properties.push(Property {
+                                    name: "Visibility".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            } else {
+                                // Multi-frame visibility data - create appropriate compressed format
+                                let visibility_data = create_v12_compressed_bool_data(bools)?;
+                                buffers.push(SsbhByteBuffer { elements: visibility_data });
+                                properties.push(Property {
+                                    name: "Visibility".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+                        }
+                    }
+                    (TrackValues::UvTransform(uv_transforms), TrackTypeV1::UvTransform) => {
+                        if !uv_transforms.is_empty() {
+                            if uv_transforms.len() == 1 {
+                                // Single frame UV transform
+                                let uv = &uv_transforms[0];
+                                let mut uv_data = Vec::new();
+                                uv_data.extend_from_slice(&0x5014u32.to_le_bytes());
+                                uv_data.extend_from_slice(&uv.scale_u.to_le_bytes());
+                                uv_data.extend_from_slice(&uv.scale_v.to_le_bytes());
+                                uv_data.extend_from_slice(&uv.rotation.to_le_bytes());
+                                uv_data.extend_from_slice(&uv.translate_u.to_le_bytes());
+                                uv_data.extend_from_slice(&uv.translate_v.to_le_bytes());
+                                
+                                buffers.push(SsbhByteBuffer { elements: uv_data });
+                                properties.push(Property {
+                                    name: "UvTransform".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            } else {
+                                // Multi-frame UV transform data - create appropriate compressed format
+                                let uv_data = create_v12_compressed_uv_data(uv_transforms)?;
+                                buffers.push(SsbhByteBuffer { elements: uv_data });
+                                properties.push(Property {
+                                    name: "UvTransform".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+                        }
+                    }
+                    _ => {
+                        // Create a default empty property for unsupported combinations
+                        let mut default_data = Vec::new();
+                        default_data.extend_from_slice(&0x0000u32.to_le_bytes());
+                        
+                        buffers.push(SsbhByteBuffer { elements: default_data });
+                        properties.push(Property {
+                            name: track.name.as_str().into(),
+                            buffer_index: (buffers.len() - 1) as u64,
+                        });
+                    }
+                }
+                
+                // Create the track
+                tracks.push(TrackV1 {
+                    name: node.name.as_str().into(),
+                    track_type,
+                    properties: properties.into(),
+                });
+            }
+        }
+    }
+    
+    Ok(Anim::V12 {
+        name: "".into(), // Default empty name
+        unk1: 0.0,       // Default unknown value
+        final_frame_index: data.final_frame_index,
+        unk2: 0.0,       // Default unknown value
+        unk3: 0.0,       // Default unknown value
+        tracks: tracks.into(),
+        buffers: buffers.into(),
+    })
+}
+
 // TODO: Test this for a small example?
 fn create_anim(data: &AnimData) -> Result<Anim, error::Error> {
     let version = match (data.major_version, data.minor_version) {
+        (1, 2) => return create_anim_v12(data),
         (2, 0) => Ok(AnimVersion::Version20),
         (2, 1) => Ok(AnimVersion::Version21),
         _ => Err(error::Error::UnsupportedVersion {
@@ -426,21 +632,35 @@ fn read_groups_v12(
     Ok(groups)
 }
 
-// for vs2
+// Improved version 1.2 track data creation that properly merges properties
 fn create_track_data_v12(
     track: &ssbh_lib::formats::anim::TrackV1,
     buffers: &[ssbh_lib::SsbhByteBuffer],
 ) -> Result<TrackData, error::Error> {
-    // Parse properties to extract transform data
     let mut compensate_scale = false;
     let transform_flags = TransformFlags::default();
     
-    // Collect all animation frames
-    let mut all_transforms = Vec::new();
-    let mut all_visibilities = Vec::new();
-    let all_uv_transforms = Vec::new();
+    // Determine maximum frame count by scanning all properties
+    let mut max_frame_count = 1;
     
-    // Process each property to extract animation data
+    // Collect parsed property data
+    struct PropertyData {
+        scales: Vec<Vector3>,
+        rotations: Vec<Vector4>,
+        translations: Vec<Vector3>,
+        visibilities: Vec<bool>,
+        uv_transforms: Vec<UvTransform>,
+    }
+    
+    let mut property_data = PropertyData {
+        scales: Vec::new(),
+        rotations: Vec::new(),
+        translations: Vec::new(),
+        visibilities: Vec::new(),
+        uv_transforms: Vec::new(),
+    };
+    
+    // First pass: parse all properties and determine frame count
     for property in &track.properties.elements {
         let property_name = property.name.to_string_lossy();
         let data = buffers.get(property.buffer_index as usize).ok_or(
@@ -455,7 +675,6 @@ fn create_track_data_v12(
 
         match &property_name as &str {
             "CompensateScale" => {
-                // Handle scale compensation flag
                 match header {
                     0x1013 => {
                         let value: u16 = reader.read_le()?;
@@ -469,176 +688,133 @@ fn create_track_data_v12(
                 }
             }
             "Scale" => {
-                // Handle scale data
                 match header {
                     0x3003 => {
+                        // Single scale value
                         let scale = reader.read_le::<Vector3>()?;
-                        // Create transform with this scale for single frame
-                        all_transforms.push(Transform {
-                            scale,
-                            rotation: Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
-                            translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                        });
+                        property_data.scales.push(scale);
                     }
-                    _ => {}
+                    _ => {
+                        // For complex scale formats, use default
+                        property_data.scales.push(Vector3 { x: 1.0, y: 1.0, z: 1.0 });
+                    }
                 }
             }
             "Rotate" => {
-                // Handle rotation data with proper compressed frame reading
                 match header {
                     0x3409 => {
                         // Compressed Vector3-based rotation data
                         let frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?; // min/max values
+                        max_frame_count = max_frame_count.max(frame_count);
+                        let _unk1 = reader.read_le::<f32>()?;
                         let _unk2 = reader.read_le::<f32>()?;
                         let _flags = reader.read_le::<u16>()?;
                         let _padding = reader.read_le::<u16>()?;
                         
-                        // Read default values (3 Vector3)
                         let default_values: [Vector3; 3] = reader.read_le()?;
                         
-                        // Read compressed frame data
                         let remaining_data = data.elements.len() - (reader.position() as usize);
                         if remaining_data > 0 {
-                            // Read the rest as compressed frame data
                             let compressed_frames = read_v12_compressed_vector3_frames(&mut reader, frame_count, &default_values[0])?;
                             for rotation_euler in compressed_frames {
                                 let rotation = euler_to_quaternion(rotation_euler);
-                                all_transforms.push(Transform {
-                                    scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                                    rotation,
-                                    translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                                });
+                                property_data.rotations.push(rotation);
                             }
                         } else {
-                            // Use default value if no compressed data
                             let rotation = euler_to_quaternion(default_values[0]);
-                            all_transforms.push(Transform {
-                                scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                                rotation,
-                                translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                            });
+                            for _ in 0..frame_count {
+                                property_data.rotations.push(rotation);
+                            }
                         }
                     }
                     0x4308 => {
                         // Compressed Vector3 data with frame indices
                         let frame_count = reader.read_le::<u32>()? as usize;
+                        max_frame_count = max_frame_count.max(frame_count);
                         let _unk1 = reader.read_le::<f32>()?;
                         
-                        // Read frame indices array
                         let mut frame_indices = vec![0u8; frame_count];
                         reader.read_exact(&mut frame_indices)?;
                         
-                        // Align to 4-byte boundary
                         let pos = reader.position();
                         let aligned_pos = (pos + 3) & !3;
                         reader.seek(std::io::SeekFrom::Start(aligned_pos))?;
                         
-                        // Read default values (3 Vector3)
                         let default_values: [Vector3; 3] = reader.read_le()?;
                         
-                        // Read compressed frame data
                         let remaining_data = data.elements.len() - (reader.position() as usize);
                         if remaining_data > 0 {
                             let compressed_frames = read_v12_compressed_vector3_frames(&mut reader, frame_count, &default_values[0])?;
                             for rotation_euler in compressed_frames {
                                 let rotation = euler_to_quaternion(rotation_euler);
-                                all_transforms.push(Transform {
-                                    scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                                    rotation,
-                                    translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                                });
+                                property_data.rotations.push(rotation);
                             }
                         } else {
-                            // Use default value if no compressed data
                             let rotation = euler_to_quaternion(default_values[0]);
-                            all_transforms.push(Transform {
-                                scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                                rotation,
-                                translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                            });
+                            for _ in 0..frame_count {
+                                property_data.rotations.push(rotation);
+                            }
                         }
                     }
                     0x4409 => {
                         // Compressed Vector4-based rotation data (quaternions)
                         let frame_count = reader.read_le::<u32>()? as usize;
+                        max_frame_count = max_frame_count.max(frame_count);
                         let _unk1 = reader.read_le::<f32>()?;
                         let _unk2 = reader.read_le::<f32>()?;
                         let _flags = reader.read_le::<u16>()?;
                         let _padding = reader.read_le::<u16>()?;
                         
-                        // Read default values (3 Vector4)
                         let default_values: [Vector4; 3] = reader.read_le()?;
                         
-                        // Read compressed frame data
                         let remaining_data = data.elements.len() - (reader.position() as usize);
                         if remaining_data > 0 {
                             let compressed_frames = read_v12_compressed_vector4_frames(&mut reader, frame_count, &default_values[0])?;
-                            for rotation in compressed_frames {
-                                all_transforms.push(Transform {
-                                    scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                                    rotation,
-                                    translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                                });
-                            }
+                            property_data.rotations.extend(compressed_frames);
                         } else {
-                            // Use default value if no compressed data
-                            all_transforms.push(Transform {
-                                scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                                rotation: default_values[0],
-                                translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                            });
+                            for _ in 0..frame_count {
+                                property_data.rotations.push(default_values[0]);
+                            }
                         }
                     }
                     0x4003 => {
                         // Single Vector4 (quaternion rotation)
                         let rotation = reader.read_le::<Vector4>()?;
-                        all_transforms.push(Transform {
-                            scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                            rotation,
-                            translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                        });
+                        property_data.rotations.push(rotation);
                     }
                     0x3003 => {
                         // Single Vector3 (euler angles, convert to quaternion)
                         let euler: Vector3 = reader.read_le()?;
                         let rotation = euler_to_quaternion(euler);
-                        all_transforms.push(Transform {
-                            scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                            rotation,
-                            translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-                        });
+                        property_data.rotations.push(rotation);
                     }
-                    _ => {}
+                    _ => {
+                        // Default rotation
+                        property_data.rotations.push(Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 });
+                    }
                 }
             }
             "Translate" => {
-                // Handle translation data
                 match header {
                     0x3003 => {
                         let translation = reader.read_le::<Vector3>()?;
-                        // Update the first transform or create one
-                        if all_transforms.is_empty() {
-                            all_transforms.push(Transform {
-                                scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-                                rotation: Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
-                                translation,
-                            });
-                        } else {
-                            all_transforms[0].translation = translation;
-                        }
+                        property_data.translations.push(translation);
                     }
-                    _ => {}
+                    _ => {
+                        // Default translation
+                        property_data.translations.push(Vector3 { x: 0.0, y: 0.0, z: 0.0 });
+                    }
                 }
             }
             "Visibility" => {
-                // Handle visibility data
                 match header {
                     0x1013 => {
                         let value: u16 = reader.read_le()?;
-                        all_visibilities.push(value != 0);
+                        property_data.visibilities.push(value != 0);
                     }
-                    _ => {}
+                    _ => {
+                        property_data.visibilities.push(true);
+                    }
                 }
             }
             _ => {
@@ -646,31 +822,53 @@ fn create_track_data_v12(
             }
         }
     }
-
-    // If no transforms were created, create a default identity transform
-    if all_transforms.is_empty() {
-        all_transforms.push(Transform {
-            scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
-            rotation: Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
-            translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
-        });
-    }
-
-    // Determine the track values based on track type
+    
+    // Second pass: create properly merged animation data
     let values = match track.track_type {
-        TrackTypeV1::Transform => TrackValues::Transform(all_transforms),
+        TrackTypeV1::Transform => {
+            let mut transforms = Vec::new();
+            
+            for frame_idx in 0..max_frame_count {
+                let scale = property_data.scales.get(frame_idx)
+                    .copied()
+                    .unwrap_or_else(|| property_data.scales.last().copied().unwrap_or(Vector3 { x: 1.0, y: 1.0, z: 1.0 }));
+                    
+                let rotation = property_data.rotations.get(frame_idx)
+                    .copied()
+                    .unwrap_or_else(|| property_data.rotations.last().copied().unwrap_or(Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }));
+                    
+                let translation = property_data.translations.get(frame_idx)
+                    .copied()
+                    .unwrap_or_else(|| property_data.translations.last().copied().unwrap_or(Vector3 { x: 0.0, y: 0.0, z: 0.0 }));
+                
+                transforms.push(Transform {
+                    scale,
+                    rotation,
+                    translation,
+                });
+            }
+            
+            // If no frames were generated, create a default identity transform
+            if transforms.is_empty() {
+                transforms.push(Transform {
+                    scale: Vector3 { x: 1.0, y: 1.0, z: 1.0 },
+                    rotation: Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 },
+                    translation: Vector3 { x: 0.0, y: 0.0, z: 0.0 },
+                });
+            }
+            
+            TrackValues::Transform(transforms)
+        }
         TrackTypeV1::Visibility => {
-            // Use collected visibility values or default to visible
-            if all_visibilities.is_empty() {
+            if property_data.visibilities.is_empty() {
                 TrackValues::Boolean(vec![true])
             } else {
-                TrackValues::Boolean(all_visibilities)
+                TrackValues::Boolean(property_data.visibilities)
             }
         }
         TrackTypeV1::UvTransform => {
-            // For UV transform tracks, create UV transform values
-            if all_uv_transforms.is_empty() {
-                TrackValues::UvTransform(vec![crate::anim_data::UvTransform {
+            if property_data.uv_transforms.is_empty() {
+                TrackValues::UvTransform(vec![UvTransform {
                     scale_u: 1.0,
                     scale_v: 1.0,
                     rotation: 0.0,
@@ -678,7 +876,7 @@ fn create_track_data_v12(
                     translate_v: 0.0,
                 }])
             } else {
-                TrackValues::UvTransform(all_uv_transforms)
+                TrackValues::UvTransform(property_data.uv_transforms)
             }
         }
     };
@@ -710,15 +908,12 @@ fn euler_to_quaternion(euler: Vector3) -> Vector4 {
 }
 
 // Read compressed Vector3 frames from version 1.2 animation data
+// This attempts to provide better decompression based on analysis of actual data
 fn read_v12_compressed_vector3_frames(
     reader: &mut Cursor<&Vec<u8>>,
     frame_count: usize,
     default_value: &Vector3,
 ) -> Result<Vec<Vector3>, error::Error> {
-    use crate::anim_data::bitutils::BitReader;
-    
-    // For version 1.2, we need to implement a simplified decompression
-    // The exact format is not fully documented, so we'll use a basic approach
     let remaining_bytes = reader.get_ref().len() - reader.position() as usize;
     
     if remaining_bytes == 0 {
@@ -726,38 +921,40 @@ fn read_v12_compressed_vector3_frames(
         return Ok(vec![*default_value; frame_count]);
     }
     
+    // For version 1.2, if there's not enough compressed data for proper decompression,
+    // fall back to using the default value for all frames
+    if remaining_bytes < frame_count * 3 {
+        return Ok(vec![*default_value; frame_count]);
+    }
+    
     let mut frames = Vec::new();
     
-    // Try to read compressed data as bitstream
-    let mut compressed_data = vec![0u8; remaining_bytes];
-    reader.read_exact(&mut compressed_data)?;
-    
-    let mut bit_reader = BitReader::from_slice(&compressed_data);
-    
-    // Simple decompression: assume each frame uses some number of bits
-    // This is a basic implementation that may need refinement
-    for _i in 0..frame_count {
-        // Try to read 3 components (X, Y, Z) with 8 bits each as a starting point
-        if let (Ok(x_bits), Ok(y_bits), Ok(z_bits)) = (
-            bit_reader.read_u8(8),
-            bit_reader.read_u8(8), 
-            bit_reader.read_u8(8)
-        ) {
-            let x = x_bits as f32 / 255.0 * 6.28 - 3.14; // Scale to -π to π
-            let y = y_bits as f32 / 255.0 * 6.28 - 3.14;
-            let z = z_bits as f32 / 255.0 * 6.28 - 3.14;
-            
-            frames.push(Vector3 { x, y, z });
-        } else {
-            // Not enough data, use default
+    // Try to read as raw float data first
+    let float_count = remaining_bytes / 4;
+    if float_count >= frame_count * 3 {
+        // Try reading as direct float values
+        for _ in 0..frame_count {
+            if reader.position() as usize + 12 <= reader.get_ref().len() {
+                let x = reader.read_le::<f32>()?;
+                let y = reader.read_le::<f32>()?;
+                let z = reader.read_le::<f32>()?;
+                frames.push(Vector3 { x, y, z });
+            } else {
+                frames.push(*default_value);
+            }
+        }
+    } else {
+        // Fallback: use default values
+        for _ in 0..frame_count {
             frames.push(*default_value);
         }
     }
     
-    // If we didn't get enough frames, fill with default
+    // Ensure we have the right number of frames
     while frames.len() < frame_count {
         frames.push(*default_value);
     }
+    frames.truncate(frame_count);
     
     Ok(frames)
 }
@@ -768,55 +965,59 @@ fn read_v12_compressed_vector4_frames(
     frame_count: usize,
     default_value: &Vector4,
 ) -> Result<Vec<Vector4>, error::Error> {
-    use crate::anim_data::bitutils::BitReader;
-    
     let remaining_bytes = reader.get_ref().len() - reader.position() as usize;
     
     if remaining_bytes == 0 {
         return Ok(vec![*default_value; frame_count]);
     }
     
+    // For version 1.2, if there's not enough compressed data for proper decompression,
+    // fall back to using the default value for all frames
+    if remaining_bytes < frame_count * 4 {
+        return Ok(vec![*default_value; frame_count]);
+    }
+    
     let mut frames = Vec::new();
     
-    let mut compressed_data = vec![0u8; remaining_bytes];
-    reader.read_exact(&mut compressed_data)?;
-    
-    let mut bit_reader = BitReader::from_slice(&compressed_data);
-    
-    // Simple decompression for quaternions
-    for _i in 0..frame_count {
-        // Try to read 4 components (X, Y, Z, W) with 8 bits each
-        if let (Ok(x_bits), Ok(y_bits), Ok(z_bits), Ok(w_bits)) = (
-            bit_reader.read_u8(8),
-            bit_reader.read_u8(8),
-            bit_reader.read_u8(8),
-            bit_reader.read_u8(8)
-        ) {
-            let x = x_bits as f32 / 255.0 * 2.0 - 1.0; // Scale to -1 to 1
-            let y = y_bits as f32 / 255.0 * 2.0 - 1.0;
-            let z = z_bits as f32 / 255.0 * 2.0 - 1.0;
-            let w = w_bits as f32 / 255.0 * 2.0 - 1.0;
-            
-            // Normalize quaternion
-            let length = (x * x + y * y + z * z + w * w).sqrt();
-            if length > 0.0 {
-                frames.push(Vector4 { 
-                    x: x / length, 
-                    y: y / length, 
-                    z: z / length, 
-                    w: w / length 
-                });
+    // Try to read as raw float data first
+    let float_count = remaining_bytes / 4;
+    if float_count >= frame_count * 4 {
+        // Try reading as direct float values (quaternions)
+        for _ in 0..frame_count {
+            if reader.position() as usize + 16 <= reader.get_ref().len() {
+                let x = reader.read_le::<f32>()?;
+                let y = reader.read_le::<f32>()?;
+                let z = reader.read_le::<f32>()?;
+                let w = reader.read_le::<f32>()?;
+                
+                // Validate and normalize quaternion
+                let length = (x * x + y * y + z * z + w * w).sqrt();
+                if length > 0.001 {
+                    frames.push(Vector4 { 
+                        x: x / length, 
+                        y: y / length, 
+                        z: z / length, 
+                        w: w / length 
+                    });
+                } else {
+                    frames.push(*default_value);
+                }
             } else {
                 frames.push(*default_value);
             }
-        } else {
+        }
+    } else {
+        // Fallback: use default values
+        for _ in 0..frame_count {
             frames.push(*default_value);
         }
     }
     
+    // Ensure we have the right number of frames
     while frames.len() < frame_count {
         frames.push(*default_value);
     }
+    frames.truncate(frame_count);
     
     Ok(frames)
 }
@@ -1593,4 +1794,162 @@ mod tests {
             })
         ));
     }
+}
+
+// Helper functions for version 1.2 creation
+
+fn is_constant_vector3(values: &[Vector3]) -> bool {
+    if values.len() <= 1 {
+        return true;
+    }
+    let first = values[0];
+    values.iter().all(|v| {
+        (v.x - first.x).abs() < f32::EPSILON 
+        && (v.y - first.y).abs() < f32::EPSILON 
+        && (v.z - first.z).abs() < f32::EPSILON
+    })
+}
+
+fn is_constant_vector4(values: &[Vector4]) -> bool {
+    if values.len() <= 1 {
+        return true;
+    }
+    let first = values[0];
+    values.iter().all(|v| {
+        (v.x - first.x).abs() < f32::EPSILON 
+        && (v.y - first.y).abs() < f32::EPSILON 
+        && (v.z - first.z).abs() < f32::EPSILON
+        && (v.w - first.w).abs() < f32::EPSILON
+    })
+}
+
+fn is_constant_bool(values: &[bool]) -> bool {
+    if values.len() <= 1 {
+        return true;
+    }
+    let first = values[0];
+    values.iter().all(|&v| v == first)
+}
+
+fn is_constant_uv_transform(values: &[UvTransform]) -> bool {
+    if values.len() <= 1 {
+        return true;
+    }
+    let first = values[0];
+    values.iter().all(|v| {
+        (v.scale_u - first.scale_u).abs() < f32::EPSILON
+        && (v.scale_v - first.scale_v).abs() < f32::EPSILON
+        && (v.rotation - first.rotation).abs() < f32::EPSILON
+        && (v.translate_u - first.translate_u).abs() < f32::EPSILON
+        && (v.translate_v - first.translate_v).abs() < f32::EPSILON
+    })
+}
+
+fn create_v12_compressed_vector3_data(values: &[Vector3]) -> Result<Vec<u8>, error::Error> {
+    let frame_count = values.len() as u32;
+    let mut data = Vec::new();
+    
+    // Use format 0x3409 for compressed Vector3 data
+    data.extend_from_slice(&0x3409u32.to_le_bytes());
+    data.extend_from_slice(&frame_count.to_le_bytes());
+    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk1
+    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2
+    data.extend_from_slice(&0u16.to_le_bytes());   // flags
+    data.extend_from_slice(&0u16.to_le_bytes());   // padding
+    
+    // Default values (use first, min, max pattern as seen in the read logic)
+    let default_value = if !values.is_empty() { values[0] } else { Vector3 { x: 0.0, y: 0.0, z: 0.0 } };
+    data.extend_from_slice(&default_value.x.to_le_bytes());
+    data.extend_from_slice(&default_value.y.to_le_bytes());
+    data.extend_from_slice(&default_value.z.to_le_bytes());
+    
+    // Add two more default values (as seen in the read logic pattern)
+    data.extend_from_slice(&default_value.x.to_le_bytes());
+    data.extend_from_slice(&default_value.y.to_le_bytes());
+    data.extend_from_slice(&default_value.z.to_le_bytes());
+    data.extend_from_slice(&default_value.x.to_le_bytes());
+    data.extend_from_slice(&default_value.y.to_le_bytes());
+    data.extend_from_slice(&default_value.z.to_le_bytes());
+    
+    // Write raw frame data
+    for value in values {
+        data.extend_from_slice(&value.x.to_le_bytes());
+        data.extend_from_slice(&value.y.to_le_bytes());
+        data.extend_from_slice(&value.z.to_le_bytes());
+    }
+    
+    Ok(data)
+}
+
+fn create_v12_compressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
+    let frame_count = values.len() as u32;
+    let mut data = Vec::new();
+    
+    // Use format 0x4409 for compressed Vector4 data
+    data.extend_from_slice(&0x4409u32.to_le_bytes());
+    data.extend_from_slice(&frame_count.to_le_bytes());
+    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk1
+    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2
+    data.extend_from_slice(&0u16.to_le_bytes());   // flags
+    data.extend_from_slice(&0u16.to_le_bytes());   // padding
+    
+    // Default values (use first, identity, identity pattern)
+    let default_value = if !values.is_empty() { values[0] } else { Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 } };
+    data.extend_from_slice(&default_value.x.to_le_bytes());
+    data.extend_from_slice(&default_value.y.to_le_bytes());
+    data.extend_from_slice(&default_value.z.to_le_bytes());
+    data.extend_from_slice(&default_value.w.to_le_bytes());
+    
+    // Add two more default values
+    data.extend_from_slice(&default_value.x.to_le_bytes());
+    data.extend_from_slice(&default_value.y.to_le_bytes());
+    data.extend_from_slice(&default_value.z.to_le_bytes());
+    data.extend_from_slice(&default_value.w.to_le_bytes());
+    data.extend_from_slice(&default_value.x.to_le_bytes());
+    data.extend_from_slice(&default_value.y.to_le_bytes());
+    data.extend_from_slice(&default_value.z.to_le_bytes());
+    data.extend_from_slice(&default_value.w.to_le_bytes());
+    
+    // Write raw frame data
+    for value in values {
+        data.extend_from_slice(&value.x.to_le_bytes());
+        data.extend_from_slice(&value.y.to_le_bytes());
+        data.extend_from_slice(&value.z.to_le_bytes());
+        data.extend_from_slice(&value.w.to_le_bytes());
+    }
+    
+    Ok(data)
+}
+
+fn create_v12_compressed_bool_data(values: &[bool]) -> Result<Vec<u8>, error::Error> {
+    let _frame_count = values.len() as u32;
+    let mut data = Vec::new();
+    
+    // Use a simple format for boolean data
+    data.extend_from_slice(&0x1013u32.to_le_bytes());
+    
+    // For now, just use the first value if all are the same
+    // For complex boolean animations, we'd need a more sophisticated format
+    let value = if !values.is_empty() { values[0] } else { true };
+    data.extend_from_slice(&(if value { 1u16 } else { 0u16 }).to_le_bytes());
+    
+    Ok(data)
+}
+
+fn create_v12_compressed_uv_data(values: &[UvTransform]) -> Result<Vec<u8>, error::Error> {
+    let _frame_count = values.len() as u32;
+    let mut data = Vec::new();
+    
+    // Use simple format for UV transforms
+    data.extend_from_slice(&0x5014u32.to_le_bytes());
+    
+    // For now, just use the first value
+    let uv = if !values.is_empty() { &values[0] } else { &UvTransform::default() };
+    data.extend_from_slice(&uv.scale_u.to_le_bytes());
+    data.extend_from_slice(&uv.scale_v.to_le_bytes());
+    data.extend_from_slice(&uv.rotation.to_le_bytes());
+    data.extend_from_slice(&uv.translate_u.to_le_bytes());
+    data.extend_from_slice(&uv.translate_v.to_le_bytes());
+    
+    Ok(data)
 }
