@@ -800,8 +800,51 @@ fn create_track_data_v12(
                         let translation = reader.read_le::<Vector3>()?;
                         property_data.translations.push(translation);
                     }
+                    0x3300 => {
+                        // Variant of single Vector3 - different header but same structure
+                        let translation = reader.read_le::<Vector3>()?;
+                        property_data.translations.push(translation);
+                    }
+                    0x3409 => {
+                        let frame_count_header = reader.read_le::<u32>()? as usize;
+                        max_frame_count = max_frame_count.max(frame_count_header);
+                        let _unk1 = reader.read_le::<f32>()?;
+                        let _unk2 = reader.read_le::<f32>()?;
+                        let _flags = reader.read_le::<u16>()?;
+                        let _padding = reader.read_le::<u16>()?;
+                        let default_values: [Vector3; 3] = reader.read_le()?;
+
+                        let compressed_frames = read_v12_compressed_vector3_frames(&mut reader, frame_count_header, &default_values[0])?;
+                        property_data.translations.extend(compressed_frames);
+                    }
+                    0x4308 => {
+                        // Compressed Vector3 data with frame indices
+                        let frame_count = reader.read_le::<u32>()? as usize;
+                        max_frame_count = max_frame_count.max(frame_count);
+                        let _unk1 = reader.read_le::<f32>()?;
+                        
+                        let mut frame_indices = vec![0u8; frame_count];
+                        reader.read_exact(&mut frame_indices)?;
+                        
+                        let pos = reader.position();
+                        let aligned_pos = (pos + 3) & !3;
+                        reader.seek(std::io::SeekFrom::Start(aligned_pos))?;
+                        
+                        let default_values: [Vector3; 3] = reader.read_le()?;
+                        
+                        let remaining_data = data.elements.len() - (reader.position() as usize);
+                        if remaining_data > 0 {
+                            let compressed_frames = read_v12_compressed_vector3_frames(&mut reader, frame_count, &default_values[0])?;
+                            property_data.translations.extend(compressed_frames);
+                        } else {
+                            for _ in 0..frame_count {
+                                property_data.translations.push(default_values[0]);
+                            }
+                        }
+                    }
                     _ => {
-                        // Default translation
+                        // Default translation - log unknown format for debugging
+                        eprintln!("Warning: Unknown Translate format header: 0x{:04X} for track {}", header, track.name.to_string_lossy());
                         property_data.translations.push(Vector3 { x: 0.0, y: 0.0, z: 0.0 });
                     }
                 }
@@ -914,48 +957,22 @@ fn read_v12_compressed_vector3_frames(
     frame_count: usize,
     default_value: &Vector3,
 ) -> Result<Vec<Vector3>, error::Error> {
-    let remaining_bytes = reader.get_ref().len() - reader.position() as usize;
-    
-    if remaining_bytes == 0 {
-        // No compressed data, return default value repeated
-        return Ok(vec![*default_value; frame_count]);
-    }
-    
-    // For version 1.2, if there's not enough compressed data for proper decompression,
-    // fall back to using the default value for all frames
-    if remaining_bytes < frame_count * 3 {
-        return Ok(vec![*default_value; frame_count]);
-    }
-    
     let mut frames = Vec::new();
-    
-    // Try to read as raw float data first
-    let float_count = remaining_bytes / 4;
-    if float_count >= frame_count * 3 {
-        // Try reading as direct float values
-        for _ in 0..frame_count {
-            if reader.position() as usize + 12 <= reader.get_ref().len() {
-                let x = reader.read_le::<f32>()?;
-                let y = reader.read_le::<f32>()?;
-                let z = reader.read_le::<f32>()?;
-                frames.push(Vector3 { x, y, z });
-            } else {
-                frames.push(*default_value);
-            }
-        }
-    } else {
-        // Fallback: use default values
-        for _ in 0..frame_count {
+
+    // Try to read as raw float data for each frame
+    for _ in 0..frame_count {
+        // Check if there are enough bytes remaining for a Vector3
+        if reader.position() as usize + 12 <= reader.get_ref().len() {
+            let x = reader.read_le::<f32>()?;
+            let y = reader.read_le::<f32>()?;
+            let z = reader.read_le::<f32>()?;
+            frames.push(Vector3 { x, y, z });
+        } else {
+            // If not enough data, use the default value
             frames.push(*default_value);
         }
     }
-    
-    // Ensure we have the right number of frames
-    while frames.len() < frame_count {
-        frames.push(*default_value);
-    }
-    frames.truncate(frame_count);
-    
+
     Ok(frames)
 }
 
