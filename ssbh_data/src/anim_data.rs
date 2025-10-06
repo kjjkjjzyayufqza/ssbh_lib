@@ -711,11 +711,13 @@ fn create_track_data_v12(
                         // Three default Vector3 values representing key frames (first, middle, last)
                         let default_values: [Vector3; 3] = reader.read_le()?;
                         
-                        let remaining_data = data.elements.len() - (reader.position() as usize);
-                        if remaining_data > 0 && bits_per_entry > 0 {
-                            // Read compressed euler angle frames
-                            let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
+                        let compressed_data_start = reader.position() as usize;
+                        let compressed_data = &data.elements[compressed_data_start..];
+
+                        if !compressed_data.is_empty() && bits_per_entry > 0 {
+                            // Decompress euler angle frames
+                            let compressed_frames = decompress_v12_vector3_data(
+                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             for rotation_euler in compressed_frames {
                                 let rotation = euler_to_quaternion(rotation_euler);
@@ -749,18 +751,20 @@ fn create_track_data_v12(
                         // Read 9 additional floats (purpose unclear, possibly extended metadata)
                         let _additional_floats: [f32; 9] = reader.read_le()?;
                         
-                        let remaining_data = data.elements.len() - (reader.position() as usize);
-                        if remaining_data > 0 {
+                        let compressed_data_start = reader.position() as usize;
+                        let compressed_data = &data.elements[compressed_data_start..];
+
+                        if !compressed_data.is_empty() {
                             // Estimate bits per entry from remaining data
-                            let total_bits = remaining_data * 8;
+                            let total_bits = compressed_data.len() * 8;
                             let bits_per_entry = if _compressed_frame_count > 0 {
                                 (total_bits / _compressed_frame_count).max(1).min(72) // 3 components * 24 bits max
                             } else {
                                 0
                             };
 
-                            let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
+                            let compressed_frames = decompress_v12_vector3_data(
+                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             for rotation_euler in compressed_frames {
                                 let rotation = euler_to_quaternion(rotation_euler);
@@ -785,10 +789,12 @@ fn create_track_data_v12(
                         // Three default Vector4 quaternion values (first, middle, last)
                         let default_values: [Vector4; 3] = reader.read_le()?;
                         
-                        let remaining_data = data.elements.len() - (reader.position() as usize);
-                        if remaining_data > 0 && bits_per_entry > 0 {
-                            let compressed_frames = read_v12_compressed_vector4_data(
-                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
+                        let compressed_data_start = reader.position() as usize;
+                        let compressed_data = &data.elements[compressed_data_start..];
+
+                        if !compressed_data.is_empty() && bits_per_entry > 0 {
+                            let compressed_frames = decompress_v12_vector4_data(
+                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             property_data.rotations.extend(compressed_frames);
                         } else {
@@ -838,10 +844,12 @@ fn create_track_data_v12(
                         // Three default Vector3 values (first frame, middle frame, last frame)
                         let default_values: [Vector3; 3] = reader.read_le()?;
                         
-                        let remaining_data = data.elements.len() - (reader.position() as usize);
-                        if remaining_data > 0 && bits_per_entry > 0 {
-                            let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
+                        let compressed_data_start = reader.position() as usize;
+                        let compressed_data = &data.elements[compressed_data_start..];
+
+                        if !compressed_data.is_empty() && bits_per_entry > 0 {
+                            let compressed_frames = decompress_v12_vector3_data(
+                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             property_data.translations.extend(compressed_frames);
                         } else {
@@ -869,18 +877,20 @@ fn create_track_data_v12(
                         // Read 9 additional floats
                         let _additional_floats: [f32; 9] = reader.read_le()?;
                         
-                        let remaining_data = data.elements.len() - (reader.position() as usize);
-                        if remaining_data > 0 {
+                        let compressed_data_start = reader.position() as usize;
+                        let compressed_data = &data.elements[compressed_data_start..];
+
+                        if !compressed_data.is_empty() {
                             // Estimate bits per entry from remaining data
-                            let total_bits = remaining_data * 8;
+                            let total_bits = compressed_data.len() * 8;
                             let bits_per_entry = if _compressed_frame_count > 0 {
                                 (total_bits / _compressed_frame_count).max(1).min(72)
                             } else {
                                 0
                             };
 
-                            let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
+                            let compressed_frames = decompress_v12_vector3_data(
+                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             property_data.translations.extend(compressed_frames);
                         } else {
@@ -996,221 +1006,6 @@ fn euler_to_quaternion(euler: Vector3) -> Vector4 {
     }
 }
 
-// Read compressed Vector3 data from version 1.2 animation
-// Based on GitHub discussion about version 1.2 compression format
-// Version 1.2 uses a different compression scheme than version 2.0+
-fn read_v12_compressed_vector3_data(
-    reader: &mut Cursor<&Vec<u8>>,
-    frame_count: usize,
-    default_values: &[Vector3; 3],
-    bits_per_entry: usize,
-) -> Result<Vec<Vector3>, error::Error> {
-    let remaining_bytes = reader.get_ref().len() - reader.position() as usize;
-
-    // If no compressed data or no bits, interpolate between default values
-    if remaining_bytes == 0 || bits_per_entry == 0 {
-        return Ok(interpolate_vector3_frames(frame_count, default_values));
-    }
-
-    // Check if this might be uncompressed float data (12 bytes per Vector3)
-    if remaining_bytes >= frame_count * 12 && bits_per_entry >= 32 * 3 {
-        // Likely uncompressed: try reading as raw float data
-        let mut frames = Vec::with_capacity(frame_count);
-        for _ in 0..frame_count {
-            if reader.position() as usize + 12 <= reader.get_ref().len() {
-                let x = reader.read_le::<f32>()?;
-                let y = reader.read_le::<f32>()?;
-                let z = reader.read_le::<f32>()?;
-                frames.push(Vector3 { x, y, z });
-            } else {
-                frames.push(default_values[0]);
-            }
-        }
-        return Ok(frames);
-    }
-
-    // Version 1.2 compression: values are indices into interpolated ranges
-    // The compressed data contains indices that select interpolation points between the 3 default values
-    let mut compressed_data = vec![0u8; remaining_bytes];
-    reader.read_exact(&mut compressed_data)?;
-
-    let mut bit_reader = bitutils::BitReader::from_slice(&compressed_data);
-    let mut frames = Vec::with_capacity(frame_count);
-
-    // For version 1.2, bits_per_entry represents the total bits used for the entire Vector3
-    // We need to determine how many bits are used per component
-    let bits_per_component = match bits_per_entry {
-        0 => 0,
-        1..=8 => 8,  // Use 8 bits per component for low bit counts
-        9..=16 => 8,
-        17..=24 => 8,
-        _ => 8,  // Cap at 8 bits per component for safety
-    };
-
-    // If we can't determine the bit count, fall back to interpolation
-    if bits_per_component == 0 {
-        return Ok(interpolate_vector3_frames(frame_count, default_values));
-    }
-
-    for i in 0..frame_count {
-        let result = (|| -> Result<Vector3, error::Error> {
-            // Read compressed indices for each component
-            let x_index = bit_reader.read_u32(bits_per_component)?;
-            let y_index = bit_reader.read_u32(bits_per_component)?;
-            let z_index = bit_reader.read_u32(bits_per_component)?;
-
-            // Convert indices to interpolation factors (0.0 to 1.0)
-            let max_index = (1u32 << bits_per_component) - 1;
-            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
-            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
-            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
-
-            // Interpolate between the three default values based on the indices
-            // This is a simplified version - the actual algorithm may be more complex
-            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
-            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
-            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
-
-            Ok(Vector3 { x, y, z })
-        })();
-
-        match result {
-            Ok(vec) => frames.push(vec),
-            Err(_) => {
-                // If decompression fails, fall back to interpolation for remaining frames
-                let interpolated = interpolate_vector3_frames(frame_count - i, default_values);
-                frames.extend(interpolated);
-                break;
-            }
-        }
-    }
-
-    Ok(frames)
-}
-
-// Read compressed Vector4 data from version 1.2 animation (for quaternions)
-// Based on GitHub discussion about version 1.2 compression format
-// Version 1.2 uses a different compression scheme than version 2.0+
-fn read_v12_compressed_vector4_data(
-    reader: &mut Cursor<&Vec<u8>>,
-    frame_count: usize,
-    default_values: &[Vector4; 3],
-    bits_per_entry: usize,
-) -> Result<Vec<Vector4>, error::Error> {
-    let remaining_bytes = reader.get_ref().len() - reader.position() as usize;
-
-    // If no compressed data or no bits, interpolate between default values
-    if remaining_bytes == 0 || bits_per_entry == 0 {
-        return Ok(interpolate_vector4_frames(frame_count, default_values));
-    }
-
-    // Check if this might be uncompressed float data (16 bytes per Vector4/quaternion)
-    if remaining_bytes >= frame_count * 16 && bits_per_entry >= 32 * 4 {
-        // Likely uncompressed: try reading as raw float data
-        let mut frames = Vec::with_capacity(frame_count);
-        for _ in 0..frame_count {
-            if reader.position() as usize + 16 <= reader.get_ref().len() {
-                let x = reader.read_le::<f32>()?;
-                let y = reader.read_le::<f32>()?;
-                let z = reader.read_le::<f32>()?;
-                let w = reader.read_le::<f32>()?;
-
-                // Normalize quaternion
-                let length = (x * x + y * y + z * z + w * w).sqrt();
-                if length > 0.001 {
-                    frames.push(Vector4 {
-                        x: x / length,
-                        y: y / length,
-                        z: z / length,
-                        w: w / length
-                    });
-                } else {
-                    frames.push(default_values[0]);
-                }
-            } else {
-                frames.push(default_values[0]);
-            }
-        }
-        return Ok(frames);
-    }
-
-    // Version 1.2 quaternion compression: similar to Vector3 but with quaternion normalization
-    let mut compressed_data = vec![0u8; remaining_bytes];
-    reader.read_exact(&mut compressed_data)?;
-
-    let mut bit_reader = bitutils::BitReader::from_slice(&compressed_data);
-    let mut frames = Vec::with_capacity(frame_count);
-
-    // For version 1.2, determine bits per component based on bits_per_entry
-    let bits_per_component = match bits_per_entry {
-        0 => 0,
-        1..=12 => 4,  // Use fewer bits for quaternions
-        13..=24 => 6,
-        25..=36 => 8,
-        _ => 8,  // Cap at 8 bits per component
-    };
-
-    // If we can't determine the bit count, fall back to interpolation
-    if bits_per_component == 0 {
-        return Ok(interpolate_vector4_frames(frame_count, default_values));
-    }
-
-    for i in 0..frame_count {
-        let result = (|| -> Result<Vector4, error::Error> {
-            // Read compressed indices for X, Y, Z components
-            let x_index = bit_reader.read_u32(bits_per_component)?;
-            let y_index = bit_reader.read_u32(bits_per_component)?;
-            let z_index = bit_reader.read_u32(bits_per_component)?;
-
-            // For quaternions, we may also have a W sign bit
-            let w_sign_bit = if bits_per_entry > bits_per_component * 3 {
-                bit_reader.read_bit().unwrap_or(true)
-            } else {
-                true
-            };
-
-            // Convert indices to interpolation factors (0.0 to 1.0)
-            let max_index = (1u32 << bits_per_component) - 1;
-            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
-            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
-            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
-
-            // Interpolate quaternion components
-            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
-            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
-            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
-            let w_base = interpolate_component(default_values[0].w, default_values[1].w, default_values[2].w, (x_t + y_t + z_t) / 3.0);
-
-            // Apply sign bit to W component
-            let w = if w_sign_bit { w_base.abs() } else { -w_base.abs() };
-
-            // Normalize the quaternion
-            let length = (x * x + y * y + z * z + w * w).sqrt();
-            if length > 0.001 {
-                Ok(Vector4 {
-                    x: x / length,
-                    y: y / length,
-                    z: z / length,
-                    w: w / length,
-                })
-            } else {
-                Ok(default_values[0])
-            }
-        })();
-
-        match result {
-            Ok(quat) => frames.push(quat),
-            Err(_) => {
-                // If decompression fails, fall back to interpolation for remaining frames
-                let interpolated = interpolate_vector4_frames(frame_count - i, default_values);
-                frames.extend(interpolated);
-                break;
-            }
-        }
-    }
-
-    Ok(frames)
-}
 
 // Helper function to interpolate a single component between three values
 fn interpolate_component(start: f32, middle: f32, end: f32, t: f32) -> f32 {
@@ -1282,18 +1077,18 @@ fn interpolate_vector4_frames(frame_count: usize, default_values: &[Vector4; 3])
     if frame_count == 0 {
         return Vec::new();
     }
-    
+
     if frame_count == 1 {
         return vec![default_values[0]];
     }
-    
+
     let mut frames = Vec::with_capacity(frame_count);
     let first = default_values[0];
     let middle = default_values[1];
     let last = default_values[2];
-    
+
     let middle_frame = frame_count / 2;
-    
+
     for i in 0..frame_count {
         let value = if i == 0 {
             first
@@ -1312,8 +1107,218 @@ fn interpolate_vector4_frames(frame_count: usize, default_values: &[Vector4; 3])
         };
         frames.push(value);
     }
-    
+
     frames
+}
+
+// Version 1.2 compression decompression functions
+
+/// Decompress version 1.2 Vector3 compressed data
+fn decompress_v12_vector3_data(
+    compressed_data: &[u8],
+    frame_count: usize,
+    default_values: &[Vector3; 3],
+    bits_per_entry: usize,
+) -> Result<Vec<Vector3>, error::Error> {
+    if frame_count == 0 {
+        return Ok(Vec::new());
+    }
+
+    // If no compressed data or no bits, interpolate between default values
+    if compressed_data.is_empty() || bits_per_entry == 0 {
+        return Ok(interpolate_vector3_frames(frame_count, default_values));
+    }
+
+    // Check if this might be uncompressed float data (12 bytes per Vector3)
+    if compressed_data.len() >= frame_count * 12 && bits_per_entry >= 32 * 3 {
+        // Try reading as raw float data
+        let mut reader = Cursor::new(compressed_data);
+        let mut frames = Vec::with_capacity(frame_count);
+        for _ in 0..frame_count {
+            if reader.position() as usize + 12 <= compressed_data.len() {
+                let x = reader.read_le::<f32>()?;
+                let y = reader.read_le::<f32>()?;
+                let z = reader.read_le::<f32>()?;
+                frames.push(Vector3 { x, y, z });
+            } else {
+                frames.push(default_values[0]);
+            }
+        }
+        return Ok(frames);
+    }
+
+    // Version 1.2 compression: values are indices into interpolated ranges
+    let mut bit_reader = bitutils::BitReader::from_slice(compressed_data);
+    let mut frames = Vec::with_capacity(frame_count);
+
+    // Determine bits per component based on bits_per_entry
+    let bits_per_component = match bits_per_entry {
+        0 => 0,
+        1..=24 => 8,  // Use 8 bits per component for most cases
+        25..=48 => 12,
+        49..=72 => 16,
+        _ => 8,  // Cap at 8 bits per component for safety
+    };
+
+    if bits_per_component == 0 {
+        return Ok(interpolate_vector3_frames(frame_count, default_values));
+    }
+
+    for i in 0..frame_count {
+        let result = (|| -> Result<Vector3, error::Error> {
+            // Read compressed indices for each component
+            let x_index = bit_reader.read_u32(bits_per_component)?;
+            let y_index = bit_reader.read_u32(bits_per_component)?;
+            let z_index = bit_reader.read_u32(bits_per_component)?;
+
+            // Convert indices to interpolation factors (0.0 to 1.0)
+            let max_index = (1u32 << bits_per_component) - 1;
+            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
+            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
+            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
+
+            // Interpolate between the three default values
+            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
+            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
+            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
+
+            Ok(Vector3 { x, y, z })
+        })();
+
+        match result {
+            Ok(vec) => frames.push(vec),
+            Err(_) => {
+                // If decompression fails, fall back to interpolation for remaining frames
+                let interpolated = interpolate_vector3_frames(frame_count - i, default_values);
+                frames.extend(interpolated);
+                break;
+            }
+        }
+    }
+
+    Ok(frames)
+}
+
+/// Decompress version 1.2 Vector4 compressed data (for quaternions)
+fn decompress_v12_vector4_data(
+    compressed_data: &[u8],
+    frame_count: usize,
+    default_values: &[Vector4; 3],
+    bits_per_entry: usize,
+) -> Result<Vec<Vector4>, error::Error> {
+    if frame_count == 0 {
+        return Ok(Vec::new());
+    }
+
+    // If no compressed data or no bits, interpolate between default values
+    if compressed_data.is_empty() || bits_per_entry == 0 {
+        return Ok(interpolate_vector4_frames(frame_count, default_values));
+    }
+
+    // Check if this might be uncompressed float data (16 bytes per Vector4)
+    if compressed_data.len() >= frame_count * 16 && bits_per_entry >= 32 * 4 {
+        // Try reading as raw float data
+        let mut reader = Cursor::new(compressed_data);
+        let mut frames = Vec::with_capacity(frame_count);
+        for _ in 0..frame_count {
+            if reader.position() as usize + 16 <= compressed_data.len() {
+                let x = reader.read_le::<f32>()?;
+                let y = reader.read_le::<f32>()?;
+                let z = reader.read_le::<f32>()?;
+                let w = reader.read_le::<f32>()?;
+
+                // Normalize quaternion
+                let length = (x * x + y * y + z * z + w * w).sqrt();
+                if length > 0.001 {
+                    frames.push(Vector4 {
+                        x: x / length,
+                        y: y / length,
+                        z: z / length,
+                        w: w / length
+                    });
+                } else {
+                    frames.push(default_values[0]);
+                }
+            } else {
+                frames.push(default_values[0]);
+            }
+        }
+        return Ok(frames);
+    }
+
+    // Version 1.2 quaternion compression
+    let mut bit_reader = bitutils::BitReader::from_slice(compressed_data);
+    let mut frames = Vec::with_capacity(frame_count);
+
+    // Determine bits per component for quaternions
+    let bits_per_component = match bits_per_entry {
+        0 => 0,
+        1..=16 => 4,  // Use fewer bits for quaternions
+        17..=32 => 6,
+        33..=48 => 8,
+        49..=64 => 10,
+        _ => 8,  // Cap at 8 bits per component
+    };
+
+    if bits_per_component == 0 {
+        return Ok(interpolate_vector4_frames(frame_count, default_values));
+    }
+
+    for i in 0..frame_count {
+        let result = (|| -> Result<Vector4, error::Error> {
+            // Read compressed indices for X, Y, Z components
+            let x_index = bit_reader.read_u32(bits_per_component)?;
+            let y_index = bit_reader.read_u32(bits_per_component)?;
+            let z_index = bit_reader.read_u32(bits_per_component)?;
+
+            // For quaternions, we may also have a W sign bit
+            let w_sign_bit = if bits_per_entry > bits_per_component * 3 {
+                bit_reader.read_bit().unwrap_or(true)
+            } else {
+                true
+            };
+
+            // Convert indices to interpolation factors
+            let max_index = (1u32 << bits_per_component) - 1;
+            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
+            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
+            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
+
+            // Interpolate quaternion components
+            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
+            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
+            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
+            let w_base = interpolate_component(default_values[0].w, default_values[1].w, default_values[2].w, (x_t + y_t + z_t) / 3.0);
+
+            // Apply sign bit to W component
+            let w = if w_sign_bit { w_base.abs() } else { -w_base.abs() };
+
+            // Normalize the quaternion
+            let length = (x * x + y * y + z * z + w * w).sqrt();
+            if length > 0.001 {
+                Ok(Vector4 {
+                    x: x / length,
+                    y: y / length,
+                    z: z / length,
+                    w: w / length,
+                })
+            } else {
+                Ok(default_values[0])
+            }
+        })();
+
+        match result {
+            Ok(quat) => frames.push(quat),
+            Err(_) => {
+                // If decompression fails, fall back to interpolation for remaining frames
+                let interpolated = interpolate_vector4_frames(frame_count - i, default_values);
+                frames.extend(interpolated);
+                break;
+            }
+        }
+    }
+
+    Ok(frames)
 }
 
 // Spherical linear interpolation for quaternions
@@ -1662,7 +1667,70 @@ impl TrackValues {
 }
 
 // TODO: Organize this in compression.rs similar to version 2.0+
-// Vector3?
+// Version 1.2 compression structures based on GitHub research
+
+/// Header for version 1.2 compressed Vector3 data (0x0934, 0x3409)
+#[allow(dead_code)]
+#[derive(Debug, BinRead)]
+struct V12Vector3CompressedHeader {
+    /// Always 0x0934 or 0x3409
+    header: u32,
+    /// Number of frames in the animation
+    frame_count: u32,
+    /// Unknown float 1, typically 1.0
+    unk1: f32,
+    /// Unknown float 2, varies
+    unk2: f32,
+    /// Flags, typically 2
+    flags: u16,
+    /// Bits per entry for decompression
+    bits_per_entry: u16,
+    /// Default values: first, middle, and last keyframes
+    default_values: [Vector3; 3],
+}
+
+/// Header for version 1.2 compressed Vector4 data (0x0944, 0x4409)
+#[allow(dead_code)]
+#[derive(Debug, BinRead)]
+struct V12Vector4CompressedHeader {
+    /// Always 0x0944 or 0x4409
+    header: u32,
+    /// Number of frames in the animation
+    frame_count: u32,
+    /// Unknown float 1, typically 1.0
+    unk1: f32,
+    /// Unknown float 2, varies
+    unk2: f32,
+    /// Flags, typically 2
+    flags: u16,
+    /// Bits per entry for decompression
+    bits_per_entry: u16,
+    /// Default values: first, middle, and last keyframes
+    default_values: [Vector4; 3],
+}
+
+/// Header for version 1.2 compressed Vector3 data with frame indices (0x4308)
+#[allow(dead_code)]
+#[derive(Debug, BinRead)]
+struct V12Vector3IndexedCompressedHeader {
+    /// Always 0x4308
+    header: u32,
+    /// Number of frames in the animation
+    frame_count: u32,
+    /// Unknown float 1, typically 1.0
+    unk1: f32,
+    /// Frame indices (one byte per frame)
+    #[br(count = frame_count, align_after = 4)]
+    frame_indices: Vec<u8>,
+    /// Default values: first, middle, and last keyframes
+    default_values: [Vector3; 3],
+    /// Additional 9 floats (purpose unclear)
+    additional_floats: [f32; 9],
+    /// Bits per entry for decompression (calculated)
+    bits_per_entry: u16,
+}
+
+// Legacy test structures (keeping for compatibility)
 #[allow(dead_code)]
 #[derive(Debug, BinRead)]
 struct V12Test1 {
@@ -1675,7 +1743,6 @@ struct V12Test1 {
     // TODO: Compressed data?
 }
 
-// Vector4?
 #[allow(dead_code)]
 #[derive(Debug, BinRead)]
 struct V12Test2 {
@@ -2152,111 +2219,319 @@ mod tests {
 
 // Helper functions for version 1.2 creation
 
+/// Create compressed Vector3 data for version 1.2 using format 0x3409
+/// Based on GitHub discussion: uses three key frames (first, middle, last) and compressed indices
 fn create_v12_compressed_vector3_data(values: &[Vector3]) -> Result<Vec<u8>, error::Error> {
     let frame_count = values.len() as u32;
     let mut data = Vec::new();
     
+    if values.is_empty() {
+        return Ok(data);
+    }
+    
     // Use format 0x3409 for compressed Vector3 data
     data.extend_from_slice(&0x3409u32.to_le_bytes());
     data.extend_from_slice(&frame_count.to_le_bytes());
-    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk1
-    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2
-    data.extend_from_slice(&0u16.to_le_bytes());   // flags
-    data.extend_from_slice(&0u16.to_le_bytes());   // padding
+    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
+    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2 - varies
+    data.extend_from_slice(&2u16.to_le_bytes());   // flags - typically 2
     
-    // Default values (use first, min, max pattern as seen in the read logic)
-    let default_value = if !values.is_empty() { values[0] } else { Vector3 { x: 0.0, y: 0.0, z: 0.0 } };
-    data.extend_from_slice(&default_value.x.to_le_bytes());
-    data.extend_from_slice(&default_value.y.to_le_bytes());
-    data.extend_from_slice(&default_value.z.to_le_bytes());
+    // Calculate bits per entry based on data range
+    // Use 8 bits per component (24 bits total for Vector3) for reasonable quality
+    let bits_per_entry = 24u16;
+    data.extend_from_slice(&bits_per_entry.to_le_bytes());
     
-    // Add two more default values (as seen in the read logic pattern)
-    data.extend_from_slice(&default_value.x.to_le_bytes());
-    data.extend_from_slice(&default_value.y.to_le_bytes());
-    data.extend_from_slice(&default_value.z.to_le_bytes());
-    data.extend_from_slice(&default_value.x.to_le_bytes());
-    data.extend_from_slice(&default_value.y.to_le_bytes());
-    data.extend_from_slice(&default_value.z.to_le_bytes());
+    // Three default Vector3 values: first frame, middle frame, last frame
+    let first_value = values[0];
+    let middle_value = if values.len() > 1 {
+        values[values.len() / 2]
+    } else {
+        first_value
+    };
+    let last_value = if values.len() > 1 {
+        values[values.len() - 1]
+    } else {
+        first_value
+    };
     
-    // Write raw frame data
-    for value in values {
-        data.extend_from_slice(&value.x.to_le_bytes());
-        data.extend_from_slice(&value.y.to_le_bytes());
-        data.extend_from_slice(&value.z.to_le_bytes());
+    // Write the three key frame values
+    data.extend_from_slice(&first_value.x.to_le_bytes());
+    data.extend_from_slice(&first_value.y.to_le_bytes());
+    data.extend_from_slice(&first_value.z.to_le_bytes());
+    
+    data.extend_from_slice(&middle_value.x.to_le_bytes());
+    data.extend_from_slice(&middle_value.y.to_le_bytes());
+    data.extend_from_slice(&middle_value.z.to_le_bytes());
+    
+    data.extend_from_slice(&last_value.x.to_le_bytes());
+    data.extend_from_slice(&last_value.y.to_le_bytes());
+    data.extend_from_slice(&last_value.z.to_le_bytes());
+    
+    // For small frame counts, just write raw data
+    if frame_count <= 3 {
+        for value in values {
+            data.extend_from_slice(&value.x.to_le_bytes());
+            data.extend_from_slice(&value.y.to_le_bytes());
+            data.extend_from_slice(&value.z.to_le_bytes());
+        }
+    } else {
+        // Compress frames using interpolation indices
+        // Each component is encoded as an 8-bit index into the range [first, middle, last]
+        let mut compressed_bits = bitvec::vec::BitVec::<u8, bitvec::prelude::Lsb0>::new();
+        let bits_per_component = 8usize;
+        
+        for value in values {
+            // Encode X component
+            let x_index = calculate_interpolation_index(
+                value.x,
+                first_value.x,
+                middle_value.x,
+                last_value.x,
+                bits_per_component,
+            );
+            write_bits(&mut compressed_bits, x_index, bits_per_component);
+            
+            // Encode Y component
+            let y_index = calculate_interpolation_index(
+                value.y,
+                first_value.y,
+                middle_value.y,
+                last_value.y,
+                bits_per_component,
+            );
+            write_bits(&mut compressed_bits, y_index, bits_per_component);
+            
+            // Encode Z component
+            let z_index = calculate_interpolation_index(
+                value.z,
+                first_value.z,
+                middle_value.z,
+                last_value.z,
+                bits_per_component,
+            );
+            write_bits(&mut compressed_bits, z_index, bits_per_component);
+        }
+        
+        data.extend_from_slice(&compressed_bits.into_vec());
     }
     
     Ok(data)
 }
 
+/// Calculate interpolation index for a value within the range [first, middle, last]
+fn calculate_interpolation_index(
+    value: f32,
+    first: f32,
+    middle: f32,
+    last: f32,
+    bits: usize,
+) -> u32 {
+    let max_index = (1u32 << bits) - 1;
+    
+    // Determine which segment the value falls into
+    let t = if (last - first).abs() < 1e-6 {
+        // Values are all the same
+        0.0
+    } else if value <= middle {
+        // First half: interpolate between first and middle
+        if (middle - first).abs() < 1e-6 {
+            0.0
+        } else {
+            (value - first) / (last - first) * 0.5
+        }
+    } else {
+        // Second half: interpolate between middle and last
+        if (last - middle).abs() < 1e-6 {
+            0.5
+        } else {
+            0.5 + (value - middle) / (last - first) * 0.5
+        }
+    };
+    
+    (t * max_index as f32).clamp(0.0, max_index as f32) as u32
+}
+
+/// Write bits to a BitVec
+fn write_bits(bits: &mut bitvec::vec::BitVec<u8, bitvec::prelude::Lsb0>, value: u32, count: usize) {
+    for i in 0..count {
+        bits.push((value >> i) & 1 == 1);
+    }
+}
+
+/// Create compressed Vector4 data for version 1.2 using format 0x4409
+/// Used for quaternion rotations - based on GitHub discussion format 0x0944/0x4409
 fn create_v12_compressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
     let frame_count = values.len() as u32;
     let mut data = Vec::new();
     
-    // Use format 0x4409 for compressed Vector4 data
+    if values.is_empty() {
+        return Ok(data);
+    }
+    
+    // Use format 0x4409 for compressed Vector4 data (quaternions)
     data.extend_from_slice(&0x4409u32.to_le_bytes());
     data.extend_from_slice(&frame_count.to_le_bytes());
-    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk1
-    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2
-    data.extend_from_slice(&0u16.to_le_bytes());   // flags
-    data.extend_from_slice(&0u16.to_le_bytes());   // padding
+    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
+    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2 - varies
+    data.extend_from_slice(&2u16.to_le_bytes());   // flags - typically 2
     
-    // Default values (use first, identity, identity pattern)
-    let default_value = if !values.is_empty() { values[0] } else { Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 } };
-    data.extend_from_slice(&default_value.x.to_le_bytes());
-    data.extend_from_slice(&default_value.y.to_le_bytes());
-    data.extend_from_slice(&default_value.z.to_le_bytes());
-    data.extend_from_slice(&default_value.w.to_le_bytes());
+    // For quaternions, we compress XYZ with indices and W with a sign bit
+    // Use fewer bits per component for quaternions (8 bits per component = 24 bits + 1 sign bit = 25 bits total)
+    let bits_per_entry = 25u16;
+    data.extend_from_slice(&bits_per_entry.to_le_bytes());
     
-    // Add two more default values
-    data.extend_from_slice(&default_value.x.to_le_bytes());
-    data.extend_from_slice(&default_value.y.to_le_bytes());
-    data.extend_from_slice(&default_value.z.to_le_bytes());
-    data.extend_from_slice(&default_value.w.to_le_bytes());
-    data.extend_from_slice(&default_value.x.to_le_bytes());
-    data.extend_from_slice(&default_value.y.to_le_bytes());
-    data.extend_from_slice(&default_value.z.to_le_bytes());
-    data.extend_from_slice(&default_value.w.to_le_bytes());
+    // Three default Vector4 quaternion values: first frame, middle frame, last frame
+    let first_value = values[0];
+    let middle_value = if values.len() > 1 {
+        values[values.len() / 2]
+    } else {
+        first_value
+    };
+    let last_value = if values.len() > 1 {
+        values[values.len() - 1]
+    } else {
+        first_value
+    };
     
-    // Write raw frame data
-    for value in values {
-        data.extend_from_slice(&value.x.to_le_bytes());
-        data.extend_from_slice(&value.y.to_le_bytes());
-        data.extend_from_slice(&value.z.to_le_bytes());
-        data.extend_from_slice(&value.w.to_le_bytes());
+    // Write the three key frame quaternion values
+    data.extend_from_slice(&first_value.x.to_le_bytes());
+    data.extend_from_slice(&first_value.y.to_le_bytes());
+    data.extend_from_slice(&first_value.z.to_le_bytes());
+    data.extend_from_slice(&first_value.w.to_le_bytes());
+    
+    data.extend_from_slice(&middle_value.x.to_le_bytes());
+    data.extend_from_slice(&middle_value.y.to_le_bytes());
+    data.extend_from_slice(&middle_value.z.to_le_bytes());
+    data.extend_from_slice(&middle_value.w.to_le_bytes());
+    
+    data.extend_from_slice(&last_value.x.to_le_bytes());
+    data.extend_from_slice(&last_value.y.to_le_bytes());
+    data.extend_from_slice(&last_value.z.to_le_bytes());
+    data.extend_from_slice(&last_value.w.to_le_bytes());
+    
+    // For small frame counts, write raw data
+    if frame_count <= 3 {
+        for value in values {
+            data.extend_from_slice(&value.x.to_le_bytes());
+            data.extend_from_slice(&value.y.to_le_bytes());
+            data.extend_from_slice(&value.z.to_le_bytes());
+            data.extend_from_slice(&value.w.to_le_bytes());
+        }
+    } else {
+        // Compress quaternion frames: XYZ as interpolation indices + W sign bit
+        let mut compressed_bits = bitvec::vec::BitVec::<u8, bitvec::prelude::Lsb0>::new();
+        let bits_per_component = 8usize;
+        
+        for value in values {
+            // Encode X component
+            let x_index = calculate_interpolation_index(
+                value.x,
+                first_value.x,
+                middle_value.x,
+                last_value.x,
+                bits_per_component,
+            );
+            write_bits(&mut compressed_bits, x_index, bits_per_component);
+            
+            // Encode Y component
+            let y_index = calculate_interpolation_index(
+                value.y,
+                first_value.y,
+                middle_value.y,
+                last_value.y,
+                bits_per_component,
+            );
+            write_bits(&mut compressed_bits, y_index, bits_per_component);
+            
+            // Encode Z component
+            let z_index = calculate_interpolation_index(
+                value.z,
+                first_value.z,
+                middle_value.z,
+                last_value.z,
+                bits_per_component,
+            );
+            write_bits(&mut compressed_bits, z_index, bits_per_component);
+            
+            // Encode W sign bit (similar to version 2.0+ quaternion compression)
+            compressed_bits.push(value.w.is_sign_negative());
+        }
+        
+        data.extend_from_slice(&compressed_bits.into_vec());
     }
     
     Ok(data)
 }
 
+/// Create compressed boolean data for version 1.2
+/// Uses format 0x1013 for single values or raw boolean data for multiple frames
 fn create_v12_compressed_bool_data(values: &[bool]) -> Result<Vec<u8>, error::Error> {
-    let _frame_count = values.len() as u32;
     let mut data = Vec::new();
     
-    // Use a simple format for boolean data
-    data.extend_from_slice(&0x1013u32.to_le_bytes());
+    if values.is_empty() {
+        return Ok(data);
+    }
     
-    // For now, just use the first value if all are the same
-    // For complex boolean animations, we'd need a more sophisticated format
-    let value = if !values.is_empty() { values[0] } else { true };
-    data.extend_from_slice(&(if value { 1u16 } else { 0u16 }).to_le_bytes());
+    // Check if all values are the same
+    let all_same = values.iter().all(|&v| v == values[0]);
+    
+    if all_same || values.len() == 1 {
+        // Use simple format 0x1013 for constant boolean
+        data.extend_from_slice(&0x1013u32.to_le_bytes());
+        data.extend_from_slice(&(if values[0] { 1u16 } else { 0u16 }).to_le_bytes());
+    } else {
+        // For varying boolean values, we could use a compressed bit format
+        // For now, write each frame as a u16 (similar to reading logic)
+        // In a real implementation, you might want to pack these as bits
+        data.extend_from_slice(&0x1013u32.to_le_bytes());
+        for &value in values {
+            data.extend_from_slice(&(if value { 1u16 } else { 0u16 }).to_le_bytes());
+        }
+    }
     
     Ok(data)
 }
 
+/// Create UV transform data for version 1.2
+/// Uses format 0x5014 for UV transformations
 fn create_v12_compressed_uv_data(values: &[UvTransform]) -> Result<Vec<u8>, error::Error> {
-    let _frame_count = values.len() as u32;
     let mut data = Vec::new();
     
-    // Use simple format for UV transforms
-    data.extend_from_slice(&0x5014u32.to_le_bytes());
+    if values.is_empty() {
+        return Ok(data);
+    }
     
-    // For now, just use the first value
-    let uv = if !values.is_empty() { &values[0] } else { &UvTransform::default() };
-    data.extend_from_slice(&uv.scale_u.to_le_bytes());
-    data.extend_from_slice(&uv.scale_v.to_le_bytes());
-    data.extend_from_slice(&uv.rotation.to_le_bytes());
-    data.extend_from_slice(&uv.translate_u.to_le_bytes());
-    data.extend_from_slice(&uv.translate_v.to_le_bytes());
+    // Check if all values are the same
+    let all_same = values.iter().all(|v| {
+        v.scale_u == values[0].scale_u
+            && v.scale_v == values[0].scale_v
+            && v.rotation == values[0].rotation
+            && v.translate_u == values[0].translate_u
+            && v.translate_v == values[0].translate_v
+    });
+    
+    if all_same || values.len() == 1 {
+        // Use simple format 0x5014 for constant UV transform
+        data.extend_from_slice(&0x5014u32.to_le_bytes());
+        let uv = &values[0];
+        data.extend_from_slice(&uv.scale_u.to_le_bytes());
+        data.extend_from_slice(&uv.scale_v.to_le_bytes());
+        data.extend_from_slice(&uv.rotation.to_le_bytes());
+        data.extend_from_slice(&uv.translate_u.to_le_bytes());
+        data.extend_from_slice(&uv.translate_v.to_le_bytes());
+    } else {
+        // For varying UV transforms, write each frame
+        // Could potentially use a compressed format similar to Vector3/Vector4
+        // For now, write as raw data (format 0x5014 followed by all frames)
+        data.extend_from_slice(&0x5014u32.to_le_bytes());
+        for uv in values {
+            data.extend_from_slice(&uv.scale_u.to_le_bytes());
+            data.extend_from_slice(&uv.scale_v.to_le_bytes());
+            data.extend_from_slice(&uv.rotation.to_le_bytes());
+            data.extend_from_slice(&uv.translate_u.to_le_bytes());
+            data.extend_from_slice(&uv.translate_v.to_le_bytes());
+        }
+    }
     
     Ok(data)
 }
