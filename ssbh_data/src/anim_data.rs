@@ -404,10 +404,19 @@ fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
         }
     }
     
+    // Validate final_frame_index is non-negative
+    let final_frame_index = if data.final_frame_index >= 0.0 {
+        Ok(data.final_frame_index)
+    } else {
+        Err(error::Error::InvalidFinalFrameIndex {
+            final_frame_index: data.final_frame_index,
+        })
+    }?;
+    
     Ok(Anim::V12 {
         name: "".into(), // Default empty name
         unk1: 0.0,       // Default unknown value
-        final_frame_index: data.final_frame_index,
+        final_frame_index,
         unk2: 0.0,       // Default unknown value
         unk3: 0.0,       // Default unknown value
         tracks: tracks.into(),
@@ -815,6 +824,9 @@ fn create_track_data_v12(
                     0x4408 => {
                         // Version 1.2: Compressed Vector4-based rotation data (quaternions)
                         // Uses 2 default Vector4 values instead of 3 like 0x4409
+                        // Format: magic + count + unk1 + unk2 + 2 default quaternions + compressed data
+                        // NOTE: Unlike other formats, this does NOT have flags or bits_per_entry fields!
+                        // The compressed data uses a fixed 10 bits per component (40 bits per frame = 5 bytes)
                         let _compressed_frame_count = reader.read_le::<u32>()? as usize;
                         let _unk1 = reader.read_le::<f32>()?;
                         let _unk2 = reader.read_le::<f32>()?;
@@ -822,15 +834,16 @@ fn create_track_data_v12(
                         // Two default Vector4 quaternion values
                         let default_values: [Vector4; 2] = reader.read_le()?;
 
-                        let _flags = reader.read_le::<u16>()?;
-                        let bits_per_entry = reader.read_le::<u16>()? as usize;
-
+                        // Compressed data starts immediately - NO flags or bits_per_entry fields!
                         let compressed_data_start = reader.position() as usize;
                         let compressed_data = &data.elements[compressed_data_start..];
 
-                        if !compressed_data.is_empty() && bits_per_entry > 0 {
+                        // Use fixed 10 bits per component for 0x4408 format
+                        let bits_per_component = 10;
+
+                        if !compressed_data.is_empty() {
                             let compressed_frames = decompress_v12_vector4_data_2_defaults(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
+                                compressed_data, _compressed_frame_count, &default_values, bits_per_component
                             )?;
                             property_data.rotations.extend(compressed_frames);
                         } else {
@@ -1467,7 +1480,6 @@ fn interpolate_vector3_frames_2_defaults(frame_count: usize, default_values: &[V
         };
         frames.push(value);
     }
-    println!("frames: {:?}", frames);
     frames
 }
 
@@ -1595,66 +1607,31 @@ fn decompress_v12_vector4_data(
 
 /// Decompress version 1.2 Vector4 compressed data with 2 default values (for quaternions)
 /// Used by 0x4408 format which only has 2 default quaternion values
+/// 
+/// # Arguments
+/// * `compressed_data` - The compressed bit-packed data
+/// * `frame_count` - Number of frames to decompress
+/// * `default_values` - Two default quaternion values used for interpolation
+/// * `bits_per_component` - Number of bits used per quaternion component (typically 10 for 0x4408)
 fn decompress_v12_vector4_data_2_defaults(
     compressed_data: &[u8],
     frame_count: usize,
     default_values: &[Vector4; 2],
-    bits_per_entry: usize,
+    bits_per_component: usize,
 ) -> Result<Vec<Vector4>, error::Error> {
     if frame_count == 0 {
         return Ok(Vec::new());
     }
 
     // If no compressed data or no bits, interpolate between default values
-    if compressed_data.is_empty() || bits_per_entry == 0 {
+    if compressed_data.is_empty() || bits_per_component == 0 {
         return Ok(interpolate_vector4_frames_2_defaults(frame_count, default_values));
-    }
-    if compressed_data.len() >= frame_count * 16 && bits_per_entry >= 32 * 4 {
-        // Try reading as raw float data
-        let mut reader = Cursor::new(compressed_data);
-        let mut frames = Vec::with_capacity(frame_count);
-        for _ in 0..frame_count {
-            if reader.position() as usize + 16 <= compressed_data.len() {
-                let x = reader.read_le::<f32>()?;
-                let y = reader.read_le::<f32>()?;
-                let z = reader.read_le::<f32>()?;
-                let w = reader.read_le::<f32>()?;
-                // Normalize quaternion
-                let length = (x * x + y * y + z * z + w * w).sqrt();
-                if length > 0.001 {
-                    frames.push(Vector4 {
-                        x: x / length,
-                        y: y / length,
-                        z: z / length,
-                        w: w / length
-                    });
-                } else {
-                    frames.push(default_values[0]);
-                }
-            } else {
-                frames.push(default_values[0]);
-            }
-        }
-        return Ok(frames);
     }
 
     // Version 1.2 quaternion compression with 2 default values
+    // Each frame uses bits_per_component bits for each of the 4 quaternion components
     let mut bit_reader = bitutils::BitReader::from_slice(compressed_data);
     let mut frames = Vec::with_capacity(frame_count);
-
-    // Determine bits per component for quaternions
-    let bits_per_component = match bits_per_entry {
-        0 => 0,
-        1..=16 => 4,  // Use fewer bits for quaternions
-        17..=32 => 6,
-        33..=48 => 8,
-        49..=64 => 10,
-        _ => 8,  // Cap at 8 bits per component
-    };
-
-    if bits_per_component == 0 {
-        return Ok(interpolate_vector4_frames_2_defaults(frame_count, default_values));
-    }
 
     for i in 0..frame_count {
         let result = (|| -> Result<Vector4, error::Error> {
@@ -1664,7 +1641,7 @@ fn decompress_v12_vector4_data_2_defaults(
             let z_index = bit_reader.read_u32(bits_per_component)?;
             let w_index = bit_reader.read_u32(bits_per_component)?;
 
-            // Convert indices to interpolation factors
+            // Convert indices to interpolation factors (0.0 to 1.0)
             let max_index = (1u32 << bits_per_component) - 1;
             let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
             let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
@@ -1676,6 +1653,7 @@ fn decompress_v12_vector4_data_2_defaults(
             let y = default_values[0].y + (default_values[1].y - default_values[0].y) * y_t;
             let z = default_values[0].z + (default_values[1].z - default_values[0].z) * z_t;
             let w = default_values[0].w + (default_values[1].w - default_values[0].w) * w_t;
+            
             // Normalize the quaternion
             let length = (x * x + y * y + z * z + w * w).sqrt();
             if length > 0.001 {
@@ -1686,6 +1664,7 @@ fn decompress_v12_vector4_data_2_defaults(
                     w: w / length,
                 })
             } else {
+                // Fallback to first default value if normalization fails
                 Ok(default_values[0])
             }
         })();
