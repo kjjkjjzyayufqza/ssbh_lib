@@ -570,12 +570,11 @@ fn read_anim_groups(anim: &Anim) -> Result<Vec<GroupData>, error::Error> {
     match anim {
         // TODO: Create fake groups for version 1.0?
         ssbh_lib::prelude::Anim::V12 {
-            tracks, buffers, ..
+            tracks, buffers, final_frame_index, ..
         } => {
-            // TODO: Group by type?
-            // TODO: Assign a single node to each track with the track name as the name?
-            // TODO: Use the track type as the track name like "Transform"?
-            read_groups_v12(&tracks.elements, &buffers.elements)
+            // For version 1.2, use the animation's final_frame_index to determine frame count
+            let frame_count = (*final_frame_index as usize).saturating_add(1);
+            read_groups_v12(&tracks.elements, &buffers.elements, frame_count)
         }
         ssbh_lib::formats::anim::Anim::V20 { groups, buffer, .. } => {
             read_groups_v20(&groups.elements, &buffer.elements)
@@ -597,6 +596,7 @@ fn group_type_v12(track_type: TrackTypeV1) -> GroupType {
 fn read_groups_v12(
     tracks: &[ssbh_lib::formats::anim::TrackV1],
     buffers: &[ssbh_lib::SsbhByteBuffer],
+    animation_frame_count: usize,
 ) -> Result<Vec<GroupData>, error::Error> {
     // Group by the track type.
     let mut tracks_by_type = HashMap::new();
@@ -605,7 +605,7 @@ fn read_groups_v12(
     // Save the track name to use for the nodes later.
     for track in tracks {
         let group_type = group_type_v12(track.track_type);
-        let track_data = create_track_data_v12(track, buffers)?;
+        let track_data = create_track_data_v12(track, buffers, animation_frame_count)?;
         tracks_by_type
             .entry(group_type)
             .or_insert(Vec::new())
@@ -635,12 +635,10 @@ fn read_groups_v12(
 fn create_track_data_v12(
     track: &ssbh_lib::formats::anim::TrackV1,
     buffers: &[ssbh_lib::SsbhByteBuffer],
+    animation_frame_count: usize,
 ) -> Result<TrackData, error::Error> {
     let mut compensate_scale = false;
     let transform_flags = TransformFlags::default();
-    
-    // Determine maximum frame count by scanning all properties
-    let mut max_frame_count = 1;
     
     // Collect parsed property data
     struct PropertyData {
@@ -704,8 +702,7 @@ fn create_track_data_v12(
                     0x3409 => {
                         // Version 1.2: Compressed Vector3-based rotation data (Euler angles)
                         // Based on GitHub discussion format
-                        let frame_count = reader.read_le::<u32>()? as usize;
-                        max_frame_count = max_frame_count.max(frame_count);
+                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
                         let _unk1 = reader.read_le::<f32>()?;  // typically 0.0 or 1.0
                         let _unk2 = reader.read_le::<f32>()?;  // varies
                         let _flags = reader.read_le::<u16>()?; // compression flags
@@ -718,30 +715,27 @@ fn create_track_data_v12(
                         if remaining_data > 0 && bits_per_entry > 0 {
                             // Read compressed euler angle frames
                             let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, frame_count, &default_values, bits_per_entry
+                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             for rotation_euler in compressed_frames {
                                 let rotation = euler_to_quaternion(rotation_euler);
                                 property_data.rotations.push(rotation);
                             }
                         } else {
-                            // No compressed data, interpolate between default values
-                            let interpolated = interpolate_vector3_frames(frame_count, &default_values);
-                            for rotation_euler in interpolated {
-                                let rotation = euler_to_quaternion(rotation_euler);
-                                property_data.rotations.push(rotation);
-                            }
+                            // No compressed data, use default value
+                            let default_euler = default_values[0];
+                            let rotation = euler_to_quaternion(default_euler);
+                            property_data.rotations.push(rotation);
                         }
                     }
                     0x4308 => {
                         // Version 1.2: Compressed Vector3 data with special format (also for Euler rotation)
                         // This format includes frame indices and 9 additional floats
-                        let frame_count = reader.read_le::<u32>()? as usize;
-                        max_frame_count = max_frame_count.max(frame_count);
+                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
                         let _unk1 = reader.read_le::<f32>()?;
-                        
+
                         // Read frame indices (one byte per frame)
-                        let mut frame_indices = vec![0u8; frame_count];
+                        let mut frame_indices = vec![0u8; _compressed_frame_count];
                         reader.read_exact(&mut frame_indices)?;
                         
                         // Align to 4-byte boundary
@@ -759,33 +753,30 @@ fn create_track_data_v12(
                         if remaining_data > 0 {
                             // Estimate bits per entry from remaining data
                             let total_bits = remaining_data * 8;
-                            let bits_per_entry = if frame_count > 0 {
-                                (total_bits / frame_count).max(1).min(72) // 3 components * 24 bits max
+                            let bits_per_entry = if _compressed_frame_count > 0 {
+                                (total_bits / _compressed_frame_count).max(1).min(72) // 3 components * 24 bits max
                             } else {
                                 0
                             };
-                            
+
                             let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, frame_count, &default_values, bits_per_entry
+                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             for rotation_euler in compressed_frames {
                                 let rotation = euler_to_quaternion(rotation_euler);
                                 property_data.rotations.push(rotation);
                             }
                         } else {
-                            // No compressed data, interpolate using frame indices and default values
-                            let interpolated = interpolate_vector3_frames(frame_count, &default_values);
-                            for rotation_euler in interpolated {
-                                let rotation = euler_to_quaternion(rotation_euler);
-                                property_data.rotations.push(rotation);
-                            }
+                            // No compressed data, use default values
+                            let default_euler = default_values[0];
+                            let rotation = euler_to_quaternion(default_euler);
+                            property_data.rotations.push(rotation);
                         }
                     }
                     0x0944 | 0x4409 => {
                         // Version 1.2: Compressed Vector4-based rotation data (quaternions)
                         // Format 0x0944 from GitHub discussion
-                        let frame_count = reader.read_le::<u32>()? as usize;
-                        max_frame_count = max_frame_count.max(frame_count);
+                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
                         let _unk1 = reader.read_le::<f32>()?;
                         let _unk2 = reader.read_le::<f32>()?;
                         let _flags = reader.read_le::<u16>()?;
@@ -797,13 +788,12 @@ fn create_track_data_v12(
                         let remaining_data = data.elements.len() - (reader.position() as usize);
                         if remaining_data > 0 && bits_per_entry > 0 {
                             let compressed_frames = read_v12_compressed_vector4_data(
-                                &mut reader, frame_count, &default_values, bits_per_entry
+                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             property_data.rotations.extend(compressed_frames);
                         } else {
-                            // No compressed data, interpolate between default quaternions
-                            let interpolated = interpolate_vector4_frames(frame_count, &default_values);
-                            property_data.rotations.extend(interpolated);
+                            // No compressed data, use default value
+                            property_data.rotations.push(default_values[0]);
                         }
                     }
                     0x4003 => {
@@ -839,8 +829,7 @@ fn create_track_data_v12(
                     0x0934 | 0x3409 => {
                         // Version 1.2: Compressed Vector3 translation data
                         // Format 0x0934 from GitHub discussion
-                        let frame_count = reader.read_le::<u32>()? as usize;
-                        max_frame_count = max_frame_count.max(frame_count);
+                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
                         let _unk1 = reader.read_le::<f32>()?;  // typically 1.0
                         let _unk2 = reader.read_le::<f32>()?;  // varies
                         let _flags = reader.read_le::<u16>()?; // typically 2
@@ -852,23 +841,21 @@ fn create_track_data_v12(
                         let remaining_data = data.elements.len() - (reader.position() as usize);
                         if remaining_data > 0 && bits_per_entry > 0 {
                             let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, frame_count, &default_values, bits_per_entry
+                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             property_data.translations.extend(compressed_frames);
                         } else {
-                            // No compressed data, interpolate between default values
-                            let interpolated = interpolate_vector3_frames(frame_count, &default_values);
-                            property_data.translations.extend(interpolated);
+                            // No compressed data, use default value
+                            property_data.translations.push(default_values[0]);
                         }
                     }
                     0x4308 => {
                         // Version 1.2: Compressed Vector3 data with frame indices
-                        let frame_count = reader.read_le::<u32>()? as usize;
-                        max_frame_count = max_frame_count.max(frame_count);
+                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
                         let _unk1 = reader.read_le::<f32>()?;
-                        
+
                         // Read frame indices (one byte per frame)
-                        let mut frame_indices = vec![0u8; frame_count];
+                        let mut frame_indices = vec![0u8; _compressed_frame_count];
                         reader.read_exact(&mut frame_indices)?;
                         
                         // Align to 4-byte boundary
@@ -886,20 +873,19 @@ fn create_track_data_v12(
                         if remaining_data > 0 {
                             // Estimate bits per entry from remaining data
                             let total_bits = remaining_data * 8;
-                            let bits_per_entry = if frame_count > 0 {
-                                (total_bits / frame_count).max(1).min(72)
+                            let bits_per_entry = if _compressed_frame_count > 0 {
+                                (total_bits / _compressed_frame_count).max(1).min(72)
                             } else {
                                 0
                             };
-                            
+
                             let compressed_frames = read_v12_compressed_vector3_data(
-                                &mut reader, frame_count, &default_values, bits_per_entry
+                                &mut reader, _compressed_frame_count, &default_values, bits_per_entry
                             )?;
                             property_data.translations.extend(compressed_frames);
                         } else {
-                            // No compressed data, interpolate between default values
-                            let interpolated = interpolate_vector3_frames(frame_count, &default_values);
-                            property_data.translations.extend(interpolated);
+                            // No compressed data, use default value
+                            property_data.translations.push(default_values[0]);
                         }
                     }
                     _ => {
@@ -930,8 +916,8 @@ fn create_track_data_v12(
     let values = match track.track_type {
         TrackTypeV1::Transform => {
             let mut transforms = Vec::new();
-            
-            for frame_idx in 0..max_frame_count {
+
+            for frame_idx in 0..animation_frame_count {
                 let scale = property_data.scales.get(frame_idx)
                     .copied()
                     .unwrap_or_else(|| property_data.scales.last().copied().unwrap_or(Vector3 { x: 1.0, y: 1.0, z: 1.0 }));
@@ -1012,7 +998,7 @@ fn euler_to_quaternion(euler: Vector3) -> Vector4 {
 
 // Read compressed Vector3 data from version 1.2 animation
 // Based on GitHub discussion about version 1.2 compression format
-// This unified function handles the compression scheme used in v1.2
+// Version 1.2 uses a different compression scheme than version 2.0+
 fn read_v12_compressed_vector3_data(
     reader: &mut Cursor<&Vec<u8>>,
     frame_count: usize,
@@ -1020,12 +1006,12 @@ fn read_v12_compressed_vector3_data(
     bits_per_entry: usize,
 ) -> Result<Vec<Vector3>, error::Error> {
     let remaining_bytes = reader.get_ref().len() - reader.position() as usize;
-    
+
     // If no compressed data or no bits, interpolate between default values
     if remaining_bytes == 0 || bits_per_entry == 0 {
         return Ok(interpolate_vector3_frames(frame_count, default_values));
     }
-    
+
     // Check if this might be uncompressed float data (12 bytes per Vector3)
     if remaining_bytes >= frame_count * 12 && bits_per_entry >= 32 * 3 {
         // Likely uncompressed: try reading as raw float data
@@ -1042,30 +1028,52 @@ fn read_v12_compressed_vector3_data(
         }
         return Ok(frames);
     }
-    
-    // Bit-packed compressed data
+
+    // Version 1.2 compression: values are indices into interpolated ranges
+    // The compressed data contains indices that select interpolation points between the 3 default values
     let mut compressed_data = vec![0u8; remaining_bytes];
     reader.read_exact(&mut compressed_data)?;
-    
+
     let mut bit_reader = bitutils::BitReader::from_slice(&compressed_data);
     let mut frames = Vec::with_capacity(frame_count);
-    
-    // Calculate min/max from the three default values for decompression
-    let (min_vals, max_vals) = calculate_vector3_range(default_values);
-    
-    // Distribute bits per entry among X, Y, Z components
-    // Assume equal distribution unless proven otherwise
-    let bits_per_component = (bits_per_entry / 3).max(1);
-    
+
+    // For version 1.2, bits_per_entry represents the total bits used for the entire Vector3
+    // We need to determine how many bits are used per component
+    let bits_per_component = match bits_per_entry {
+        0 => 0,
+        1..=8 => 8,  // Use 8 bits per component for low bit counts
+        9..=16 => 8,
+        17..=24 => 8,
+        _ => 8,  // Cap at 8 bits per component for safety
+    };
+
+    // If we can't determine the bit count, fall back to interpolation
+    if bits_per_component == 0 {
+        return Ok(interpolate_vector3_frames(frame_count, default_values));
+    }
+
     for i in 0..frame_count {
-        // Try to decompress each component
         let result = (|| -> Result<Vector3, error::Error> {
-            let x = decompress_float_component(&mut bit_reader, min_vals.x, max_vals.x, bits_per_component)?;
-            let y = decompress_float_component(&mut bit_reader, min_vals.y, max_vals.y, bits_per_component)?;
-            let z = decompress_float_component(&mut bit_reader, min_vals.z, max_vals.z, bits_per_component)?;
+            // Read compressed indices for each component
+            let x_index = bit_reader.read_u32(bits_per_component)?;
+            let y_index = bit_reader.read_u32(bits_per_component)?;
+            let z_index = bit_reader.read_u32(bits_per_component)?;
+
+            // Convert indices to interpolation factors (0.0 to 1.0)
+            let max_index = (1u32 << bits_per_component) - 1;
+            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
+            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
+            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
+
+            // Interpolate between the three default values based on the indices
+            // This is a simplified version - the actual algorithm may be more complex
+            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
+            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
+            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
+
             Ok(Vector3 { x, y, z })
         })();
-        
+
         match result {
             Ok(vec) => frames.push(vec),
             Err(_) => {
@@ -1076,12 +1084,13 @@ fn read_v12_compressed_vector3_data(
             }
         }
     }
-    
+
     Ok(frames)
 }
 
 // Read compressed Vector4 data from version 1.2 animation (for quaternions)
 // Based on GitHub discussion about version 1.2 compression format
+// Version 1.2 uses a different compression scheme than version 2.0+
 fn read_v12_compressed_vector4_data(
     reader: &mut Cursor<&Vec<u8>>,
     frame_count: usize,
@@ -1089,12 +1098,12 @@ fn read_v12_compressed_vector4_data(
     bits_per_entry: usize,
 ) -> Result<Vec<Vector4>, error::Error> {
     let remaining_bytes = reader.get_ref().len() - reader.position() as usize;
-    
+
     // If no compressed data or no bits, interpolate between default values
     if remaining_bytes == 0 || bits_per_entry == 0 {
         return Ok(interpolate_vector4_frames(frame_count, default_values));
     }
-    
+
     // Check if this might be uncompressed float data (16 bytes per Vector4/quaternion)
     if remaining_bytes >= frame_count * 16 && bits_per_entry >= 32 * 4 {
         // Likely uncompressed: try reading as raw float data
@@ -1105,15 +1114,15 @@ fn read_v12_compressed_vector4_data(
                 let y = reader.read_le::<f32>()?;
                 let z = reader.read_le::<f32>()?;
                 let w = reader.read_le::<f32>()?;
-                
+
                 // Normalize quaternion
                 let length = (x * x + y * y + z * z + w * w).sqrt();
                 if length > 0.001 {
-                    frames.push(Vector4 { 
-                        x: x / length, 
-                        y: y / length, 
-                        z: z / length, 
-                        w: w / length 
+                    frames.push(Vector4 {
+                        x: x / length,
+                        y: y / length,
+                        z: z / length,
+                        w: w / length
                     });
                 } else {
                     frames.push(default_values[0]);
@@ -1124,42 +1133,58 @@ fn read_v12_compressed_vector4_data(
         }
         return Ok(frames);
     }
-    
-    // Bit-packed compressed quaternion data
+
+    // Version 1.2 quaternion compression: similar to Vector3 but with quaternion normalization
     let mut compressed_data = vec![0u8; remaining_bytes];
     reader.read_exact(&mut compressed_data)?;
-    
+
     let mut bit_reader = bitutils::BitReader::from_slice(&compressed_data);
     let mut frames = Vec::with_capacity(frame_count);
-    
-    // Calculate min/max from the three default quaternion values
-    let (min_vals, max_vals) = calculate_vector4_range(default_values);
-    
-    // For quaternions: typically X,Y,Z components are compressed, W is reconstructed
-    // According to GitHub discussion and version 2.0+ compression logic
-    // bits_per_entry = bits for X + bits for Y + bits for Z + 1 bit for W sign
-    let bits_for_w_sign = 1;
-    let bits_for_xyz = bits_per_entry.saturating_sub(bits_for_w_sign);
-    let bits_per_component = (bits_for_xyz / 3).max(1);
-    
+
+    // For version 1.2, determine bits per component based on bits_per_entry
+    let bits_per_component = match bits_per_entry {
+        0 => 0,
+        1..=12 => 4,  // Use fewer bits for quaternions
+        13..=24 => 6,
+        25..=36 => 8,
+        _ => 8,  // Cap at 8 bits per component
+    };
+
+    // If we can't determine the bit count, fall back to interpolation
+    if bits_per_component == 0 {
+        return Ok(interpolate_vector4_frames(frame_count, default_values));
+    }
+
     for i in 0..frame_count {
         let result = (|| -> Result<Vector4, error::Error> {
-            let x = decompress_float_component(&mut bit_reader, min_vals.x, max_vals.x, bits_per_component)?;
-            let y = decompress_float_component(&mut bit_reader, min_vals.y, max_vals.y, bits_per_component)?;
-            let z = decompress_float_component(&mut bit_reader, min_vals.z, max_vals.z, bits_per_component)?;
-            
-            // Read sign bit for W component
-            let w_sign = if let Ok(sign_bit) = bit_reader.read_bit() {
-                if sign_bit { 1.0 } else { -1.0 }
+            // Read compressed indices for X, Y, Z components
+            let x_index = bit_reader.read_u32(bits_per_component)?;
+            let y_index = bit_reader.read_u32(bits_per_component)?;
+            let z_index = bit_reader.read_u32(bits_per_component)?;
+
+            // For quaternions, we may also have a W sign bit
+            let w_sign_bit = if bits_per_entry > bits_per_component * 3 {
+                bit_reader.read_bit().unwrap_or(true)
             } else {
-                1.0
+                true
             };
-            
-            // Reconstruct W from normalized quaternion property: x^2 + y^2 + z^2 + w^2 = 1
-            let w_squared = (1.0 - (x * x + y * y + z * z)).max(0.0);
-            let w = w_sign * w_squared.sqrt();
-            
-            // Normalize the quaternion to ensure it's valid
+
+            // Convert indices to interpolation factors (0.0 to 1.0)
+            let max_index = (1u32 << bits_per_component) - 1;
+            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
+            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
+            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
+
+            // Interpolate quaternion components
+            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
+            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
+            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
+            let w_base = interpolate_component(default_values[0].w, default_values[1].w, default_values[2].w, (x_t + y_t + z_t) / 3.0);
+
+            // Apply sign bit to W component
+            let w = if w_sign_bit { w_base.abs() } else { -w_base.abs() };
+
+            // Normalize the quaternion
             let length = (x * x + y * y + z * z + w * w).sqrt();
             if length > 0.001 {
                 Ok(Vector4 {
@@ -1172,7 +1197,7 @@ fn read_v12_compressed_vector4_data(
                 Ok(default_values[0])
             }
         })();
-        
+
         match result {
             Ok(quat) => frames.push(quat),
             Err(_) => {
@@ -1183,8 +1208,23 @@ fn read_v12_compressed_vector4_data(
             }
         }
     }
-    
+
     Ok(frames)
+}
+
+// Helper function to interpolate a single component between three values
+fn interpolate_component(start: f32, middle: f32, end: f32, t: f32) -> f32 {
+    // For version 1.2, we use a simple interpolation scheme
+    // This may need to be adjusted based on the actual algorithm used in the game
+    if t <= 0.5 {
+        // Interpolate between start and middle
+        let local_t = t * 2.0;
+        start + (middle - start) * local_t
+    } else {
+        // Interpolate between middle and end
+        let local_t = (t - 0.5) * 2.0;
+        middle + (end - middle) * local_t
+    }
 }
 
 // Helper function to interpolate Vector3 values between key frames
@@ -1192,19 +1232,19 @@ fn interpolate_vector3_frames(frame_count: usize, default_values: &[Vector3; 3])
     if frame_count == 0 {
         return Vec::new();
     }
-    
+
     if frame_count == 1 {
         return vec![default_values[0]];
     }
-    
+
     let mut frames = Vec::with_capacity(frame_count);
     let first = default_values[0];
     let middle = default_values[1];
     let last = default_values[2];
-    
+
     // Determine middle frame index
     let middle_frame = frame_count / 2;
-    
+
     for i in 0..frame_count {
         let value = if i == 0 {
             first
@@ -1231,60 +1271,10 @@ fn interpolate_vector3_frames(frame_count: usize, default_values: &[Vector3; 3])
         };
         frames.push(value);
     }
-    
+
     frames
 }
 
-// Calculate min and max values from the three default values
-fn calculate_vector3_range(values: &[Vector3; 3]) -> (Vector3, Vector3) {
-    let min_x = values.iter().map(|v| v.x).fold(f32::INFINITY, f32::min);
-    let max_x = values.iter().map(|v| v.x).fold(f32::NEG_INFINITY, f32::max);
-    let min_y = values.iter().map(|v| v.y).fold(f32::INFINITY, f32::min);
-    let max_y = values.iter().map(|v| v.y).fold(f32::NEG_INFINITY, f32::max);
-    let min_z = values.iter().map(|v| v.z).fold(f32::INFINITY, f32::min);
-    let max_z = values.iter().map(|v| v.z).fold(f32::NEG_INFINITY, f32::max);
-    
-    (
-        Vector3 { x: min_x, y: min_y, z: min_z },
-        Vector3 { x: max_x, y: max_y, z: max_z },
-    )
-}
-
-// Calculate min and max values from the three default quaternion values
-fn calculate_vector4_range(values: &[Vector4; 3]) -> (Vector4, Vector4) {
-    let min_x = values.iter().map(|v| v.x).fold(f32::INFINITY, f32::min);
-    let max_x = values.iter().map(|v| v.x).fold(f32::NEG_INFINITY, f32::max);
-    let min_y = values.iter().map(|v| v.y).fold(f32::INFINITY, f32::min);
-    let max_y = values.iter().map(|v| v.y).fold(f32::NEG_INFINITY, f32::max);
-    let min_z = values.iter().map(|v| v.z).fold(f32::INFINITY, f32::min);
-    let max_z = values.iter().map(|v| v.z).fold(f32::NEG_INFINITY, f32::max);
-    let min_w = values.iter().map(|v| v.w).fold(f32::INFINITY, f32::min);
-    let max_w = values.iter().map(|v| v.w).fold(f32::NEG_INFINITY, f32::max);
-    
-    (
-        Vector4 { x: min_x, y: min_y, z: min_z, w: min_w },
-        Vector4 { x: max_x, y: max_y, z: max_z, w: max_w },
-    )
-}
-
-// Decompress a single float component from bit-packed data
-fn decompress_float_component(
-    bit_reader: &mut bitutils::BitReader,
-    min_val: f32,
-    max_val: f32,
-    bit_count: usize,
-) -> Result<f32, error::Error> {
-    if bit_count == 0 || min_val == max_val {
-        return Ok(min_val);
-    }
-    
-    let compressed_value = bit_reader.read_u32(bit_count)?;
-    let max_compressed = (1u32 << bit_count) - 1;
-    
-    // Linear interpolation between min and max
-    let t = compressed_value as f32 / max_compressed as f32;
-    Ok(min_val + (max_val - min_val) * t)
-}
 
 
 // Helper function to interpolate Vector4 (quaternion) values between key frames
