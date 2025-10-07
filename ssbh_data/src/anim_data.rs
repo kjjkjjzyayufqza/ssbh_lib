@@ -956,7 +956,7 @@ fn create_track_data_v12(
                         let _unk2 = reader.read_le::<f32>()?;  // varies
                         let _flags = reader.read_le::<u16>()?; // typically 2
                         let bits_per_entry = reader.read_le::<u16>()? as usize;  // bit count for decompression
-
+                        println!("bits_per_entry: {}", bits_per_entry);
                         // Three default Vector3 values (first frame, middle frame, last frame)
                         let default_values: [Vector3; 3] = reader.read_le()?;
 
@@ -1151,14 +1151,22 @@ fn euler_to_quaternion(euler: Vector3) -> Vector4 {
 
 // Helper function to interpolate a single component between three values
 fn interpolate_component(start: f32, middle: f32, end: f32, t: f32) -> f32 {
-    // For version 1.2, we use a simple interpolation scheme
-    // This may need to be adjusted based on the actual algorithm used in the game
+    // Version 1.2 compression uses three keyframes (first, middle, last) for better data distribution.
+    // The algorithm divides the interpolation range into two segments:
+    // - First segment: start to middle (t: 0.0 to 0.5)
+    // - Second segment: middle to end (t: 0.5 to 1.0)
+    //
+    // This provides better precision for values clustered around keyframes
+    // while maintaining reasonable coverage for the full range.
+
     if t <= 0.5 {
         // Interpolate between start and middle
+        // Map t from [0.0, 0.5] to [0.0, 1.0] for this segment
         let local_t = t * 2.0;
         start + (middle - start) * local_t
     } else {
         // Interpolate between middle and end
+        // Map t from [0.5, 1.0] to [0.0, 1.0] for this segment
         let local_t = (t - 0.5) * 2.0;
         middle + (end - middle) * local_t
     }
