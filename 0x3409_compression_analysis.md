@@ -130,10 +130,74 @@ Translate track: GBL_RT
 Translate header: 0x3409
 Translate data: [9, 52, 0, 0, 40, 0, 0, 0, 0, 0, 128, 63, 91, 254, 230, 65, 2, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 185, 194, 75, 63, 0, 0, 0, 0, 0, 0, 0, 0, 45, 99, 143, 66, 0, 0, 0, 0, 0, 0, 0, 0, 127, 89, 181, 66, 1, 0, 1, 0, 1, 0, 8, 18, 1, 0, 1, 0, 1, 0, 8, 18, 255, 255, 227, 11, 88, 113, 0, 18, 1, 128, 41, 53, 167, 15, 154, 14, 4, 96, 253, 127, 122, 49, 3, 67, 166, 27, 228, 43, 182, 14, 1, 32, 54, 24, 
 139, 68, 106, 15, 73, 52, 139, 8, 203, 42, 94, 2, 67, 36, 114, 254, 54, 30, 80, 252, 45, 25, 15, 250, 1, 22, 75, 247, 166, 19, 245, 17, 
-244, 14, 1, 0, 1, 0, 1, 0, 2, 17, 1, 0, 1, 0, 1, 0, 2, 17, 181, 4, 172, 20, 255, 17, 0, 17, 6, 128, 151, 246, 193, 47, 111, 11, 199, 127, 24, 190]
+244, 14, 1, 0, 1, 0, 1, 0, 2, 17, 1, 0, 1, 0, 1, 0, 2, 17, 181, 4, 172, 20, 255, 17, 0, 17, 6, 128, 151, 246, 193, 47, 111, 11, 199, 127, 24, 190
 
 
 compress data
 1, 0, 1, 0, 1, 0, 8, 18, 1, 0, 1, 0, 1, 0, 8, 18, 255, 255, 227, 11, 88, 113, 0, 18, 1, 128, 41, 53, 167, 15, 154, 14, 4, 96, 253, 127, 122, 49, 3, 67, 166, 27, 228, 43, 182, 14, 1, 32, 54, 24, 
 139, 68, 106, 15, 73, 52, 139, 8, 203, 42, 94, 2, 67, 36, 114, 254, 54, 30, 80, 252, 45, 25, 15, 250, 1, 22, 75, 247, 166, 19, 245, 17, 
 244, 14, 1, 0, 1, 0, 1, 0, 2, 17, 1, 0, 1, 0, 1, 0, 2, 17, 181, 4, 172, 20, 255, 17, 0, 17, 6, 128, 151, 246, 193, 47, 111, 11, 199, 127, 24, 190
+
+## Additional Example: 3409_3.bin (Translation on X Only)
+
+Context: This file contains a 0x3409-compressed track where only X varies; Y and Z remain 0.
+
+Header (parsed):
+- Magic: 0x00003409
+- Frame count: 45
+- Unknown value 1: 1.0
+- Unknown value 2: 6.900769
+- Flags: 2
+- Bits per entry: 15
+
+Keyframes (Vector3):
+- First:  (1.672210, 0.000000, 0.000000)
+- Middle: (48.582199, 0.000000, 0.000000)
+- Last:   (59.990200, 0.000000, 0.000000)
+
+Compressed data overview:
+- Total compressed bytes after keyframes: 108 bytes
+- Detected segment header (duplicated u16 quartet): last u16 = 0x1208
+  - Interpreting the last u16 as [high_byte | low_byte]: high_byte=0x12 (18), low_byte=0x08
+  - Inferred per-segment bit width (for the active axis) = 18 bits
+- Segment 0 payload: offset 60 (from start of file), length 48 bytes
+  - Entries if pure single-axis stream: floor(48 bytes × 8 / 18 bits) = 21 entries
+
+Notes and implications:
+- Unlike the 40-frame Z-translation example, 3409_3.bin reports Bits per entry = 15 in the header, yet the segment-local header’s high byte (0x12) implies 18 bits for the active axis within this segment. This reinforces the model that the stream is segmented and each segment can specify its own packing parameters independent of the global header field.
+- Only one duplicated header was detected within the compressed area, suggesting there may be a single segment (or the second is elsewhere/not present).
+- Since only X varies, the inferred “active-axis bit width” should be applied to X when building per-frame indices. Y and Z likely compress to trivial/constant forms.
+- To reconstruct, we follow the same segmented interpolation model using the three keyframes, but the time parameter t for each frame comes from decoding per-frame indices within this segment using the inferred bit width (18) and the segment’s ordering.
+
+Open questions for this sample:
+- Whether there are additional segment parameters (e.g., low byte 0x08) that influence intra-segment sampling (nonlinear spacing or LUT selection) remains to be validated by full-frame decoding and comparison to a ground-truth series.
+
+## Additional Example: 3409_2.bin (X/Y/Z All Vary)
+
+Header (parsed):
+- Magic: 0x00003409
+- Frame count: 67
+- Unknown value 1: 1.0
+- Unknown value 2: 17.935175
+- Flags: 2
+- Bits per entry: 46
+
+Keyframes (Vector3):
+- First:  (0.454533, -0.810477, 1.992870)
+- Middle: (0.301214, -0.750987, 2.126730)
+- Last:   (0.000000, 3.000000, 0.000000)
+
+Compressed data:
+- Total compressed bytes after keyframes: 320 bytes
+- No duplicated per-segment small headers detected in this sample (unlike prior examples). This suggests either:
+  - A single continuous segment without the duplicated header convention, or
+  - A different packing flavor for multi-axis movement where control info is embedded differently.
+
+Implications of bits_per_entry = 46:
+- If evenly split per axis, that would be ~15.33 bits/axis, which is not an integer. This indicates the three components are not simply equal-width packed.
+- Plausible layouts include asymmetric per-axis bit widths whose sum is 46 (e.g., 16/15/15 or 18/14/14, etc.), or interleaved variable-width codes.
+- With no explicit duplicated segment header, per-axis widths may be defined implicitly by `bits_per_entry` and/or `flags`.
+
+Next steps for this sample:
+- Perform bit-level decoding trials to infer the exact (bx, by, bz) triplet summing to 46 that best reconstructs the ground truth curves (from the corresponding anim/JSON). This will help generalize the model beyond the segmented, single-axis-dominant case.
+- Investigate whether the lack of duplicated headers correlates with "all axes active" tracks and if so, document the control field placement for per-entry packing.

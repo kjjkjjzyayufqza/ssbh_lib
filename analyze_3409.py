@@ -1,129 +1,303 @@
+#!/usr/bin/env python3
+"""
+Animation Data Compression Decoder - Test Suite
+Testing various decompression algorithms for 0x3409 compressed animation data
+"""
+
 import struct
+import math
+from typing import List, Tuple
+import os
 
-# Raw data from terminal selection
-raw_data = [9, 52, 0, 0, 40, 0, 0, 0, 0, 0, 128, 63, 91, 254, 230, 65, 2, 0, 21, 0, 0, 0, 0, 0, 0, 0, 0, 0, 185, 194, 75, 63, 0, 0, 0, 0, 0, 0, 0, 0, 45, 99, 143, 66, 0, 0, 0, 0, 0, 0, 0, 0, 127, 89, 181, 66, 1, 0, 1, 0, 1, 0, 8, 18, 1, 0, 1, 0, 1, 0, 8, 18, 255, 255, 227, 11, 88, 113, 0, 18, 1, 128, 41, 53, 167, 15, 154, 14, 4, 96, 253, 127, 122, 49, 3, 67, 166, 27, 228, 43, 182, 14, 1, 32, 54, 24, 139, 68, 106, 15, 73, 52, 139, 8, 203, 42, 94, 2, 67, 36, 114, 254, 54,
-30, 80, 252, 45, 25, 15, 250, 1, 22, 75, 247, 166, 19, 245, 17, 244, 14, 1, 0, 1, 0, 1, 0, 2, 17, 1, 0, 1, 0, 1, 0, 2, 17, 181, 4, 172, 20, 255, 17, 0, 17, 6, 128, 151, 246, 193, 47, 111, 11, 199, 127, 24, 190]
 
-def parse_3409_header(data):
-    """Parse the 0x3409 format header"""
-    header = struct.unpack('<I', bytes(data[0:4]))[0]
-    frame_count = struct.unpack('<I', bytes(data[4:8]))[0]
-    unk1 = struct.unpack('<f', bytes(data[8:12]))[0]
-    unk2 = struct.unpack('<f', bytes(data[12:16]))[0]
-    flags = struct.unpack('<H', bytes(data[16:18]))[0]
-    bits_per_entry = struct.unpack('<H', bytes(data[18:20]))[0]
+class AnimationDecoder:
+    """Main decoder class for testing different decompression strategies"""
+    
+    def __init__(self):
+        # Known ground truth values (37 frames, excluding first/middle/last)
+        self.known_values = [
+            1.721675,  2.773587,  3.944817,  5.231249,  6.627399,
+            8.129151,  9.729649,  11.42615,  13.21042,  15.0811,
+            17.029949, 19.05286,  21.144341, 23.30028,  25.51519,
+            27.784969, 30.10137,  32.46302,  34.863091, 37.294689,
+            39.75647,  42.240189, 44.743111, 47.258369, 49.780499,
+            52.35062,  54.963249, 57.621151, 60.328419, 63.08506,
+            65.896561, 68.765663,  # Frame 33
+            # Frame 34 (middle) is excluded
+            74.683533, 77.739143, 80.863342, 84.058853, 87.328407
+            # Frame 40 (last) is excluded
+        ]
+        
+        # Z-axis compressed data (58 bytes)
+        self.z_compressed = bytes([
+            0x01, 0x80, 0x29, 0x35, 0xA7, 0x0F, 0x9A, 0x0E,
+            0x04, 0x60, 0xFD, 0x7F, 0x7A, 0x31, 0x03, 0x43,
+            0xA6, 0x1B, 0xE4, 0x2B, 0xB6, 0x0E, 0x01, 0x20,
+            0x36, 0x18, 0x8B, 0x44, 0x6A, 0x0F, 0x49, 0x34,
+            0x8B, 0x08, 0xCB, 0x2A, 0x5E, 0x02, 0x43, 0x24,
+            0x72, 0xFE, 0x36, 0x1E, 0x50, 0xFC, 0x2D, 0x19,
+            0x0F, 0xFA, 0x01, 0x16, 0x4B, 0xF7, 0xA6, 0x13,
+            0xF5, 0x11, 0xF4, 0x0E
+        ])
+        
+        # Parameter block from the document
+        self.param_block = bytes([0xFF, 0xFF, 0xE3, 0x0B, 0x58, 0x71, 0x00, 0x12])
+        
+        # Starting value (first frame)
+        self.first_frame_value = 0.795937
+        
+        # Key frames for reference
+        self.middle_frame_value = 71.693703  # Frame 34
+        self.last_frame_value = 90.674797    # Frame 40
+    
+    def calculate_rmse(self, decoded: List[float]) -> float:
+        """Calculate Root Mean Square Error"""
+        if len(decoded) != len(self.known_values):
+            return float('inf')
+        
+        sum_sq_error = sum((a - b) ** 2 for a, b in zip(self.known_values, decoded))
+        return math.sqrt(sum_sq_error / len(self.known_values))
+    
+    def calculate_max_error(self, decoded: List[float]) -> float:
+        """Calculate maximum absolute error"""
+        if len(decoded) != len(self.known_values):
+            return float('inf')
+        
+        return max(abs(a - b) for a, b in zip(self.known_values, decoded))
+    
+    def test_fixed_point_decode(self) -> None:
+        """Test Method 1: 16-bit Fixed Point Decoding"""
+        print("\n" + "="*70)
+        print("TEST 1: 16-bit Fixed Point Decoding")
+        print("="*70)
+        
+        scale_factors = [100.0, 1000.0, 3043.0, 10000.0, 32768.0]
+        
+        for scale in scale_factors:
+            print(f"\n--- Scale Factor: {scale} ---")
+            
+            current = self.first_frame_value
+            offset = 2  # Skip 01 80 header
+            decoded_values = []
+            
+            frame_idx = 0
+            while offset + 1 < len(self.z_compressed) and frame_idx < len(self.known_values):
+                # Read 16-bit signed integer (little endian)
+                delta_raw = struct.unpack('<h', self.z_compressed[offset:offset+2])[0]
+                offset += 2
+                
+                delta = delta_raw / scale
+                current += delta
+                decoded_values.append(current)
+                
+                error = abs(current - self.known_values[frame_idx])
+                
+                if frame_idx < 5 or error > 0.5:  # Print first 5 or problematic frames
+                    print(f"Frame {frame_idx+2:2d}: raw={delta_raw:6d}, delta={delta:8.3f}, "
+                          f"value={current:8.3f}, real={self.known_values[frame_idx]:8.3f}, "
+                          f"error={error:8.6f}")
+                
+                # Stop if error is too large
+                if error > 2.0:
+                    print(f"  [!] Large error detected, stopping...")
+                    break
+                
+                frame_idx += 1
+            
+            if len(decoded_values) >= len(self.known_values):
+                rmse = self.calculate_rmse(decoded_values[:len(self.known_values)])
+                max_err = self.calculate_max_error(decoded_values[:len(self.known_values)])
+                print(f"\n  [STATS] RMSE: {rmse:.6f}, Max Error: {max_err:.6f}")
+                
+                if rmse < 0.1:
+                    print(f"  [SUCCESS] Scale factor {scale} produces good results!")
+    
+    def decode_varint_zigzag(self, data: bytes, offset: int) -> Tuple[int, int]:
+        """Decode variable-length integer with ZigZag encoding"""
+        result = 0
+        shift = 0
+        new_offset = offset
+        
+        while new_offset < len(data):
+            byte = data[new_offset]
+            new_offset += 1
+            
+            result |= (byte & 0x7F) << shift
+            
+            if (byte & 0x80) == 0:  # MSB = 0, done
+                break
+            
+            shift += 7
+        
+        # ZigZag decode: 0→0, 1→-1, 2→1, 3→-2...
+        signed_value = (result >> 1) ^ -(result & 1)
+        
+        return signed_value, new_offset
+    
+    def test_varint_decode(self) -> None:
+        """Test Method 2: Variable-length Integer + ZigZag Decoding"""
+        print("\n" + "="*70)
+        print("TEST 2: Varint + ZigZag Decoding")
+        print("="*70)
+        
+        scale_factors = [100.0, 1000.0, 10000.0]
+        
+        for scale in scale_factors:
+            print(f"\n--- Scale Factor: {scale} ---")
+            
+            current = self.first_frame_value
+            offset = 2  # Skip 01 80 header
+            decoded_values = []
+            
+            frame_idx = 0
+            while offset < len(self.z_compressed) and frame_idx < len(self.known_values):
+                try:
+                    signed_val, offset = self.decode_varint_zigzag(self.z_compressed, offset)
+                    
+                    delta = signed_val / scale
+                    current += delta
+                    decoded_values.append(current)
+                    
+                    error = abs(current - self.known_values[frame_idx])
+                    
+                    if frame_idx < 5:
+                        print(f"Frame {frame_idx+2:2d}: varint={signed_val:6d}, "
+                              f"value={current:8.6f}, real={self.known_values[frame_idx]:8.6f}, "
+                              f"error={error:8.6f}")
+                    
+                    frame_idx += 1
+                    
+                except Exception as e:
+                    print(f"  [!] Decode error: {e}")
+                    break
+            
+            if len(decoded_values) > 0:
+                rmse = self.calculate_rmse(decoded_values[:min(len(decoded_values), len(self.known_values))])
+                print(f"\n  [STATS] Decoded {len(decoded_values)} frames, RMSE: {rmse:.6f}")
+    
+    def analyze_param_block(self) -> None:
+        """Test Method 3: Parameter Block Analysis"""
+        print("\n" + "="*70)
+        print("TEST 3: Parameter Block Analysis")
+        print("="*70)
+        
+        print(f"\nParameter Block: {self.param_block.hex(' ').upper()}")
+        
+        # Test all possible 32-bit float positions
+        print("\n--- Interpreting as floats ---")
+        for i in range(len(self.param_block) - 3):
+            val = struct.unpack('<f', self.param_block[i:i+4])[0]
+            print(f"Offset {i}: {val:15.6f}")
+        
+        # Test 16-bit integers
+        print("\n--- Interpreting as 16-bit integers ---")
+        for i in range(0, len(self.param_block), 2):
+            u16 = struct.unpack('<H', self.param_block[i:i+2])[0]
+            s16 = struct.unpack('<h', self.param_block[i:i+2])[0]
+            print(f"Offset {i}: uint16={u16:5d} (0x{u16:04X}), int16={s16:6d}")
+        
+        # Check for unk2 value (28.874197)
+        unk2 = 28.874197
+        unk2_bytes = struct.pack('<f', unk2)
+        print(f"\nunk2 (28.874197) IEEE 754 bytes: {unk2_bytes.hex(' ').upper()}")
+        
+        # Check scale factor hypothesis
+        scale_factor = struct.unpack('<H', self.param_block[2:4])[0]
+        print(f"\nPotential scale factor at offset 2: {scale_factor} (0x{scale_factor:04X})")
+    
+    def test_8bit_encoding(self) -> None:
+        """Test Method 4: 8-bit Delta Encoding"""
+        print("\n" + "="*70)
+        print("TEST 4: 8-bit Delta Encoding")
+        print("="*70)
+        
+        scale_factors = [10.0, 100.0, 255.0]
+        
+        for scale in scale_factors:
+            print(f"\n--- Scale Factor: {scale} ---")
+            
+            current = self.first_frame_value
+            offset = 2  # Skip 01 80 header
+            decoded_values = []
+            
+            frame_idx = 0
+            while offset < len(self.z_compressed) and frame_idx < len(self.known_values):
+                # Read 8-bit signed integer
+                delta_raw = struct.unpack('b', bytes([self.z_compressed[offset]]))[0]
+                offset += 1
+                
+                delta = delta_raw / scale
+                current += delta
+                decoded_values.append(current)
+                
+                error = abs(current - self.known_values[frame_idx])
+                
+                if frame_idx < 5:
+                    print(f"Frame {frame_idx+2:2d}: raw={delta_raw:4d}, "
+                          f"value={current:8.3f}, real={self.known_values[frame_idx]:8.3f}, "
+                          f"error={error:8.6f}")
+                
+                frame_idx += 1
+            
+            if len(decoded_values) > 0:
+                rmse = self.calculate_rmse(decoded_values[:min(len(decoded_values), len(self.known_values))])
+                print(f"\n  [STATS] RMSE: {rmse:.6f}")
+    
+    def hex_dump_analysis(self) -> None:
+        """Analyze the raw hex data patterns"""
+        print("\n" + "="*70)
+        print("HEX DUMP ANALYSIS")
+        print("="*70)
+        
+        print("\nCompressed data (58 bytes):")
+        for i in range(0, len(self.z_compressed), 16):
+            hex_str = ' '.join(f'{b:02X}' for b in self.z_compressed[i:i+16])
+            ascii_str = ''.join(chr(b) if 32 <= b < 127 else '.' for b in self.z_compressed[i:i+16])
+            print(f"{i:04X}: {hex_str:<47} | {ascii_str}")
+        
+        print("\n--- Header Analysis ---")
+        header_word = struct.unpack('<H', self.z_compressed[0:2])[0]
+        print(f"First word: 0x{header_word:04X} = {header_word} (decimal)")
+        print(f"  Could be: control word, encoding type, or length marker")
+        
+        print("\n--- Value Distribution ---")
+        values_as_16bit = []
+        for i in range(2, len(self.z_compressed) - 1, 2):
+            val = struct.unpack('<h', self.z_compressed[i:i+2])[0]
+            values_as_16bit.append(val)
+        
+        print(f"Min 16-bit value: {min(values_as_16bit)}")
+        print(f"Max 16-bit value: {max(values_as_16bit)}")
+        print(f"Average: {sum(values_as_16bit) / len(values_as_16bit):.2f}")
 
-    return header, frame_count, unk1, unk2, flags, bits_per_entry
 
-def parse_default_vectors(data, count=3):
-    """Parse the default Vector3 values (keyframes)"""
-    vectors = []
-    pos = 20  # Start after header
-    for i in range(count):
-        x = struct.unpack('<f', bytes(data[pos:pos+4]))[0]
-        y = struct.unpack('<f', bytes(data[pos+4:pos+8]))[0]
-        z = struct.unpack('<f', bytes(data[pos+8:pos+12]))[0]
-        vectors.append((x, y, z))
-        pos += 12
-    return vectors, pos
-
-def interpolate_component(start, middle, end, t):
-    """
-    Interpolate between three keyframes using segmented approach.
-    First half (t=0.0-0.5): interpolate between start and middle
-    Second half (t=0.5-1.0): interpolate between middle and end
-    """
-    if t <= 0.5:
-        # First segment: start to middle
-        local_t = t * 2.0
-        return start + (middle - start) * local_t
-    else:
-        # Second segment: middle to end
-        local_t = (t - 0.5) * 2.0
-        return middle + (end - middle) * local_t
-
-def demonstrate_3409_compression_logic():
-    """Demonstrate 0x3409 compression logic with actual data"""
-
-    print("=== 0x3409 Format Analysis with Real Data ===")
+def main():
+    """Main test runner"""
+    print("="*70)
+    print("ANIMATION COMPRESSION DECODER - TEST SUITE")
+    print("Testing 0x3409 compressed data with multiple algorithms")
+    print("="*70)
+    
+    decoder = AnimationDecoder()
+    
+    # Run all tests
+    decoder.hex_dump_analysis()
+    decoder.analyze_param_block()
+    decoder.test_fixed_point_decode()
+    decoder.test_varint_decode()
+    decoder.test_8bit_encoding()
+    
+    print("\n" + "="*70)
+    print("TESTING COMPLETE")
+    print("="*70)
+    print("\n[NEXT STEPS]")
+    print("  1. Review RMSE values - values < 0.1 indicate good decoding")
+    print("  2. Check which scale factor produces the best results")
+    print("  3. Analyze the parameter block for metadata")
+    print("  4. Test with additional sample files if available")
     print()
 
-    # Parse header
-    header, frame_count, unk1, unk2, flags, bits_per_entry = parse_3409_header(raw_data)
-    print(f"Header: 0x{header:08X}")
-    print(f"Frame Count: {frame_count}")
-    print(f"Unknown Value 1: {unk1}")
-    print(f"Unknown Value 2: {unk2}")
-    print(f"Flags: {flags}")
-    print(f"Bits Per Entry: {bits_per_entry}")
-    print()
-
-    # Parse default vectors (keyframes)
-    default_vectors, compressed_start = parse_default_vectors(raw_data)
-    first, middle, last = default_vectors
-
-    print("Key Frame Vectors:")
-    print(f"First:  ({first[0]:.6f}, {first[1]:.6f}, {first[2]:.6f})")
-    print(f"Middle: ({middle[0]:.6f}, {middle[1]:.6f}, {middle[2]:.6f})")
-    print(f"Last:   ({last[0]:.6f}, {last[1]:.6f}, {last[2]:.6f})")
-    print()
-
-    # Show compressed data info
-    compressed_data = raw_data[compressed_start:]
-    print(f"Compressed data starts at position: {compressed_start}")
-    print(f"Compressed data length: {len(compressed_data)} bytes")
-    print(f"Compressed data (first 20 bytes): {compressed_data[:20]}")
-    print()
-
-    print("=== Interpolation Logic Explanation ===")
-    print("0x3409 uses segmented interpolation with 3 keyframes:")
-    print("- Range 0.0-0.5: Linear interpolation between 'first' and 'middle'")
-    print("- Range 0.5-1.0: Linear interpolation between 'middle' and 'last'")
-    print()
-
-    # Demonstrate interpolation with actual keyframe data
-    print("X-component interpolation examples using actual keyframes:")
-    x_first, x_middle, x_last = first[0], middle[0], last[0]
-    print(f"X values: first={x_first:.6f}, middle={x_middle:.6f}, last={x_last:.6f}")
-
-    for t in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        interpolated = interpolate_component(x_first, x_middle, x_last, t)
-        segment = "first→middle" if t <= 0.5 else "middle→last"
-        print(f"  t={t:4.2f} ({segment:12s}): {interpolated:.6f}")
-
-    print()
-    print("Y-component interpolation examples:")
-    y_first, y_middle, y_last = first[1], middle[1], last[1]
-    print(f"Y values: first={y_first:.6f}, middle={y_middle:.6f}, last={y_last:.6f}")
-
-    for t in [0.0, 0.25, 0.5, 0.75, 1.0]:
-        interpolated = interpolate_component(y_first, y_middle, y_last, t)
-        segment = "first→middle" if t <= 0.5 else "middle→last"
-        print(f"  t={t:4.2f} ({segment:12s}): {interpolated:.6f}")
-
-    print()
-    print("=== Decompression Process ===")
-    print("1. Read compressed bit stream from compressed data")
-    print("2. Extract indices for each component (X, Y, Z) using bits_per_entry")
-    print("3. Convert indices to interpolation parameter t:")
-    print("   t = index / (2^bits_per_component - 1)")
-    print("4. Use t to interpolate between the 3 keyframes")
-    print("5. Each frame requires 3 indices (one per component)")
-    print()
-
-    # Calculate bits per component (assuming 8 bits as used in the code)
-    bits_per_component = 8  # Common value for 0x3409
-    max_index = (1 << bits_per_component) - 1
-
-    print(f"=== Index to Interpolation Parameter Conversion ===")
-    print(f"Bits per component: {bits_per_component}")
-    print(f"Max index value: {max_index}")
-    print("Example conversions:")
-
-    for index in [0, 64, 128, 192, 255]:
-        t = index / max_index
-        interpolated_x = interpolate_component(x_first, x_middle, x_last, t)
-        print(f"  Index {index:3d} → t={t:.3f} → X={interpolated_x:.6f}")
 
 if __name__ == "__main__":
-    demonstrate_3409_compression_logic()
+    main()
+

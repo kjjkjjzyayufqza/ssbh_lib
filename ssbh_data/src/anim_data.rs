@@ -707,10 +707,10 @@ fn create_track_data_v12(
                 }
             }
             "Rotate" => {
-                println!("Rotate track: {}", track.name.to_string_lossy());
-                println!("Rotate header: 0x{:04X}", header);
-                println!("Rotate data: {:?}", data.elements);
-                println!("Rotate data length: {}", data.elements.len());
+                // println!("Rotate track: {}", track.name.to_string_lossy());
+                // println!("Rotate header: 0x{:04X}", header);
+                // println!("Rotate data: {:?}", data.elements);
+                // println!("Rotate data length: {}", data.elements.len());
                 match header {
                     0x3408 => {
                         // Version 1.2: Compressed Vector3-based rotation data (Euler angles)
@@ -933,10 +933,7 @@ fn create_track_data_v12(
                 }
             }
             "Translate" => {
-                println!("Translate track: {}", track.name.to_string_lossy());
-                println!("Translate header: 0x{:04X}", header);
-                println!("Translate data: {:?}", data.elements);
-                println!("Translate data length: {}", data.elements.len());
+
                 match header {
                     0x3003 => {
                         // Single Vector3 - uncompressed
@@ -949,6 +946,10 @@ fn create_track_data_v12(
                         property_data.translations.push(translation);
                     }
                     0x0934 | 0x3409 => {
+                        println!("Translate track: {}", track.name.to_string_lossy());
+                        println!("Translate header: 0x{:04X}", header);
+                        println!("Translate data: {:?}", data.elements);
+                        println!("Translate data length: {}", data.elements.len());
                         // Version 1.2: Compressed Vector3 translation data
                         // Format 0x0934 from GitHub discussion
                         let _compressed_frame_count = reader.read_le::<u32>()? as usize;
