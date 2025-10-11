@@ -109,12 +109,25 @@ To decompress one frame of Vector3 data:
 4. **Combine**: Create final Vector3(x, y, z)
 5. **Repeat** for each frame
 
-## Key Insights
+## Key Insights (Updated with Function Analysis)
 
 - **Efficiency**: Stores only 3 keyframes instead of 40 individual frames
 - **Quality**: Segmented interpolation provides better precision than simple linear interpolation
 - **Flexibility**: Can represent complex curves with minimal data
 - **Application**: Perfect for smooth animation curves in game assets
+
+---
+
+## Function-Level Decompression Flow (IDA Analysis Result)
+
+The high-level algorithm is executed through a nested object model:
+
+1.  **Main Dispatcher (`sub_140244330`):** The VTable `operator()` entry point for the compressed track.
+2.  **Interpolation Scheduler (`sub_140235330`):** Handles frame time decomposition, boundary checks (`<0.01f`, `>0.99f`), and dispatches to **Read Single Frame (RSF)** and **Interpolate Between Frames (IBF)** logic via function objects/structs stored in the Decompressor object (`a1+64` and `a1+136`).
+3.  **Read Single Frame Core (`sub_14023FCF0`):** This function is the actual entry point for RSF logic. It acts as a **four-component dispatcher**, delegating X, Y, Z, and W processing to four distinct function pointers stored in its internal structure (`a1[4]`, `a1[15]`, `a1[26]`, `a1[37]`). These four functions contain the hard-coded BitReader (e.g., 21-bit index extraction) and the final inverse segmented interpolation computation.
+4.  **Key Parameters:**
+    *   **Normalization Factor:** The inverse of the total frame count is stored in the Decompressor structure at offset **+72**.
+    *   **Keyframes:** 3 x Vector3 (K1, K2, K3) are passed as captured context to the Lambda object.
 
 ## Compression Benefits
 

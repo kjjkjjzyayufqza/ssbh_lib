@@ -65,64 +65,40 @@ __int64 sub_1402423F0(__int64 a1, __int64 a2)
 
 `sub_1402430B0` 实际上是设置 `a1+144` 区域的函数对象。它调用 `sub_140244800` 创建 104 字节的 Lambda 对象，然后通过 `sub_140039FE0` 将其移动/复制到 `a1+144`。
 
-### sub_140235330 中的对象使用
+### sub_140235330 中的对象使用（已解决）
+
+**更新：** `a1` 是 `AnimationTrackProcessor` (Decompressor Context) 指针。
 
 ```c
 void sub_140235330(__int64 a1, __int64 a2, float a3)
 {
     // a1 是 AnimationTrackProcessor 指针
-    // a1+64 是另一个函数对象的指针（在其他地方设置）
-    // a1+136 也是一个函数对象的指针
+    // a1+64 是 read_single_frame 对象指针 (Read Single Frame / RSF)
+    // a1+136 是 interpolate_between_frames 对象指针 (Interpolate Between Frames / IBF)
     
-    v6 = *(_QWORD *)(a1 + 64);  // 获取函数对象指针
-    
-    // 通过虚表调用函数对象的 operator()
+    // Read Single Frame (RSF) Logic VCall:
+    v6 = *(_QWORD *)(a1 + 64);  // 获取 RSF 对象指针
     (*(__int64 (__fastcall **)(__int64, char **, float *))
-        (*(_QWORD *)v6 + 16i64))(v6, &v12, &v11);
+        (*(_QWORD *)v6 + 16i64))(v6, &v12, &v11); // 调用 RSF::operator()
     
     // ...
     
-    v10 = *(_QWORD *)(a1 + 136);  // 获取另一个函数对象
+    // Interpolate Between Frames (IBF) Logic VCall:
+    v10 = *(_QWORD *)(a1 + 136);  // 获取 IBF 对象指针
     (*(__int64 (__fastcall **)(__int64, __int64 *, char **, char **, float *))
-        (*(_QWORD *)v10 + 16i64))(v10, &v14, &v13, &v12, &v11);
+        (*(_QWORD *)v10 + 16i64))(v10, &v14, &v13, &v12, &v11); // 调用 IBF::operator()
 }
 ```
 
-## 关键问题：a1+64 和 a1+136 何时被设置？
+## 关键发现：核心逻辑定位（已解决）
 
-### 当前分析状态
-- `sub_1402423F0` 将它们初始化为 0
-- `sub_140236CC0` 在 a1+80 设置插值对象，但不是 a1+64 或 a1+136
-- `sub_1402430B0` 设置 a1+144 的 Lambda 对象
+**1. Keyframe 数据**
+- **发现：** Keyframes (K1, K2, K3) 是 3 个 Vector3，共 9 个浮点数 (36 字节)，存储在原始数据结构的 Keyframe 区域。
 
-### 可能性分析
+**2. 配置参数**
+- **时间归一化因子：** 位于 `AnimationTrackProcessor` (Decompressor Context) 结构的 **+72 偏移** (`sub_140236CC0` 赋初始值)。
 
-#### 假设 1: 这些指针在 sub_1402407B0 中设置
-`sub_1402407B0` 是主调度器，调用 `sub_1402423F0` 后可能还有其他设置步骤。
-
-#### 假设 2: 它们指向 a1 内部的其他对象
-- a1+64 可能指向 a1+80（插值对象）
-- a1+136 可能指向 a1+144（Lambda 对象）
-- 或者它们在 sub_1402423F0 返回后被设置
-
-#### 假设 3: sub_140039FE0 设置了这些指针
-`sub_140039FE0(v12, a1 + 144)` 可能不仅仅是复制，还可能设置其他字段。
-
-## 下一步分析重点
-
-1. **反编译 sub_140039FE0**
-   - 看它如何处理 Lambda 对象
-   - 是否设置 a1+64 或 a1+136
-
-2. **查看 sub_1402407B0 调用 sub_1402423F0 后的代码**
-   - 是否有额外的设置步骤
-
-3. **分析 a1+80 对象的用途**
-   - 虚表 _lambda_7c80d3bccf2818536ef2f57a848ddbdb_
-   - 签名：void(void*, void const*, void const*, float)
-   - 这可能就是 a1+136 使用的插值函数
-
-4. **确认内存布局假设**
-   - a1+64 -> a1+80 的对象？
-   - a1+136 -> a1+144 的 Lambda？
-   - a1+200 的用途？
+**3. BitReader/分段插值实现 (RSF Core)**
+- **RSF Core 转发函数：** RSF 对象的 `operator()` 最终调用 **`sub_14023FCF0`**。
+- **分量处理：** `sub_14023FCF0` 负责 X, Y, Z, W 四个分量的分派，它通过其输入结构中的四个函数指针 (`a1[4]`、`a1[15]`、`a1[26]`、`a1[37]`)，调用最终的 BitReader/分段插值逻辑。
+- **IBF Core：** IBF 对象的 `operator()` 执行简单的线性插值。

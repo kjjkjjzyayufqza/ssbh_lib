@@ -111,61 +111,34 @@ void interpolate_frame(__int64 lambda_obj, __int64 output, float frame_time)
 }
 ```
 
-## 待解决的关键问题
+## 待解决的关键问题 (已解决)
 
-### 问题 1: 偏移+64 的 read_frame_func 是什么？
+### 问题 1: 核心解压缩和位流逻辑 (`read_single_frame`) 是什么？
 
-**已知**：
-- 该函数被 sub_140235330 调用
-- 通过虚表调用：`(*(func_ptr + 16))(...)` 
-- 参数：lambda_obj, output_buffer, frame_index
+**发现**：
+- 实际的单帧读取逻辑 (RSF) 封装在 `AnimationSourceDecompressor` 对象内，并通过 `sub_140235330` 调用其虚函数 (`+64` 偏移处对象的虚表 +16)。
+- RSF 核心逻辑位于 **`sub_14023FCF0`** 及其内部调用的 **四个函数指针**，分别负责 X, Y, Z, W 分量的 BitReader 和分段插值。
+- Keyframe 数据 (3 x Vector3) 和时间归一化参数已定位。
 
-**需要**：
-- 反编译该函数的实际实现
-- 理解如何从压缩流读取索引值
-- 理解如何执行分段插值（K1, K2, K3）
+### 问题 2: 核心线性插值逻辑 (`interpolate_between_frames`) 是什么？
 
-### 问题 2: 偏移+136 的 interpolate_func 是什么？
+**发现**：
+- 线性插值逻辑 (IBF) 类似于 RSF，通过 Decompressor 对象偏移 `+136` 处的对象虚函数 (`+16`) 调用。
+- IBF 负责对 `sub_14023FCF0` 返回的两个 Vector3 结果进行简单的线性插值。
 
-**已知**：
-- 该函数执行双帧线性插值
-- 参数：lambda_obj, output, frame_1, frame_2, t
+### 问题 3: 88 字节数据中 Keyframe 和 配置参数的位置在哪？
 
-**需要**：
-- 反编译该函数
-- 验证插值公式
+**发现**：
+- **Keyframe 数据**：Keyframe 确实由 K1, K2, K3 (3 个 Vector3) 组成，共 9 个浮点数 (36 字节) 存储在原始数据结构的 Keyframe 区域。
+- **配置参数**：时间缩放因子（用于归一化时间）位于 `AnimationSourceDecompressor` 结构体 **+72 偏移处**。
 
-### 问题 3: 88 字节数据中哪些是 Keyframe 值？
+## 下一步行动计划 (已完成分析，转为实现)
 
-**推测**：
-- `captured_24_40` (16 bytes) 可能是 K1 (3 floats + padding)
-- `captured_40_56` (16 bytes) 可能是 K2
-- `captured_72_88` (16 bytes) 可能是 K3
+### 优先级 1: 编写 Python 重构
+- 基于已确认的 **分段线性插值数学模型** 和 **Decompressor 结构**，开始实现 `Decompressor0x3409` 类。
 
-**需要验证**：
-- 反编译实际使用这些数据的函数
-- 确认是否是 float[3] 格式
-
-### 问题 4: bits_per_entry 等配置存储在哪？
-
-**可能位置**：
-- `captured_08` 或 `captured_16`
-- 或者在 `captured_56`, `captured_88` 中
-
-## 下一步行动计划
-
-### 优先级 1: 找到偏移+64 函数指针的设置位置
-- 在 sub_1402430B0 或更早的调用链中查找
-- 可能在 sub_1402423F0 的两个分支中设置不同的函数
-
-### 优先级 2: 反编译具体的读取函数
-- 一旦找到函数地址，立即反编译
-- 分析位流读取和分段插值逻辑
+### 优先级 2: 确定 BitReader 细节
+- 假设 X/Y/Z/W 分量 BitReader 函数实现是相同的，并将 BitReader 逻辑（读取 21 位索引，反量化）整合到 Python 实现中。
 
 ### 优先级 3: 验证数据布局
-- 使用实际的 3409.bin 数据
-- 对比理论分析和实际值
-
-### 优先级 4: 编写 Python 重构
-- 基于完整的实现细节
-- 逐个验证每个组件
+- 使用实际的 3409.bin 数据对 Python 实现进行端到端测试，验证 Keyframe 数据布局和参数是否准确。

@@ -211,45 +211,23 @@ struct Lambda_0x3409 {
 
 #### 5.4.2 核心插值逻辑（`sub_140235330`）
 
-`sub_140235330` 是实际执行帧插值的函数，其逻辑如下：
+`sub_140235330` 是实际执行帧插值的函数，其 `lambda_obj` 参数实际指向 `AnimationSourceDecompressor` 对象。
+
+**关键发现：**
+1. **时间归一化参数**：在 `sub_140236CC0` 中设置，位于 `AnimationSourceDecompressor` (Decompressor Context) 结构 **+72 偏移** 处。
+2. **Read Single Frame (RSF) Logic 的真实核心**：位于 `sub_14023FCF0`，它是一个分发函数，将 X/Y/Z/W 四个分量 BitReader/分段插值工作委托给其输入结构中的四个函数指针（`a1[4]`、`a1[15]`、`a1[26]`、`a1[37]`）。
 
 **伪代码重构：**
 ```c
-void interpolate_frame(__int64 lambda_obj, __int64 output, float frame_time)
+void interpolate_frame(__int64 decompressor_obj, __int64 output, float frame_time)
 {
-    int frame_index = (int)frame_time;
-    float fractional = frame_time - (float)frame_index;
+    // ... 边界检查和插值调度逻辑保持不变 ...
     
-    // 边界情况1: 接近整数帧下界 (fractional < 0.01)
-    if (fractional < 0.01f) {
-        // 直接读取当前帧
-        read_single_frame(lambda_obj, output, frame_index);
-        return;
-    }
-    
-    // 边界情况2: 接近整数帧上界 (fractional > 0.99)
-    if (fractional > 0.99f) {
-        // 直接读取下一帧
-        read_single_frame(lambda_obj, output, frame_index + 1);
-        return;
-    }
-    
-    // 常规情况: 需要插值
-    char frame_data_1[44];  // 存储帧 N 的数据
-    char frame_data_2[52];  // 存储帧 N+1 的数据
-    
-    // 读取两个相邻帧的数据
-    read_single_frame(lambda_obj, frame_data_1, frame_index);
-    read_single_frame(lambda_obj, frame_data_2, frame_index + 1);
-    
-    // 执行插值 (线性插值)
-    interpolate_between_frames(
-        lambda_obj,
-        output,           // 输出 Vector3
-        frame_data_1,     // 帧 N 数据
-        frame_data_2,     // 帧 N+1 数据
-        fractional        // 插值参数 [0.0, 1.0]
-    );
+    // read_single_frame 指向 Decompressor + 64 处的对象，其 operator() (虚表+16) 执行读取和分段插值。
+    read_single_frame(decompressor_obj+64, frame_data_1, frame_index);
+    // ...
+    // interpolate_between_frames 指向 Decompressor + 136 处的对象，其 operator() (虚表+16) 执行线性插值。
+    interpolate_between_frames(decompressor_obj+136, output, frame_data_1, frame_data_2, fractional);
 }
 ```
 
