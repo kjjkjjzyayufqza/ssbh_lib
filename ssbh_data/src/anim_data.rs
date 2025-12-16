@@ -36,7 +36,7 @@ for group in anim.groups {
 //! When converting to [Anim], compression is enabled for a track if compression would save space.
 //! This may produce differences with the original due to compression differences.
 //! These errors are small in practice but may cause gameplay differences such as online desyncs.
-use binrw::io::{Cursor, Read, Seek, Write};
+use binrw::io::{Cursor, Seek, Write};
 use binrw::{BinRead, BinReaderExt};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -60,6 +60,8 @@ mod buffers;
 use buffers::*;
 mod bitutils;
 mod compression;
+#[path = "nuanmb_v12.rs"]
+mod nuanmb_v12;
 
 /// Data associated with an [Anim] file.
 /// Supported versions are 2.0 and 2.1.
@@ -198,6 +200,9 @@ pub mod error {
             buffer_index: usize,
             buffer_count: usize,
         },
+
+        #[error("the provided animation data is malformed or incomplete")]
+        InvalidData,
 
         /// An error occurred while reading the compressed header for version 2.0 or later.
         #[error("the track data compression header is malformed and cannot be read")]
@@ -700,6 +705,42 @@ fn create_track_data_v12(
                         let scale = reader.read_le::<Vector3>()?;
                         property_data.scales.push(scale);
                     }
+                    0x3200 => {
+                        let frames = nuanmb_v12::decode_scale_3200(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3208 => {
+                        let frames = nuanmb_v12::decode_scale_3208(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3209 => {
+                        let frames = nuanmb_v12::decode_scale_3209(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3300 => {
+                        let frames = nuanmb_v12::decode_scale_3300(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3308 => {
+                        let frames = nuanmb_v12::decode_scale_3308(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3309 => {
+                        let frames = nuanmb_v12::decode_scale_3309(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3400 => {
+                        let frames = nuanmb_v12::decode_scale_3400(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3408 => {
+                        let frames = nuanmb_v12::decode_scale_3408(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
+                    0x3409 => {
+                        let frames = nuanmb_v12::decode_scale_3409(&data.elements)?;
+                        property_data.scales.extend(frames);
+                    }
                     _ => {
                         // For complex scale formats, use default
                         property_data.scales.push(Vector3 { x: 1.0, y: 1.0, z: 1.0 });
@@ -707,343 +748,104 @@ fn create_track_data_v12(
                 }
             }
             "Rotate" => {
-                // println!("Rotate track: {}", track.name.to_string_lossy());
-                // println!("Rotate header: 0x{:04X}", header);
-                // println!("Rotate data: {:?}", data.elements);
-                // println!("Rotate data length: {}", data.elements.len());
                 match header {
-                    0x3408 => {
-                        // Version 1.2: Compressed Vector3-based rotation data (Euler angles)
-                        // Uses 2 default Vector3 values instead of 3 like 0x3409
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;  // typically 1.0
-                        let _unk2 = reader.read_le::<f32>()?;  // varies
-
-                        // Two default Vector3 values representing key frames
-                        let default_values: [Vector3; 2] = reader.read_le()?;
-
-                        let _flags = reader.read_le::<u16>()?;
-                        let bits_per_entry = reader.read_le::<u16>()? as usize;
-
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        if !compressed_data.is_empty() && bits_per_entry > 0 {
-                            let compressed_frames = decompress_v12_vector3_data_2_defaults(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
-                            )?;
-                            for rotation_euler in compressed_frames {
-                                let rotation = euler_to_quaternion(rotation_euler);
-                                property_data.rotations.push(rotation);
-                            }
-                        } else {
-                            // No compressed data, use default value
-                            let default_euler = default_values[0];
-                            let rotation = euler_to_quaternion(default_euler);
-                            property_data.rotations.push(rotation);
-                        }
-                    }
-                    0x3409 => {
-                        // Version 1.2: Compressed Vector3-based rotation data (Euler angles)
-                        // Based on GitHub discussion format
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;  // typically 0.0 or 1.0
-                        let _unk2 = reader.read_le::<f32>()?;  // varies
-                        let _flags = reader.read_le::<u16>()?; // compression flags
-                        let bits_per_entry = reader.read_le::<u16>()? as usize;
-                        
-                        // Three default Vector3 values representing key frames (first, middle, last)
-                        let default_values: [Vector3; 3] = reader.read_le()?;
-                        
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        if !compressed_data.is_empty() && bits_per_entry > 0 {
-                            // Decompress euler angle frames
-                            let compressed_frames = decompress_v12_vector3_data(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
-                            )?;
-                            for rotation_euler in compressed_frames {
-                                let rotation = euler_to_quaternion(rotation_euler);
-                                property_data.rotations.push(rotation);
-                            }
-                        } else {
-                            // No compressed data, use default value
-                            let default_euler = default_values[0];
-                            let rotation = euler_to_quaternion(default_euler);
-                            property_data.rotations.push(rotation);
-                        }
-                    }
-                    0x4308 => {
-                        // Version 1.2: Compressed Vector3 data with special format (also for Euler rotation)
-                        // This format includes frame indices and 9 additional floats
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;
-
-                        // Read frame indices (one byte per frame)
-                        let mut frame_indices = vec![0u8; _compressed_frame_count];
-                        reader.read_exact(&mut frame_indices)?;
-                        
-                        // Align to 4-byte boundary
-                        let pos = reader.position();
-                        let aligned_pos = (pos + 3) & !3;
-                        reader.seek(std::io::SeekFrom::Start(aligned_pos))?;
-                        
-                        // Read 3 default Vector3 values (first, middle, last keyframes)
-                        let default_values: [Vector3; 3] = reader.read_le()?;
-                        
-                        // Read 9 additional floats (purpose unclear, possibly extended metadata)
-                        let _additional_floats: [f32; 9] = reader.read_le()?;
-                        
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        if !compressed_data.is_empty() {
-                            // Estimate bits per entry from remaining data
-                            let total_bits = compressed_data.len() * 8;
-                            let bits_per_entry = if _compressed_frame_count > 0 {
-                                (total_bits / _compressed_frame_count).max(1).min(72) // 3 components * 24 bits max
-                            } else {
-                                0
-                            };
-
-                            let compressed_frames = decompress_v12_vector3_data(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
-                            )?;
-                            for rotation_euler in compressed_frames {
-                                let rotation = euler_to_quaternion(rotation_euler);
-                                property_data.rotations.push(rotation);
-                            }
-                        } else {
-                            // No compressed data, use default values
-                            let default_euler = default_values[0];
-                            let rotation = euler_to_quaternion(default_euler);
-                            property_data.rotations.push(rotation);
-                        }
-                    }
-                    0x4408 => {
-                        // Version 1.2: Compressed Vector4-based rotation data (quaternions)
-                        // Uses 2 default Vector4 values instead of 3 like 0x4409
-                        // Format: magic + count + unk1 + unk2 + 2 default quaternions + compressed data
-                        // NOTE: Unlike other formats, this does NOT have flags or bits_per_entry fields!
-                        // The compressed data uses a fixed 10 bits per component (40 bits per frame = 5 bytes)
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;
-                        let _unk2 = reader.read_le::<f32>()?;
-
-                        // Two default Vector4 quaternion values
-                        let default_values: [Vector4; 2] = reader.read_le()?;
-
-                        // Compressed data starts immediately - NO flags or bits_per_entry fields!
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        // Use fixed 10 bits per component for 0x4408 format
-                        let bits_per_component = 10;
-
-                        if !compressed_data.is_empty() {
-                            let compressed_frames = decompress_v12_vector4_data_2_defaults(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_component
-                            )?;
-                            property_data.rotations.extend(compressed_frames);
-                        } else {
-                            // No compressed data, use default value
-                            property_data.rotations.push(default_values[0]);
-                        }
-                    }
-                    0x4409 => {
-                        // Version 1.2: Compressed Vector4-based rotation data (quaternions)
-                        // Same logic as 0x4408
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;
-                        let _unk2 = reader.read_le::<f32>()?;
-                        let _flags = reader.read_le::<u16>()?;
-                        let bits_per_entry = reader.read_le::<u16>()? as usize;
-
-                        // Three default Vector4 quaternion values (first, middle, last)
-                        let default_values: [Vector4; 3] = reader.read_le()?;
-
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        if !compressed_data.is_empty() && bits_per_entry > 0 {
-                            let compressed_frames = decompress_v12_vector4_data(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
-                            )?;
-                            property_data.rotations.extend(compressed_frames);
-                        } else {
-                            // No compressed data, use default value
-                            property_data.rotations.push(default_values[0]);
-                        }
-                    }
-                    0x4003 => {
-                        // Single Vector4 (quaternion rotation) - uncompressed
-                        let rotation = reader.read_le::<Vector4>()?;
-                        property_data.rotations.push(rotation);
-                    }
                     0x3003 => {
                         // Single Vector3 (euler angles, convert to quaternion) - uncompressed
                         let euler: Vector3 = reader.read_le()?;
                         let rotation = euler_to_quaternion(euler);
                         property_data.rotations.push(rotation);
                     }
+                    0x4003 => {
+                        // Single Vector4 (quaternion rotation) - uncompressed
+                        let rotation = reader.read_le::<Vector4>()?;
+                        property_data.rotations.push(rotation);
+                    }
+                    0x4200 => {
+                        let frames = nuanmb_v12::decode_rotate_4200(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
+                    0x4208 => {
+                        let frames = nuanmb_v12::decode_rotate_4208(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
+                    0x4209 => {
+                        let frames = nuanmb_v12::decode_rotate_4209(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
                     0x4300 => {
-                        // Version 1.2: Uncompressed quaternion data
-                        // Direct float values per frame (4 floats = 16 bytes per frame)
-                        let frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;  // typically 1.0
-                        let _unk2 = reader.read_le::<f32>()?;  // varies
-
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        // Parse uncompressed quaternion data
-                        let mut data_reader = Cursor::new(compressed_data);
-                        for _ in 0..frame_count {
-                            if data_reader.position() as usize + 16 <= compressed_data.len() {
-                                let x = data_reader.read_le::<f32>()?;
-                                let y = data_reader.read_le::<f32>()?;
-                                let z = data_reader.read_le::<f32>()?;
-                                let w = data_reader.read_le::<f32>()?;
-
-                                // Normalize quaternion if needed
-                                let length = (x * x + y * y + z * z + w * w).sqrt();
-                                if length > 0.001 {
-                                    property_data.rotations.push(Vector4 {
-                                        x: x / length,
-                                        y: y / length,
-                                        z: z / length,
-                                        w: w / length,
-                                    });
-                                } else {
-                                    // Use identity quaternion if invalid
-                                    property_data.rotations.push(Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 });
-                                }
-                            } else {
-                                // Use identity quaternion if not enough data
-                                property_data.rotations.push(Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 });
-                            }
-                        }
+                        let frames = nuanmb_v12::decode_rotate_4300(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
+                    0x4308 => {
+                        let frames = nuanmb_v12::decode_rotate_4308(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
+                    0x4309 => {
+                        let frames = nuanmb_v12::decode_rotate_4309(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
+                    0x4400 => {
+                        let frames = nuanmb_v12::decode_rotate_4400(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
+                    0x4408 => {
+                        let frames = nuanmb_v12::decode_rotate_4408(&data.elements)?;
+                        property_data.rotations.extend(frames);
+                    }
+                    0x4409 => {
+                        let frames = nuanmb_v12::decode_rotate_4409(&data.elements)?;
+                        property_data.rotations.extend(frames);
                     }
                     _ => {
                         // Unknown format, use default identity rotation
-                        eprintln!("Warning: Unknown Rotate format header: 0x{:04X} for track {}", header, track.name.to_string_lossy());
                         property_data.rotations.push(Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 });
                     }
                 }
             }
             "Translate" => {
-
                 match header {
                     0x3003 => {
-                        // Single Vector3 - uncompressed
                         let translation = reader.read_le::<Vector3>()?;
                         property_data.translations.push(translation);
+                    }
+                    0x3200 => {
+                        let frames = nuanmb_v12::decode_translate_3200(&data.elements)?;
+                        property_data.translations.extend(frames);
+                    }
+                    0x3208 => {
+                        let frames = nuanmb_v12::decode_translate_3208(&data.elements)?;
+                        property_data.translations.extend(frames);
+                    }
+                    0x3209 => {
+                        let frames = nuanmb_v12::decode_translate_3209(&data.elements)?;
+                        property_data.translations.extend(frames);
                     }
                     0x3300 => {
-                        // Variant of single Vector3 - different header but same structure
-                        let translation = reader.read_le::<Vector3>()?;
-                        property_data.translations.push(translation);
+                        let frames = nuanmb_v12::decode_translate_3300(&data.elements)?;
+                        property_data.translations.extend(frames);
                     }
-                    0x0934 | 0x3409 => {
-                        println!("Translate track: {}", track.name.to_string_lossy());
-                        println!("Translate header: 0x{:04X}", header);
-                        println!("Translate data: {:?}", data.elements);
-                        println!("Translate data length: {}", data.elements.len());
-                        // Version 1.2: Compressed Vector3 translation data
-                        // Format 0x0934 from GitHub discussion
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;  // typically 1.0
-                        let _unk2 = reader.read_le::<f32>()?;  // varies
-                        let _flags = reader.read_le::<u16>()?; // typically 2
-                        let bits_per_entry = reader.read_le::<u16>()? as usize;  // bit count for decompression
-                        println!("bits_per_entry: {}", bits_per_entry);
-                        // Three default Vector3 values (first frame, middle frame, last frame)
-                        let default_values: [Vector3; 3] = reader.read_le()?;
-
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        if !compressed_data.is_empty() && bits_per_entry > 0 {
-                            let compressed_frames = decompress_v12_vector3_data(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
-                            )?;
-                            property_data.translations.extend(compressed_frames);
-                        } else {
-                            // No compressed data, use default value
-                            property_data.translations.push(default_values[0]);
-                        }
+                    0x3308 => {
+                        let frames = nuanmb_v12::decode_translate_3308(&data.elements)?;
+                        property_data.translations.extend(frames);
+                    }
+                    0x3309 => {
+                        let frames = nuanmb_v12::decode_translate_3309(&data.elements)?;
+                        property_data.translations.extend(frames);
+                    }
+                    0x3400 => {
+                        let frames = nuanmb_v12::decode_translate_3400(&data.elements)?;
+                        property_data.translations.extend(frames);
                     }
                     0x3408 => {
-                        // Version 1.2: Compressed Vector3 translation data
-                        // Uses 2 default Vector3 values instead of 3 like 0x3409
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;  // typically 1.0
-                        let _unk2 = reader.read_le::<f32>()?;  // varies
-
-                        // Two default Vector3 values representing key frames
-                        let default_values: [Vector3; 2] = reader.read_le()?;
-
-                        let _flags = reader.read_le::<u16>()?;
-                        let bits_per_entry = reader.read_le::<u16>()? as usize;
-
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        if !compressed_data.is_empty() && bits_per_entry > 0 {
-                            let compressed_frames = decompress_v12_vector3_data_2_defaults(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
-                            )?;
-                            property_data.translations.extend(compressed_frames);
-                        } else {
-                            // No compressed data, use default value
-                            property_data.translations.push(default_values[0]);
-                        }
+                        let frames = nuanmb_v12::decode_translate_3408(&data.elements)?;
+                        property_data.translations.extend(frames);
                     }
-                    0x4308 => {
-                        // Version 1.2: Compressed Vector3 data with frame indices
-                        let _compressed_frame_count = reader.read_le::<u32>()? as usize;
-                        let _unk1 = reader.read_le::<f32>()?;
-
-                        // Read frame indices (one byte per frame)
-                        let mut frame_indices = vec![0u8; _compressed_frame_count];
-                        reader.read_exact(&mut frame_indices)?;
-                        
-                        // Align to 4-byte boundary
-                        let pos = reader.position();
-                        let aligned_pos = (pos + 3) & !3;
-                        reader.seek(std::io::SeekFrom::Start(aligned_pos))?;
-                        
-                        // Read 3 default Vector3 values (first, middle, last keyframes)
-                        let default_values: [Vector3; 3] = reader.read_le()?;
-                        
-                        // Read 9 additional floats
-                        let _additional_floats: [f32; 9] = reader.read_le()?;
-                        
-                        let compressed_data_start = reader.position() as usize;
-                        let compressed_data = &data.elements[compressed_data_start..];
-
-                        if !compressed_data.is_empty() {
-                            // Estimate bits per entry from remaining data
-                            let total_bits = compressed_data.len() * 8;
-                            let bits_per_entry = if _compressed_frame_count > 0 {
-                                (total_bits / _compressed_frame_count).max(1).min(72)
-                            } else {
-                                0
-                            };
-
-                            let compressed_frames = decompress_v12_vector3_data(
-                                compressed_data, _compressed_frame_count, &default_values, bits_per_entry
-                            )?;
-                            property_data.translations.extend(compressed_frames);
-                        } else {
-                            // No compressed data, use default value
-                            property_data.translations.push(default_values[0]);
-                        }
+                    0x3409 => {
+                        let frames = nuanmb_v12::decode_translate_3409(&data.elements)?;
+                        property_data.translations.extend(frames);
                     }
                     _ => {
-                        // Unknown format - log for debugging
-                        eprintln!("Warning: Unknown Translate format header: 0x{:04X} for track {}", header, track.name.to_string_lossy());
+                        // Unknown format
                         property_data.translations.push(Vector3 { x: 0.0, y: 0.0, z: 0.0 });
                     }
                 }
@@ -1280,421 +1082,6 @@ fn interpolate_vector4_frames(frame_count: usize, default_values: &[Vector4]) ->
     }
 
     frames
-}
-
-// Version 1.2 compression decompression functions
-
-/// Decompress version 1.2 Vector3 compressed data
-fn decompress_v12_vector3_data(
-    compressed_data: &[u8],
-    frame_count: usize,
-    default_values: &[Vector3; 3],
-    bits_per_entry: usize,
-) -> Result<Vec<Vector3>, error::Error> {
-    if frame_count == 0 {
-        return Ok(Vec::new());
-    }
-
-    // If no compressed data or no bits, interpolate between default values
-    if compressed_data.is_empty() || bits_per_entry == 0 {
-        return Ok(interpolate_vector3_frames(frame_count, default_values));
-    }
-
-    // Check if this might be uncompressed float data (12 bytes per Vector3)
-    if compressed_data.len() >= frame_count * 12 && bits_per_entry >= 32 * 3 {
-        // Try reading as raw float data
-        let mut reader = Cursor::new(compressed_data);
-        let mut frames = Vec::with_capacity(frame_count);
-        for _ in 0..frame_count {
-            if reader.position() as usize + 12 <= compressed_data.len() {
-                let x = reader.read_le::<f32>()?;
-                let y = reader.read_le::<f32>()?;
-                let z = reader.read_le::<f32>()?;
-                frames.push(Vector3 { x, y, z });
-            } else {
-                frames.push(default_values[0]);
-            }
-        }
-        return Ok(frames);
-    }
-
-    // Version 1.2 compression: values are indices into interpolated ranges
-    let mut bit_reader = bitutils::BitReader::from_slice(compressed_data);
-    let mut frames = Vec::with_capacity(frame_count);
-
-    // Determine bits per component based on bits_per_entry
-    let bits_per_component = match bits_per_entry {
-        0 => 0,
-        1..=24 => 8,  // Use 8 bits per component for most cases
-        25..=48 => 12,
-        49..=72 => 16,
-        _ => 8,  // Cap at 8 bits per component for safety
-    };
-
-    if bits_per_component == 0 {
-        return Ok(interpolate_vector3_frames(frame_count, default_values));
-    }
-
-    for i in 0..frame_count {
-        let result = (|| -> Result<Vector3, error::Error> {
-            // Read compressed indices for each component
-            let x_index = bit_reader.read_u32(bits_per_component)?;
-            let y_index = bit_reader.read_u32(bits_per_component)?;
-            let z_index = bit_reader.read_u32(bits_per_component)?;
-
-            // Convert indices to interpolation factors (0.0 to 1.0)
-            let max_index = (1u32 << bits_per_component) - 1;
-            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
-            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
-            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
-
-            // Interpolate between the three default values
-            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
-            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
-            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
-
-            Ok(Vector3 { x, y, z })
-        })();
-
-        match result {
-            Ok(vec) => frames.push(vec),
-            Err(_) => {
-                // If decompression fails, fall back to interpolation for remaining frames
-                let interpolated = interpolate_vector3_frames(frame_count - i, default_values);
-                frames.extend(interpolated);
-                break;
-            }
-        }
-    }
-
-    Ok(frames)
-}
-
-/// Decompress version 1.2 Vector3 compressed data with 2 default values
-/// Used by 0x3408 format which only has 2 default Vector3 values
-fn decompress_v12_vector3_data_2_defaults(
-    compressed_data: &[u8],
-    frame_count: usize,
-    default_values: &[Vector3; 2],
-    bits_per_entry: usize,
-) -> Result<Vec<Vector3>, error::Error> {
-    if frame_count == 0 {
-        return Ok(Vec::new());
-    }
-
-    // If no compressed data or no bits, interpolate between default values
-    // Also use interpolation for very low bits_per_entry (≤1) which may indicate
-    // that compression is not actually used for this track
-    if compressed_data.is_empty() || bits_per_entry <= 1 {
-        return Ok(interpolate_vector3_frames_2_defaults(frame_count, default_values));
-    }
-
-    // Check if this might be uncompressed float data (12 bytes per Vector3)
-    if compressed_data.len() >= frame_count * 12 && bits_per_entry >= 32 * 3 {
-        // Try reading as raw float data
-        let mut reader = Cursor::new(compressed_data);
-        let mut frames = Vec::with_capacity(frame_count);
-        for _ in 0..frame_count {
-            if reader.position() as usize + 12 <= compressed_data.len() {
-                let x = reader.read_le::<f32>()?;
-                let y = reader.read_le::<f32>()?;
-                let z = reader.read_le::<f32>()?;
-                frames.push(Vector3 { x, y, z });
-            } else {
-                frames.push(default_values[0]);
-            }
-        }
-        return Ok(frames);
-    }
-
-    // Version 1.2 compression with 2 default values
-    let mut bit_reader = bitutils::BitReader::from_slice(compressed_data);
-    let mut frames = Vec::with_capacity(frame_count);
-
-    // Determine bits per component based on bits_per_entry
-    let bits_per_component = match bits_per_entry {
-        0 => 0,
-        1..=24 => 8,  // Use 8 bits per component for most cases
-        25..=48 => 12,
-        49..=72 => 16,
-        _ => 8,  // Cap at 8 bits per component for safety
-    };
-
-    if bits_per_component == 0 {
-        return Ok(interpolate_vector3_frames_2_defaults(frame_count, default_values));
-    }
-
-    for i in 0..frame_count {
-        let result = (|| -> Result<Vector3, error::Error> {
-            // Read compressed indices for each component
-            let x_index = bit_reader.read_u32(bits_per_component)?;
-            let y_index = bit_reader.read_u32(bits_per_component)?;
-            let z_index = bit_reader.read_u32(bits_per_component)?;
-
-            // Convert indices to interpolation factors (0.0 to 1.0)
-            let max_index = (1u32 << bits_per_component) - 1;
-            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
-            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
-            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
-
-            // Interpolate between the two default values (simple linear interpolation)
-            let x = default_values[0].x + (default_values[1].x - default_values[0].x) * x_t;
-            let y = default_values[0].y + (default_values[1].y - default_values[0].y) * y_t;
-            let z = default_values[0].z + (default_values[1].z - default_values[0].z) * z_t;
-            println!("x: {}, y: {}, z: {}", x, y, z);
-            Ok(Vector3 { x, y, z })
-        })();
-
-        match result {
-            Ok(vec) => frames.push(vec),
-            Err(_) => {
-                // If decompression fails, fall back to interpolation for remaining frames
-                let interpolated = interpolate_vector3_frames_2_defaults(frame_count - i, default_values);
-                frames.extend(interpolated);
-                break;
-            }
-        }
-    }
-
-    Ok(frames)
-}
-
-/// Interpolate Vector3 frames with exactly 2 default values
-fn interpolate_vector3_frames_2_defaults(frame_count: usize, default_values: &[Vector3; 2]) -> Vec<Vector3> {
-    if frame_count == 0 {
-        return Vec::new();
-    }
-
-    if frame_count == 1 {
-        return vec![default_values[0]];
-    }
-
-    let mut frames = Vec::with_capacity(frame_count);
-    let first = default_values[0];
-    let last = default_values[1];
-
-    for i in 0..frame_count {
-        let value = if i == 0 {
-            first
-        } else if i == frame_count - 1 {
-            last
-        } else {
-            // Linear interpolation between first and last
-            let t = i as f32 / (frame_count - 1) as f32;
-            Vector3 {
-                x: first.x + (last.x - first.x) * t,
-                y: first.y + (last.y - first.y) * t,
-                z: first.z + (last.z - first.z) * t,
-            }
-        };
-        frames.push(value);
-    }
-    frames
-}
-
-/// Decompress version 1.2 Vector4 compressed data (for quaternions)
-fn decompress_v12_vector4_data(
-    compressed_data: &[u8],
-    frame_count: usize,
-    default_values: &[Vector4],
-    bits_per_entry: usize,
-) -> Result<Vec<Vector4>, error::Error> {
-    if frame_count == 0 {
-        return Ok(Vec::new());
-    }
-
-    // If no compressed data or no bits, interpolate between default values
-    if compressed_data.is_empty() || bits_per_entry == 0 {
-        return Ok(interpolate_vector4_frames(frame_count, default_values));
-    }
-
-    // Check if this might be uncompressed float data (16 bytes per Vector4)
-    if compressed_data.len() >= frame_count * 16 && bits_per_entry >= 32 * 4 {
-        // Try reading as raw float data
-        let mut reader = Cursor::new(compressed_data);
-        let mut frames = Vec::with_capacity(frame_count);
-        for _ in 0..frame_count {
-            if reader.position() as usize + 16 <= compressed_data.len() {
-                let x = reader.read_le::<f32>()?;
-                let y = reader.read_le::<f32>()?;
-                let z = reader.read_le::<f32>()?;
-                let w = reader.read_le::<f32>()?;
-
-                // Normalize quaternion
-                let length = (x * x + y * y + z * z + w * w).sqrt();
-                if length > 0.001 {
-                    frames.push(Vector4 {
-                        x: x / length,
-                        y: y / length,
-                        z: z / length,
-                        w: w / length
-                    });
-                } else {
-                    frames.push(default_values[0]);
-                }
-            } else {
-                frames.push(default_values[0]);
-            }
-        }
-        return Ok(frames);
-    }
-
-    // Version 1.2 quaternion compression
-    let mut bit_reader = bitutils::BitReader::from_slice(compressed_data);
-    let mut frames = Vec::with_capacity(frame_count);
-
-    // Determine bits per component for quaternions
-    let bits_per_component = match bits_per_entry {
-        0 => 0,
-        1..=16 => 4,  // Use fewer bits for quaternions
-        17..=32 => 6,
-        33..=48 => 8,
-        49..=64 => 10,
-        _ => 8,  // Cap at 8 bits per component
-    };
-
-    if bits_per_component == 0 {
-        return Ok(interpolate_vector4_frames(frame_count, default_values));
-    }
-
-    for i in 0..frame_count {
-        let result = (|| -> Result<Vector4, error::Error> {
-            // Read compressed indices for X, Y, Z components
-            let x_index = bit_reader.read_u32(bits_per_component)?;
-            let y_index = bit_reader.read_u32(bits_per_component)?;
-            let z_index = bit_reader.read_u32(bits_per_component)?;
-
-            // For quaternions, we may also have a W sign bit
-            let w_sign_bit = if bits_per_entry > bits_per_component * 3 {
-                bit_reader.read_bit().unwrap_or(true)
-            } else {
-                true
-            };
-
-            // Convert indices to interpolation factors
-            let max_index = (1u32 << bits_per_component) - 1;
-            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
-            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
-            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
-
-            // Interpolate quaternion components
-            let x = interpolate_component(default_values[0].x, default_values[1].x, default_values[2].x, x_t);
-            let y = interpolate_component(default_values[0].y, default_values[1].y, default_values[2].y, y_t);
-            let z = interpolate_component(default_values[0].z, default_values[1].z, default_values[2].z, z_t);
-            let w_base = interpolate_component(default_values[0].w, default_values[1].w, default_values[2].w, (x_t + y_t + z_t) / 3.0);
-
-            // Apply sign bit to W component
-            let w = if w_sign_bit { w_base.abs() } else { -w_base.abs() };
-
-            // Normalize the quaternion
-            let length = (x * x + y * y + z * z + w * w).sqrt();
-            if length > 0.001 {
-                Ok(Vector4 {
-                    x: x / length,
-                    y: y / length,
-                    z: z / length,
-                    w: w / length,
-                })
-            } else {
-                Ok(default_values[0])
-            }
-        })();
-
-        match result {
-            Ok(quat) => frames.push(quat),
-            Err(_) => {
-                // If decompression fails, fall back to interpolation for remaining frames
-                let interpolated = interpolate_vector4_frames(frame_count - i, default_values);
-                frames.extend(interpolated);
-                break;
-            }
-        }
-    }
-
-    Ok(frames)
-}
-
-/// Decompress version 1.2 Vector4 compressed data with 2 default values (for quaternions)
-/// Used by 0x4408 format which only has 2 default quaternion values
-/// 
-/// # Arguments
-/// * `compressed_data` - The compressed bit-packed data
-/// * `frame_count` - Number of frames to decompress
-/// * `default_values` - Two default quaternion values used for interpolation
-/// * `bits_per_component` - Number of bits used per quaternion component (typically 10 for 0x4408)
-fn decompress_v12_vector4_data_2_defaults(
-    compressed_data: &[u8],
-    frame_count: usize,
-    default_values: &[Vector4; 2],
-    bits_per_component: usize,
-) -> Result<Vec<Vector4>, error::Error> {
-    if frame_count == 0 {
-        return Ok(Vec::new());
-    }
-
-    // If no compressed data or no bits, interpolate between default values
-    if compressed_data.is_empty() || bits_per_component == 0 {
-        return Ok(interpolate_vector4_frames_2_defaults(frame_count, default_values));
-    }
-
-    // Version 1.2 quaternion compression with 2 default values
-    // Each frame uses bits_per_component bits for each of the 4 quaternion components
-    let mut bit_reader = bitutils::BitReader::from_slice(compressed_data);
-    let mut frames = Vec::with_capacity(frame_count);
-
-    for i in 0..frame_count {
-        let result = (|| -> Result<Vector4, error::Error> {
-            // Read compressed indices for X, Y, Z, W components
-            let x_index = bit_reader.read_u32(bits_per_component)?;
-            let y_index = bit_reader.read_u32(bits_per_component)?;
-            let z_index = bit_reader.read_u32(bits_per_component)?;
-            let w_index = bit_reader.read_u32(bits_per_component)?;
-
-            // Convert indices to interpolation factors (0.0 to 1.0)
-            let max_index = (1u32 << bits_per_component) - 1;
-            let x_t = if max_index > 0 { x_index as f32 / max_index as f32 } else { 0.0 };
-            let y_t = if max_index > 0 { y_index as f32 / max_index as f32 } else { 0.0 };
-            let z_t = if max_index > 0 { z_index as f32 / max_index as f32 } else { 0.0 };
-            let w_t = if max_index > 0 { w_index as f32 / max_index as f32 } else { 0.0 };
-
-            // Interpolate quaternion components independently between 2 default values
-            let x = default_values[0].x + (default_values[1].x - default_values[0].x) * x_t;
-            let y = default_values[0].y + (default_values[1].y - default_values[0].y) * y_t;
-            let z = default_values[0].z + (default_values[1].z - default_values[0].z) * z_t;
-            let w = default_values[0].w + (default_values[1].w - default_values[0].w) * w_t;
-            
-            // Normalize the quaternion
-            let length = (x * x + y * y + z * z + w * w).sqrt();
-            if length > 0.001 {
-                Ok(Vector4 {
-                    x: x / length,
-                    y: y / length,
-                    z: z / length,
-                    w: w / length,
-                })
-            } else {
-                // Fallback to first default value if normalization fails
-                Ok(default_values[0])
-            }
-        })();
-
-        match result {
-            Ok(quat) => frames.push(quat),
-            Err(_) => {
-                // If decompression fails, fall back to interpolation for remaining frames
-                let interpolated = interpolate_vector4_frames_2_defaults(frame_count - i, default_values);
-                frames.extend(interpolated);
-                break;
-            }
-        }
-    }
-
-    Ok(frames)
-}
-
-/// Interpolate Vector4 frames with exactly 2 default values
-fn interpolate_vector4_frames_2_defaults(frame_count: usize, default_values: &[Vector4; 2]) -> Vec<Vector4> {
-    interpolate_vector4_frames(frame_count, default_values)
 }
 
 // Spherical linear interpolation for quaternions
