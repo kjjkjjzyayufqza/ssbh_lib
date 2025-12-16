@@ -1879,23 +1879,26 @@ fn try_parse_endpoints_3409(
 
 /// Decode Anim v1.2 Rotate buffer with header 0x4409.
 ///
-/// Layout:
+/// Layout (curve-level 0x3409/0x4409 family):
 /// - u32 header (0x4409)
 /// - u32 key_count (frames)
 /// - f32 unk1 (often 1.0)
 /// - f32 base_scale
-/// - u16 blocks
+/// - u16 flags (semantics still unclear; do not treat as block count)
 /// - u16 bits
-/// - u32 padding
-/// - endpoints: (endpoint_count) * Vector4<f32>
+/// - endpoints: (block_count(key_count) + 1) * Vector4<f32>
 /// - residual stream (variable, 4-byte aligned)
+///
+/// Some files appear to contain an extra u32 immediately after `bits`, shifting the endpoints base
+/// from 0x14 to 0x18. This decoder tries both endpoint bases (0x14 and 0x18) and validates the
+/// candidate by walking the residual stream.
 ///
 /// Rebuild key quaternions:
 /// - K(local) from endpoint lerp within each 33-key block
 /// - R(local) from decode_residual_vector
 /// - q_key = normalize(K + R)
 pub fn decode_rotate_4409(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
-    if bytes.len() < 24 {
+    if bytes.len() < 0x14 {
         return Err(error::Error::InvalidData);
     }
     if read_u32_le(bytes, 0)? != 0x4409 {
@@ -1904,36 +1907,94 @@ pub fn decode_rotate_4409(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
     let key_count = read_u32_le(bytes, 4)? as usize;
     let _unk1 = read_f32_le(bytes, 8)?;
     let base_scale = read_f32_le(bytes, 12)?;
-    let blocks = read_u16_le(bytes, 16)? as usize;
     let _bits = read_u16_le(bytes, 18)?;
 
     if key_count == 0 {
         return Ok(vec![Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }]);
     }
 
-    let expected_blocks = compute_block_count(key_count);
-    let endpoint_count = if blocks == expected_blocks {
-        blocks + 1
+    let block_count = if key_count <= 1 {
+        0usize
     } else {
-        expected_blocks + 1
+        (key_count - 1) / 33 + 1
     };
+    let endpoint_count = block_count + 1;
 
-    let header_size = 24;
-    let endpoint_table_size = endpoint_count * 16;
-    let residual_off = header_size + endpoint_table_size;
-
-    if residual_off > bytes.len() {
-        return Err(error::Error::InvalidData);
+    fn walk_residual_4409(
+        payload: &[u8],
+        residual_off: usize,
+        base_scale: f32,
+        comp_bits: usize,
+        key_count: usize,
+        block_count: usize,
+    ) -> Result<usize, error::Error> {
+        let mut cursor = residual_off;
+        for block_idx in 0..block_count {
+            let block_len = compute_block_len(key_count, block_idx);
+            if block_len <= 1 {
+                continue;
+            }
+            let (_, end_off) = decode_residual_vector(payload, cursor, base_scale, 1, comp_bits, block_len)?;
+            let delta = end_off.saturating_sub(cursor);
+            if delta == 0 || (delta % 4) != 0 {
+                return Err(error::Error::InvalidData);
+            }
+            cursor = end_off;
+        }
+        Ok(cursor)
     }
 
-    // Read endpoints
-    let mut endpoints = Vec::with_capacity(endpoint_count);
-    for i in 0..endpoint_count {
-        endpoints.push(read_vec4_f32_le(bytes, header_size + i * 16)?);
+    let mut best: Option<(Vec<Vector4>, usize, usize)> = None; // (endpoints, residual_off, comp_bits)
+    let mut best_key: Option<(usize, i32, usize)> = None; // (slack, -comp_bits, residual_off)
+
+    for endpoint_base in [0x14usize, 0x18usize] {
+        let endpoints_size = endpoint_count * 16;
+        let residual_off = endpoint_base + endpoints_size;
+        if residual_off > bytes.len() {
+            continue;
+        }
+        if (endpoint_base % 4) != 0 || (residual_off % 4) != 0 {
+            continue;
+        }
+
+        let mut endpoints = Vec::with_capacity(endpoint_count);
+        let mut max_abs = 0.0f32;
+        let mut ok = true;
+        for i in 0..endpoint_count {
+            let q = match read_vec4_f32_le(bytes, endpoint_base + i * 16) {
+                Ok(v) => v,
+                Err(_) => {
+                    ok = false;
+                    break;
+                }
+            };
+            max_abs = max_abs.max(q.x.abs()).max(q.y.abs()).max(q.z.abs()).max(q.w.abs());
+            endpoints.push(q);
+        }
+        if !ok || !max_abs.is_finite() || max_abs > 1.0e6 {
+            continue;
+        }
+
+        for comp_bits in [4usize, 3, 2, 1] {
+            let end_off = match walk_residual_4409(bytes, residual_off, base_scale, comp_bits, key_count, block_count)
+            {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+            if end_off > bytes.len() {
+                continue;
+            }
+            let slack = bytes.len() - end_off;
+            let cand_key = (slack, -(comp_bits as i32), residual_off);
+            if best_key.is_none() || cand_key < best_key.unwrap() {
+                best = Some((endpoints.clone(), residual_off, comp_bits));
+                best_key = Some(cand_key);
+            }
+            break;
+        }
     }
 
-    // Infer component count by walking residual stream
-    let comp_bits = infer_4409_comp_bits(bytes, residual_off, base_scale, key_count)?;
+    let (endpoints, residual_off, comp_bits) = best.ok_or(error::Error::InvalidData)?;
 
     // Compute prefix words for each block
     let q_counts = compute_block_qcounts(bytes, residual_off, base_scale, comp_bits, key_count)?;
@@ -1979,24 +2040,6 @@ pub fn decode_rotate_4409(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
         out.push(q);
     }
     Ok(out)
-}
-
-fn infer_4409_comp_bits(
-    bytes: &[u8],
-    residual_off: usize,
-    base_scale: f32,
-    key_count: usize,
-) -> Result<usize, error::Error> {
-    // Try component counts from 4 down to 1
-    for comp in [4, 3, 2, 1] {
-        if let Ok(q_counts) = compute_block_qcounts(bytes, residual_off, base_scale, comp, key_count) {
-            let end_off = residual_off + 4 * q_counts.iter().sum::<usize>();
-            if end_off <= bytes.len() {
-                return Ok(comp);
-            }
-        }
-    }
-    Err(error::Error::InvalidData)
 }
 
 // ========================== Scale Decoders (Aliases to Translate) ==========================
