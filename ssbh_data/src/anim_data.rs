@@ -83,6 +83,50 @@ pub struct AnimData {
     pub groups: Vec<GroupData>,
 }
 
+impl AnimData {
+    /// Converts the AnimData to an uncompressed Anim v1.2 format.
+    /// 
+    /// This method creates a v1.2 animation file using only constant and raw stream formats,
+    /// never using compressed formats like 0x3409 or 0x4409. This is useful for maximum
+    /// simplicity and compatibility when converting from other animation formats.
+    /// 
+    /// # Encoding Strategy
+    /// - Constant tracks (all frames identical): Uses constant formats (0x3003, 0x4003, etc.)
+    /// - Multi-frame tracks: Uses raw stream formats (0x3400, 0x4300, etc.)
+    /// - Quaternions are automatically normalized before writing
+    /// 
+    /// # Errors
+    /// Returns an error if:
+    /// - The major/minor version is not 1.2
+    /// - The final_frame_index is negative
+    /// - There are issues writing the buffer data
+    pub fn to_anim_v12_uncompressed(&self) -> Result<Anim, error::Error> {
+        if self.major_version != 1 || self.minor_version != 2 {
+            return Err(error::Error::UnsupportedVersion {
+                major_version: self.major_version,
+                minor_version: self.minor_version,
+            });
+        }
+        create_anim_v12_uncompressed(self)
+    }
+
+    /// Writes the AnimData to a file in uncompressed Anim v1.2 format.
+    /// 
+    /// This is a convenience method that combines `to_anim_v12_uncompressed()` with
+    /// writing to a file. See `to_anim_v12_uncompressed()` for details on the encoding strategy.
+    /// 
+    /// # Errors
+    /// Returns an error if:
+    /// - The major/minor version is not 1.2
+    /// - The final_frame_index is negative
+    /// - There are issues writing the buffer data
+    /// - File I/O fails
+    pub fn write_to_file_v12_uncompressed<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), error::Error> {
+        let anim = self.to_anim_v12_uncompressed()?;
+        anim.write_to_file(path).map_err(Into::into)
+    }
+}
+
 // TODO: Test these conversions.
 impl TryFrom<Anim> for AnimData {
     type Error = Box<dyn Error>;
@@ -429,10 +473,146 @@ fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
     })
 }
 
+// Create uncompressed v1.2 animation from AnimData
+// This version uses only constant and raw stream formats, never compressed formats
+fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, error::Error> {
+    use ssbh_lib::formats::anim::{TrackV1, Property};
+    use ssbh_lib::SsbhByteBuffer;
+    
+    let mut tracks = Vec::new();
+    let mut buffers = Vec::new();
+    
+    let _frame_count = (data.final_frame_index as usize) + 1;
+    
+    // Convert each group back to tracks for version 1.2
+    for group in &data.groups {
+        for node in &group.nodes {
+            for track in &node.tracks {
+                // Determine track type based on group type and track name
+                let track_type = match group.group_type {
+                    GroupType::Transform => TrackTypeV1::Transform,
+                    GroupType::Visibility => TrackTypeV1::Visibility,
+                    GroupType::Material => TrackTypeV1::UvTransform,
+                    _ => TrackTypeV1::Transform, // Default fallback
+                };
+                
+                // Create properties based on track type and values
+                let mut properties = Vec::new();
+                
+                match (&track.values, track_type) {
+                    (TrackValues::Transform(transforms), TrackTypeV1::Transform) => {
+                        if !transforms.is_empty() {
+                            // Extract scale, rotation, and translation data
+                            let scales: Vec<Vector3> = transforms.iter().map(|t| t.scale).collect();
+                            let rotations: Vec<Vector4> = transforms.iter().map(|t| t.rotation).collect();
+                            let translations: Vec<Vector3> = transforms.iter().map(|t| t.translation).collect();
+                            
+                            // Create Scale property
+                            let scale_data = create_v12_uncompressed_vector3_data(&scales, "Scale")?;
+                            buffers.push(SsbhByteBuffer { elements: scale_data });
+                            properties.push(Property {
+                                name: "Scale".into(),
+                                buffer_index: (buffers.len() - 1) as u64,
+                            });
+                            
+                            // Create Rotation property
+                            let rotation_data = create_v12_uncompressed_vector4_data(&rotations)?;
+                            buffers.push(SsbhByteBuffer { elements: rotation_data });
+                            properties.push(Property {
+                                name: "Rotate".into(),
+                                buffer_index: (buffers.len() - 1) as u64,
+                            });
+                            
+                            // Create Translation property
+                            let translation_data = create_v12_uncompressed_vector3_data(&translations, "Translate")?;
+                            buffers.push(SsbhByteBuffer { elements: translation_data });
+                            properties.push(Property {
+                                name: "Translate".into(),
+                                buffer_index: (buffers.len() - 1) as u64,
+                            });
+                            
+                            // CompensateScale property if needed
+                            if track.compensate_scale {
+                                let mut compensate_data = Vec::new();
+                                compensate_data.extend_from_slice(&0x1003u32.to_le_bytes());
+                                compensate_data.extend_from_slice(&1.0f32.to_le_bytes()); // true = 1.0
+                                
+                                buffers.push(SsbhByteBuffer { elements: compensate_data });
+                                properties.push(Property {
+                                    name: "CompensateScale".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+                        }
+                    }
+                    (TrackValues::Boolean(bools), TrackTypeV1::Visibility) => {
+                        if !bools.is_empty() {
+                            let visibility_data = create_v12_uncompressed_bool_data(bools)?;
+                            buffers.push(SsbhByteBuffer { elements: visibility_data });
+                            properties.push(Property {
+                                name: "Visibility".into(),
+                                buffer_index: (buffers.len() - 1) as u64,
+                            });
+                        }
+                    }
+                    (TrackValues::UvTransform(uv_transforms), TrackTypeV1::UvTransform) => {
+                        if !uv_transforms.is_empty() {
+                            let uv_data = create_v12_uncompressed_uv_data(uv_transforms)?;
+                            buffers.push(SsbhByteBuffer { elements: uv_data });
+                            properties.push(Property {
+                                name: "UvTransform".into(),
+                                buffer_index: (buffers.len() - 1) as u64,
+                            });
+                        }
+                    }
+                    _ => {
+                        // Create a default empty property for unsupported combinations
+                        let mut default_data = Vec::new();
+                        default_data.extend_from_slice(&0x0000u32.to_le_bytes());
+                        
+                        buffers.push(SsbhByteBuffer { elements: default_data });
+                        properties.push(Property {
+                            name: track.name.as_str().into(),
+                            buffer_index: (buffers.len() - 1) as u64,
+                        });
+                    }
+                }
+                
+                // Create the track
+                tracks.push(TrackV1 {
+                    name: node.name.as_str().into(),
+                    track_type,
+                    properties: properties.into(),
+                });
+            }
+        }
+    }
+    
+    // Validate final_frame_index is non-negative
+    let final_frame_index = if data.final_frame_index >= 0.0 {
+        Ok(data.final_frame_index)
+    } else {
+        Err(error::Error::InvalidFinalFrameIndex {
+            final_frame_index: data.final_frame_index,
+        })
+    }?;
+    
+    Ok(Anim::V12 {
+        name: "".into(), // Default empty name
+        unk1: 0.0,       // Default unknown value
+        final_frame_index,
+        unk2: 0.0,       // Default unknown value
+        unk3: 0.0,       // Default unknown value
+        tracks: tracks.into(),
+        buffers: buffers.into(),
+    })
+}
+
 // TODO: Test this for a small example?
 fn create_anim(data: &AnimData) -> Result<Anim, error::Error> {
     let version = match (data.major_version, data.minor_version) {
-        (1, 2) => return create_anim_v12(data),
+        // Use uncompressed format by default for v1.2
+        (1, 2) => return create_anim_v12_uncompressed(data),
         (2, 0) => Ok(AnimVersion::Version20),
         (2, 1) => Ok(AnimVersion::Version21),
         _ => Err(error::Error::UnsupportedVersion {
@@ -2249,6 +2429,183 @@ fn create_v12_compressed_bool_data(values: &[bool]) -> Result<Vec<u8>, error::Er
         data.extend_from_slice(&0x1013u32.to_le_bytes());
         for &value in values {
             data.extend_from_slice(&(if value { 1u16 } else { 0u16 }).to_le_bytes());
+        }
+    }
+    
+    Ok(data)
+}
+
+/// Create uncompressed Vector3 data for version 1.2
+/// Uses constant format 0x3003 for single values or raw stream format 0x3400 for multi-frame data
+fn create_v12_uncompressed_vector3_data(values: &[Vector3], _property_name: &str) -> Result<Vec<u8>, error::Error> {
+    let mut data = Vec::new();
+    
+    if values.is_empty() {
+        return Ok(data);
+    }
+    
+    // Check if all values are identical (constant track)
+    let all_same = values.iter().all(|v| {
+        (v.x - values[0].x).abs() < 1e-6
+            && (v.y - values[0].y).abs() < 1e-6
+            && (v.z - values[0].z).abs() < 1e-6
+    });
+    
+    if all_same || values.len() == 1 {
+        // Use constant format 0x3003
+        data.extend_from_slice(&0x3003u32.to_le_bytes());
+        data.extend_from_slice(&values[0].x.to_le_bytes());
+        data.extend_from_slice(&values[0].y.to_le_bytes());
+        data.extend_from_slice(&values[0].z.to_le_bytes());
+    } else {
+        // Use raw stream format 0x3400
+        let frame_count = values.len() as u32;
+        data.extend_from_slice(&0x3400u32.to_le_bytes());
+        data.extend_from_slice(&frame_count.to_le_bytes());
+        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
+        
+        // Write all frame values as raw f32 data
+        for value in values {
+            data.extend_from_slice(&value.x.to_le_bytes());
+            data.extend_from_slice(&value.y.to_le_bytes());
+            data.extend_from_slice(&value.z.to_le_bytes());
+        }
+    }
+    
+    Ok(data)
+}
+
+/// Create uncompressed Vector4 data for version 1.2 (quaternions)
+/// Uses constant format 0x4003 for single values or raw stream format 0x4300 for multi-frame data
+fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
+    let mut data = Vec::new();
+    
+    if values.is_empty() {
+        return Ok(data);
+    }
+    
+    // Normalize all quaternions
+    let normalized_values: Vec<Vector4> = values.iter().map(|q| {
+        let magnitude = (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w).sqrt();
+        if magnitude > 1e-6 {
+            Vector4 {
+                x: q.x / magnitude,
+                y: q.y / magnitude,
+                z: q.z / magnitude,
+                w: q.w / magnitude,
+            }
+        } else {
+            // Identity quaternion if magnitude is too small
+            Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }
+        }
+    }).collect();
+    
+    // Check if all values are identical (constant track)
+    let all_same = normalized_values.iter().all(|v| {
+        (v.x - normalized_values[0].x).abs() < 1e-6
+            && (v.y - normalized_values[0].y).abs() < 1e-6
+            && (v.z - normalized_values[0].z).abs() < 1e-6
+            && (v.w - normalized_values[0].w).abs() < 1e-6
+    });
+    
+    if all_same || normalized_values.len() == 1 {
+        // Use constant format 0x4003
+        data.extend_from_slice(&0x4003u32.to_le_bytes());
+        data.extend_from_slice(&normalized_values[0].x.to_le_bytes());
+        data.extend_from_slice(&normalized_values[0].y.to_le_bytes());
+        data.extend_from_slice(&normalized_values[0].z.to_le_bytes());
+        data.extend_from_slice(&normalized_values[0].w.to_le_bytes());
+    } else {
+        // Use raw stream format 0x4300
+        let frame_count = normalized_values.len() as u32;
+        data.extend_from_slice(&0x4300u32.to_le_bytes());
+        data.extend_from_slice(&frame_count.to_le_bytes());
+        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
+        data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2 - typically 0.0
+        
+        // Write all frame values as raw f32 quaternion data
+        for value in &normalized_values {
+            data.extend_from_slice(&value.x.to_le_bytes());
+            data.extend_from_slice(&value.y.to_le_bytes());
+            data.extend_from_slice(&value.z.to_le_bytes());
+            data.extend_from_slice(&value.w.to_le_bytes());
+        }
+    }
+    
+    Ok(data)
+}
+
+/// Create uncompressed boolean data for version 1.2
+/// Uses constant format 0x1013 for single values or raw stream format for multi-frame data
+fn create_v12_uncompressed_bool_data(values: &[bool]) -> Result<Vec<u8>, error::Error> {
+    let mut data = Vec::new();
+    
+    if values.is_empty() {
+        return Ok(data);
+    }
+    
+    // Check if all values are identical (constant track)
+    let all_same = values.iter().all(|&v| v == values[0]);
+    
+    if all_same || values.len() == 1 {
+        // Use constant format 0x1013
+        data.extend_from_slice(&0x1013u32.to_le_bytes());
+        data.extend_from_slice(&(if values[0] { 1u16 } else { 0u16 }).to_le_bytes());
+    } else {
+        // Use raw stream format - write header and all values
+        // Format: 0x1019 header + frame_count + values as u16
+        data.extend_from_slice(&0x1019u32.to_le_bytes());
+        let frame_count = values.len() as u32;
+        data.extend_from_slice(&frame_count.to_le_bytes());
+        
+        for &value in values {
+            data.extend_from_slice(&(if value { 1u16 } else { 0u16 }).to_le_bytes());
+        }
+    }
+    
+    Ok(data)
+}
+
+/// Create uncompressed UV transform data for version 1.2
+/// Uses format 0x5014 for constant or raw stream
+fn create_v12_uncompressed_uv_data(values: &[UvTransform]) -> Result<Vec<u8>, error::Error> {
+    let mut data = Vec::new();
+    
+    if values.is_empty() {
+        return Ok(data);
+    }
+    
+    // Check if all values are the same
+    let all_same = values.iter().all(|v| {
+        (v.scale_u - values[0].scale_u).abs() < 1e-6
+            && (v.scale_v - values[0].scale_v).abs() < 1e-6
+            && (v.rotation - values[0].rotation).abs() < 1e-6
+            && (v.translate_u - values[0].translate_u).abs() < 1e-6
+            && (v.translate_v - values[0].translate_v).abs() < 1e-6
+    });
+    
+    if all_same || values.len() == 1 {
+        // Use constant format 0x5014
+        data.extend_from_slice(&0x5014u32.to_le_bytes());
+        let uv = &values[0];
+        data.extend_from_slice(&uv.scale_u.to_le_bytes());
+        data.extend_from_slice(&uv.scale_v.to_le_bytes());
+        data.extend_from_slice(&uv.rotation.to_le_bytes());
+        data.extend_from_slice(&uv.translate_u.to_le_bytes());
+        data.extend_from_slice(&uv.translate_v.to_le_bytes());
+    } else {
+        // Use raw stream - write header with frame count, then all values
+        // Format: 0x5019 header + frame_count + all UV transforms
+        data.extend_from_slice(&0x5019u32.to_le_bytes());
+        let frame_count = values.len() as u32;
+        data.extend_from_slice(&frame_count.to_le_bytes());
+        
+        for uv in values {
+            data.extend_from_slice(&uv.scale_u.to_le_bytes());
+            data.extend_from_slice(&uv.scale_v.to_le_bytes());
+            data.extend_from_slice(&uv.rotation.to_le_bytes());
+            data.extend_from_slice(&uv.translate_u.to_le_bytes());
+            data.extend_from_slice(&uv.translate_v.to_le_bytes());
         }
     }
     
