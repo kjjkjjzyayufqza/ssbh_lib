@@ -912,8 +912,16 @@ pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
         return Err(error::Error::InvalidData);
     }
     let frame_count = read_u32_le(bytes, 4)? as usize;
-    let mut pos = 12;
+    // Some files include two f32 values after frame_count (unk1, unk2),
+    // while others appear to include only unk1.
+    // Determine the quaternion stream start based on total buffer size.
+    let pos = if bytes.len() >= 16 + frame_count * 16 && bytes.len() != 12 + frame_count * 16 {
+        16
+    } else {
+        12
+    };
     let mut frames = Vec::with_capacity(frame_count);
+    let mut pos = pos;
     for _ in 0..frame_count {
         let mut q = read_vec4_f32_le(bytes, pos)?;
         pos += 16;

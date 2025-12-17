@@ -599,7 +599,7 @@ fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, error::Error> {
     
     Ok(Anim::V12 {
         name: "".into(), // Default empty name
-        unk1: 0.0,       // Default unknown value
+        unk1: 1.0,
         final_frame_index,
         unk2: 0.0,       // Default unknown value
         unk3: 0.0,       // Default unknown value
@@ -2458,13 +2458,29 @@ fn create_v12_uncompressed_vector3_data(values: &[Vector3], _property_name: &str
         data.extend_from_slice(&values[0].y.to_le_bytes());
         data.extend_from_slice(&values[0].z.to_le_bytes());
     } else {
-        // Use raw stream format 0x3400
-        let frame_count = values.len() as u32;
-        data.extend_from_slice(&0x3400u32.to_le_bytes());
-        data.extend_from_slice(&frame_count.to_le_bytes());
+        // Use indexed keyframe format 0x3300 for compatibility.
+        // This stores uncompressed f32 Vector3 values with explicit frame indices.
+        let key_count = values.len();
+        if key_count > u8::MAX as usize + 1 {
+            return Err(error::Error::InvalidFinalFrameIndex {
+                final_frame_index: key_count as f32 - 1.0,
+            });
+        }
+
+        data.extend_from_slice(&0x3300u32.to_le_bytes());
+        data.extend_from_slice(&(key_count as u32).to_le_bytes());
         data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
-        
-        // Write all frame values as raw f32 data
+
+        // Frame indices (one byte per key).
+        for i in 0..key_count {
+            data.push(i as u8);
+        }
+        // Align to 4 bytes before key values.
+        while (data.len() % 4) != 0 {
+            data.push(0);
+        }
+
+        // Key values as raw f32 data.
         for value in values {
             data.extend_from_slice(&value.x.to_le_bytes());
             data.extend_from_slice(&value.y.to_le_bytes());
