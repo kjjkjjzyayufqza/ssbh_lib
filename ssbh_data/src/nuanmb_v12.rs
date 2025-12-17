@@ -1751,12 +1751,37 @@ pub fn decode_translate_3409(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let blocks = compute_block_count(key_count);
     let endpoint_count = blocks + 1;
 
-    // Infer layout: try different endpoint encodings and residual offsets
-    let (endpoints, comp_bits, residual_off, _q_counts) = 
-        infer_3409_layout(bytes, 20, endpoint_count, base_scale, key_count)?;
+    // Infer layout: Some files include an extra u32 after `bits`, shifting the endpoints base
+    // from 0x14 to 0x18 (similar to the 0x4409 family). Try both bases and validate by
+    // walking the residual stream.
+    let mut best: Option<(Vec<Vector3>, usize, usize, Vec<usize>)> = None; // (endpoints, comp_bits, residual_off, q_counts)
+    let mut best_key: Option<(usize, i32, usize)> = None; // (slack, -comp_bits, residual_off)
+
+    for scan_start in [0x14usize, 0x18usize] {
+        if scan_start > bytes.len() {
+            continue;
+        }
+        let (endpoints, comp_bits, residual_off, q_counts) =
+            match infer_3409_layout(bytes, scan_start, endpoint_count, base_scale, key_count) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
+
+        let end_off = residual_off + 4 * q_counts.iter().sum::<usize>();
+        if end_off > bytes.len() {
+            continue;
+        }
+        let slack = bytes.len() - end_off;
+        let cand_key = (slack, -(comp_bits as i32), residual_off);
+        if best_key.is_none() || cand_key < best_key.unwrap() {
+            best = Some((endpoints, comp_bits, residual_off, q_counts));
+            best_key = Some(cand_key);
+        }
+    }
+
+    let (endpoints, comp_bits, residual_off, q_counts) = best.ok_or(error::Error::InvalidData)?;
 
     // Compute prefix words for each block
-    let q_counts = compute_block_qcounts(bytes, residual_off, base_scale, comp_bits, key_count)?;
     let mut prefix_words = vec![0usize];
     for q in &q_counts {
         prefix_words.push(prefix_words.last().copied().unwrap_or(0) + *q);

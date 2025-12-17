@@ -61,7 +61,9 @@ use buffers::*;
 mod bitutils;
 mod compression;
 #[path = "nuanmb_v12.rs"]
-mod nuanmb_v12;
+pub mod nuanmb_v12;
+#[path = "nuanmb_v12_encode.rs"]
+pub mod nuanmb_v12_encode;
 
 /// Data associated with an [Anim] file.
 /// Supported versions are 2.0 and 2.1.
@@ -111,10 +113,10 @@ impl AnimData {
     }
 
     /// Writes the AnimData to a file in uncompressed Anim v1.2 format.
-    /// 
+    ///
     /// This is a convenience method that combines `to_anim_v12_uncompressed()` with
     /// writing to a file. See `to_anim_v12_uncompressed()` for details on the encoding strategy.
-    /// 
+    ///
     /// # Errors
     /// Returns an error if:
     /// - The major/minor version is not 1.2
@@ -123,6 +125,47 @@ impl AnimData {
     /// - File I/O fails
     pub fn write_to_file_v12_uncompressed<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), error::Error> {
         let anim = self.to_anim_v12_uncompressed()?;
+        anim.write_to_file(path).map_err(Into::into)
+    }
+
+    /// Converts the AnimData to a compressed Anim v1.2 format compatible with EXVS2.
+    ///
+    /// This method creates a v1.2 animation file using compressed formats that match
+    /// the game's expectations for playback, particularly 0x3409 for Vector3 data.
+    ///
+    /// # Encoding Strategy
+    /// - Single-frame tracks: Uses constant formats (0x3003, 0x4003, etc.)
+    /// - Multi-frame tracks: Uses compressed formats (0x3409 for Vector3, 0x4409 for quaternions)
+    /// - Quaternions are automatically normalized before writing
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - The major/minor version is not 1.2
+    /// - The final_frame_index is negative
+    /// - There are issues writing the buffer data
+    pub fn to_anim_v12_compressed(&self) -> Result<Anim, error::Error> {
+        if self.major_version != 1 || self.minor_version != 2 {
+            return Err(error::Error::UnsupportedVersion {
+                major_version: self.major_version,
+                minor_version: self.minor_version,
+            });
+        }
+        create_anim_v12(self)
+    }
+
+    /// Writes the AnimData to a file in compressed Anim v1.2 format compatible with EXVS2.
+    ///
+    /// This is a convenience method that combines `to_anim_v12_compressed()` with
+    /// writing to a file. See `to_anim_v12_compressed()` for details on the encoding strategy.
+    ///
+    /// # Errors
+    /// Returns an error if:
+    /// - The major/minor version is not 1.2
+    /// - The final_frame_index is negative
+    /// - There are issues writing the buffer data
+    /// - File I/O fails
+    pub fn write_to_file_v12_compressed<P: AsRef<std::path::Path>>(&self, path: P) -> Result<(), error::Error> {
+        let anim = self.to_anim_v12_compressed()?;
         anim.write_to_file(path).map_err(Into::into)
     }
 }
@@ -291,87 +334,125 @@ fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
                             let translations: Vec<Vector3> = transforms.iter().map(|t| t.translation).collect();
                             
                             // Create Scale property
-                            if scales.len() == 1 {
-                                // Single frame scale
-                                let mut scale_data = Vec::new();
-                                scale_data.extend_from_slice(&0x3003u32.to_le_bytes());
-                                scale_data.extend_from_slice(&scales[0].x.to_le_bytes());
-                                scale_data.extend_from_slice(&scales[0].y.to_le_bytes());
-                                scale_data.extend_from_slice(&scales[0].z.to_le_bytes());
-                                
-                                buffers.push(SsbhByteBuffer { elements: scale_data });
-                                properties.push(Property {
-                                    name: "Scale".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
-                            } else {
-                                // Multi-frame scale data - use compressed format
-                                let scale_data = create_v12_compressed_vector3_data(&scales)?;
-                                buffers.push(SsbhByteBuffer { elements: scale_data });
-                                properties.push(Property {
-                                    name: "Scale".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
+                            // Preserve property presence semantics as much as possible.
+                            // The high level JSON does not retain the original property list for Anim v1.2,
+                            // so we avoid writing properties that look like unanimated defaults.
+                            let write_scale = scales.iter().any(|s| {
+                                (s.x - 1.0).abs() > 1e-6 || (s.y - 1.0).abs() > 1e-6 || (s.z - 1.0).abs() > 1e-6
+                            });
+                            if write_scale {
+                                if scales.len() == 1 {
+                                    // Single frame scale
+                                    let mut scale_data = Vec::new();
+                                    scale_data.extend_from_slice(&0x3003u32.to_le_bytes());
+                                    scale_data.extend_from_slice(&scales[0].x.to_le_bytes());
+                                    scale_data.extend_from_slice(&scales[0].y.to_le_bytes());
+                                    scale_data.extend_from_slice(&scales[0].z.to_le_bytes());
+                                    
+                                    buffers.push(SsbhByteBuffer { elements: scale_data });
+                                    properties.push(Property {
+                                        name: "Scale".into(),
+                                        buffer_index: (buffers.len() - 1) as u64,
+                                    });
+                                } else {
+                                    // Multi-frame scale data - use an uncompressed indexed format.
+                                    // This avoids generating malformed 0x3409 buffers until the encoder is fully validated.
+                                    let scale_data = create_v12_uncompressed_vector3_data(&scales, "Scale")?;
+                                    buffers.push(SsbhByteBuffer { elements: scale_data });
+                                    properties.push(Property {
+                                        name: "Scale".into(),
+                                        buffer_index: (buffers.len() - 1) as u64,
+                                    });
+                                }
                             }
                             
                             // Create Rotation property
-                            if rotations.len() == 1 {
-                                // Single frame rotation
-                                let mut rotation_data = Vec::new();
-                                rotation_data.extend_from_slice(&0x4003u32.to_le_bytes());
-                                rotation_data.extend_from_slice(&rotations[0].x.to_le_bytes());
-                                rotation_data.extend_from_slice(&rotations[0].y.to_le_bytes());
-                                rotation_data.extend_from_slice(&rotations[0].z.to_le_bytes());
-                                rotation_data.extend_from_slice(&rotations[0].w.to_le_bytes());
-                                
-                                buffers.push(SsbhByteBuffer { elements: rotation_data });
-                                properties.push(Property {
-                                    name: "Rotate".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
-                            } else {
-                                // Multi-frame rotation data - use compressed format
-                                let rotation_data = create_v12_compressed_vector4_data(&rotations)?;
-                                buffers.push(SsbhByteBuffer { elements: rotation_data });
-                                properties.push(Property {
-                                    name: "Rotate".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
+                            let write_rotate = rotations.iter().any(|q| {
+                                q.x.abs() > 1e-6 || q.y.abs() > 1e-6 || q.z.abs() > 1e-6 || (q.w - 1.0).abs() > 1e-6
+                            });
+                            if write_rotate {
+                                if rotations.len() == 1 {
+                                    // Single frame rotation
+                                    let mut rotation_data = Vec::new();
+                                    rotation_data.extend_from_slice(&0x4003u32.to_le_bytes());
+                                    rotation_data.extend_from_slice(&rotations[0].x.to_le_bytes());
+                                    rotation_data.extend_from_slice(&rotations[0].y.to_le_bytes());
+                                    rotation_data.extend_from_slice(&rotations[0].z.to_le_bytes());
+                                    rotation_data.extend_from_slice(&rotations[0].w.to_le_bytes());
+                                    
+                                    buffers.push(SsbhByteBuffer { elements: rotation_data });
+                                    properties.push(Property {
+                                        name: "Rotate".into(),
+                                        buffer_index: (buffers.len() - 1) as u64,
+                                    });
+                                } else {
+                                    // Multi-frame rotation data - write an uncompressed format.
+                                    // This avoids generating a malformed 0x4409 buffer.
+                                    let rotation_data = create_v12_uncompressed_vector4_data(&rotations)?;
+                                    buffers.push(SsbhByteBuffer { elements: rotation_data });
+                                    properties.push(Property {
+                                        name: "Rotate".into(),
+                                        buffer_index: (buffers.len() - 1) as u64,
+                                    });
+                                }
                             }
                             
                             // Create Translation property
-                            if translations.len() == 1 {
-                                // Single frame translation
-                                let mut translation_data = Vec::new();
-                                translation_data.extend_from_slice(&0x3003u32.to_le_bytes());
-                                translation_data.extend_from_slice(&translations[0].x.to_le_bytes());
-                                translation_data.extend_from_slice(&translations[0].y.to_le_bytes());
-                                translation_data.extend_from_slice(&translations[0].z.to_le_bytes());
-                                
-                                buffers.push(SsbhByteBuffer { elements: translation_data });
-                                properties.push(Property {
-                                    name: "Translate".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
-                            } else {
-                                // Multi-frame translation data - use compressed format
-                                let translation_data = create_v12_compressed_vector3_data(&translations)?;
-                                buffers.push(SsbhByteBuffer { elements: translation_data });
-                                properties.push(Property {
-                                    name: "Translate".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
+                            let write_translate = translations.iter().any(|t| {
+                                t.x.abs() > 1e-6 || t.y.abs() > 1e-6 || t.z.abs() > 1e-6
+                            });
+                            if write_translate {
+                                if translations.len() == 1 {
+                                    // Single frame translation
+                                    let mut translation_data = Vec::new();
+                                    translation_data.extend_from_slice(&0x3003u32.to_le_bytes());
+                                    translation_data.extend_from_slice(&translations[0].x.to_le_bytes());
+                                    translation_data.extend_from_slice(&translations[0].y.to_le_bytes());
+                                    translation_data.extend_from_slice(&translations[0].z.to_le_bytes());
+                                    
+                                    buffers.push(SsbhByteBuffer { elements: translation_data });
+                                    properties.push(Property {
+                                        name: "Translate".into(),
+                                        buffer_index: (buffers.len() - 1) as u64,
+                                    });
+                                } else {
+                                    // Multi-frame translation data - use an uncompressed indexed format.
+                                    // This avoids generating malformed 0x3409 buffers until the encoder is fully validated.
+                                    let translation_data = create_v12_uncompressed_vector3_data(&translations, "Translate")?;
+                                    buffers.push(SsbhByteBuffer { elements: translation_data });
+                                    properties.push(Property {
+                                        name: "Translate".into(),
+                                        buffer_index: (buffers.len() - 1) as u64,
+                                    });
+                                }
                             }
                             
                             // CompensateScale property if needed
-                            if track.compensate_scale {
+                            // CompensateScale is represented as a boolean-like 0x1013 u16 in Anim v1.2.
+                            // Preserve property presence by always writing it, even when false.
+                            {
                                 let mut compensate_data = Vec::new();
-                                compensate_data.extend_from_slice(&0x1003u32.to_le_bytes());
-                                compensate_data.extend_from_slice(&1.0f32.to_le_bytes()); // true = 1.0
-                                
+                                compensate_data.extend_from_slice(&0x1013u32.to_le_bytes());
+                                let v: u16 = if track.compensate_scale { 0x7FFF } else { 0x0000 };
+                                compensate_data.extend_from_slice(&v.to_le_bytes());
+
                                 buffers.push(SsbhByteBuffer { elements: compensate_data });
                                 properties.push(Property {
                                     name: "CompensateScale".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+
+                            // Visibility is commonly present as a 0x1013 u16 on Transform tracks.
+                            // The high level representation does not currently preserve it, so default to true.
+                            {
+                                let mut visibility_data = Vec::new();
+                                visibility_data.extend_from_slice(&0x1013u32.to_le_bytes());
+                                visibility_data.extend_from_slice(&0x7FFFu16.to_le_bytes());
+
+                                buffers.push(SsbhByteBuffer { elements: visibility_data });
+                                properties.push(Property {
+                                    name: "Visibility".into(),
                                     buffer_index: (buffers.len() - 1) as u64,
                                 });
                             }
@@ -431,24 +512,19 @@ fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
                         }
                     }
                     _ => {
-                        // Create a default empty property for unsupported combinations
-                        let mut default_data = Vec::new();
-                        default_data.extend_from_slice(&0x0000u32.to_le_bytes());
-                        
-                        buffers.push(SsbhByteBuffer { elements: default_data });
-                        properties.push(Property {
-                            name: track.name.as_str().into(),
-                            buffer_index: (buffers.len() - 1) as u64,
-                        });
+                        // Unsupported combinations should not generate invalid placeholder buffers.
+                        // Writing an unknown property with a 0x0000 header can crash consumers.
                     }
                 }
                 
                 // Create the track
-                tracks.push(TrackV1 {
-                    name: node.name.as_str().into(),
-                    track_type,
-                    properties: properties.into(),
-                });
+                if !properties.is_empty() {
+                    tracks.push(TrackV1 {
+                        name: node.name.as_str().into(),
+                        track_type,
+                        properties: properties.into(),
+                    });
+                }
             }
         }
     }
@@ -611,8 +687,8 @@ fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, error::Error> {
 // TODO: Test this for a small example?
 fn create_anim(data: &AnimData) -> Result<Anim, error::Error> {
     let version = match (data.major_version, data.minor_version) {
-        // Use uncompressed format by default for v1.2
-        (1, 2) => return create_anim_v12_uncompressed(data),
+        // Use compressed format for v1.2 (EXVS2 compatibility)
+        (1, 2) => return create_anim_v12(data),
         (2, 0) => Ok(AnimVersion::Version20),
         (2, 1) => Ok(AnimVersion::Version21),
         _ => Err(error::Error::UnsupportedVersion {
@@ -2163,102 +2239,16 @@ mod tests {
 // Helper functions for version 1.2 creation
 
 /// Create compressed Vector3 data for version 1.2 using format 0x3409
-/// Based on GitHub discussion: uses three key frames (first, middle, last) and compressed indices
+/// Uses the proper EXVS2-compatible encoder with 33-key blocks and residual encoding.
+/// This is used for both Scale and Translate properties as they share the same format.
 fn create_v12_compressed_vector3_data(values: &[Vector3]) -> Result<Vec<u8>, error::Error> {
-    let frame_count = values.len() as u32;
-    let mut data = Vec::new();
-    
     if values.is_empty() {
-        return Ok(data);
+        return Ok(Vec::new());
     }
     
-    // Use format 0x3409 for compressed Vector3 data
-    data.extend_from_slice(&0x3409u32.to_le_bytes());
-    data.extend_from_slice(&frame_count.to_le_bytes());
-    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
-    data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2 - varies
-    data.extend_from_slice(&2u16.to_le_bytes());   // flags - typically 2
-    
-    // Calculate bits per entry based on data range
-    // Use 8 bits per component (24 bits total for Vector3) for reasonable quality
-    let bits_per_entry = 24u16;
-    data.extend_from_slice(&bits_per_entry.to_le_bytes());
-    
-    // Three default Vector3 values: first frame, middle frame, last frame
-    let first_value = values[0];
-    let middle_value = if values.len() > 1 {
-        values[values.len() / 2]
-    } else {
-        first_value
-    };
-    let last_value = if values.len() > 1 {
-        values[values.len() - 1]
-    } else {
-        first_value
-    };
-    
-    // Write the three key frame values
-    data.extend_from_slice(&first_value.x.to_le_bytes());
-    data.extend_from_slice(&first_value.y.to_le_bytes());
-    data.extend_from_slice(&first_value.z.to_le_bytes());
-    
-    data.extend_from_slice(&middle_value.x.to_le_bytes());
-    data.extend_from_slice(&middle_value.y.to_le_bytes());
-    data.extend_from_slice(&middle_value.z.to_le_bytes());
-    
-    data.extend_from_slice(&last_value.x.to_le_bytes());
-    data.extend_from_slice(&last_value.y.to_le_bytes());
-    data.extend_from_slice(&last_value.z.to_le_bytes());
-    
-    // For small frame counts, just write raw data
-    if frame_count <= 3 {
-        for value in values {
-            data.extend_from_slice(&value.x.to_le_bytes());
-            data.extend_from_slice(&value.y.to_le_bytes());
-            data.extend_from_slice(&value.z.to_le_bytes());
-        }
-    } else {
-        // Compress frames using interpolation indices
-        // Each component is encoded as an 8-bit index into the range [first, middle, last]
-        let mut compressed_bits = bitvec::vec::BitVec::<u8, bitvec::prelude::Lsb0>::new();
-        let bits_per_component = 8usize;
-        
-        for value in values {
-            // Encode X component
-            let x_index = calculate_interpolation_index(
-                value.x,
-                first_value.x,
-                middle_value.x,
-                last_value.x,
-                bits_per_component,
-            );
-            write_bits(&mut compressed_bits, x_index, bits_per_component);
-            
-            // Encode Y component
-            let y_index = calculate_interpolation_index(
-                value.y,
-                first_value.y,
-                middle_value.y,
-                last_value.y,
-                bits_per_component,
-            );
-            write_bits(&mut compressed_bits, y_index, bits_per_component);
-            
-            // Encode Z component
-            let z_index = calculate_interpolation_index(
-                value.z,
-                first_value.z,
-                middle_value.z,
-                last_value.z,
-                bits_per_component,
-            );
-            write_bits(&mut compressed_bits, z_index, bits_per_component);
-        }
-        
-        data.extend_from_slice(&compressed_bits.into_vec());
-    }
-    
-    Ok(data)
+    // Use the proper 0x3409 encoder from nuanmb_v12_encode module
+    // This encoder is compatible with both Scale and Translate data
+    nuanmb_v12_encode::encode_vector3_3409(values)
 }
 
 /// Calculate interpolation index for a value within the range [first, middle, last]
@@ -2500,8 +2490,10 @@ fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, e
         return Ok(data);
     }
     
-    // Normalize all quaternions
-    let normalized_values: Vec<Vector4> = values.iter().map(|q| {
+    // Normalize all quaternions.
+    // Also enforce sign continuity (q and -q represent the same rotation).
+    // Many runtimes interpolate quaternions directly, so sign flips can cause visible pops.
+    let mut normalized_values: Vec<Vector4> = values.iter().map(|q| {
         let magnitude = (q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w).sqrt();
         if magnitude > 1e-6 {
             Vector4 {
@@ -2515,6 +2507,21 @@ fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, e
             Vector4 { x: 0.0, y: 0.0, z: 0.0, w: 1.0 }
         }
     }).collect();
+
+    // Enforce hemisphere continuity relative to the previous frame.
+    for i in 1..normalized_values.len() {
+        let prev = normalized_values[i - 1];
+        let curr = normalized_values[i];
+        let dot = prev.x * curr.x + prev.y * curr.y + prev.z * curr.z + prev.w * curr.w;
+        if dot < 0.0 {
+            normalized_values[i] = Vector4 {
+                x: -curr.x,
+                y: -curr.y,
+                z: -curr.z,
+                w: -curr.w,
+            };
+        }
+    }
     
     // Check if all values are identical (constant track)
     let all_same = normalized_values.iter().all(|v| {

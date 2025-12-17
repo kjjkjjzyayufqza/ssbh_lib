@@ -76,14 +76,26 @@ fn main() {
             let json = std::fs::read_to_string(input_path).expect("Failed to read file.");
             let output_path = cli.output.map(PathBuf::from);
 
+            // Try AnimData first to avoid accidentally accepting the JSON as another format
+            // due to permissive deserialization defaults.
+            if let Ok(data) = serde_json::from_str::<AnimData>(&json) {
+                eprintln!(
+                    "AnimData JSON detected: groups={}, final_frame_index={}",
+                    data.groups.len(),
+                    data.final_frame_index
+                );
+                let output_path = output_path
+                    .as_ref()
+                    .map(PathBuf::from)
+                    .unwrap_or_else(|| PathBuf::from(input_path).with_extension("nuanmb"));
+                data.write_to_file(output_path).unwrap();
+                return;
+            }
+
             // Try all available formats.
             deserialize_and_save::<MeshData>(&json, input_path, &output_path, "numshb")
-                .or_else(|_| {
-                    deserialize_and_save::<SkelData>(&json, input_path, &output_path, "nusktb")
-                })
-                .or_else(|_| {
-                    deserialize_and_save::<AnimData>(&json, input_path, &output_path, "nuanmb")
-                })
+                .or_else(|_| deserialize_and_save::<SkelData>(&json, input_path, &output_path, "nusktb"))
+                .or_else(|_| deserialize_and_save::<AnimData>(&json, input_path, &output_path, "nuanmb"))
                 .or_else(|_| {
                     deserialize_and_save::<ModlData>(&json, input_path, &output_path, "numdlb")
                 })
