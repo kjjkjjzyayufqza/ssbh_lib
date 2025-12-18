@@ -652,7 +652,7 @@ fn create_v12_uncompressed_vector3_data(
 /// Create uncompressed Vector4 data for version 1.2 (quaternions).
 ///
 /// Uses constant format 0x4003 for single values.
-/// For multi-frame data, uses the 0x4300 keyframed quaternion format with u8 frame indices.
+/// For multi-frame data, uses the 0x4300 raw quaternion stream format.
 fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
     let mut data = Vec::new();
 
@@ -717,33 +717,20 @@ fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, e
         data.extend_from_slice(&normalized_values[0].z.to_le_bytes());
         data.extend_from_slice(&normalized_values[0].w.to_le_bytes());
     } else {
-        // Use 0x4300 keyframed quaternion format with u8 frame indices.
-        // Observed game data can omit the second f32 header field and instead store:
-        // u32 magic + u32 key_count + f32 unk1 + u8 frame_indices[key_count] + align4 + key_count * vec4<f32>
-        //
-        // We currently emit a dense index table (0..key_count-1), which preserves all frames.
-        let key_count = normalized_values.len();
-        if key_count > u8::MAX as usize + 1 {
-            return Err(error::Error::InvalidFinalFrameIndex {
-                final_frame_index: key_count as f32 - 1.0,
-            });
-        }
+        // Use 0x4300 raw quaternion stream.
+        // Layout (validated against tooling):
+        // - u32 header (0x4300)
+        // - u32 frame_count
+        // - f32 unk1 (often 1.0)
+        // - f32 unk2 (often 0.0)
+        // - frame_count * Vector4<f32> quaternions
+        let frame_count = normalized_values.len();
 
         data.extend_from_slice(&0x4300u32.to_le_bytes());
-        data.extend_from_slice(&(key_count as u32).to_le_bytes());
-        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
+        data.extend_from_slice(&(frame_count as u32).to_le_bytes());
+        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
+        data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2
 
-        // Frame indices (one byte per key).
-        for i in 0..key_count {
-            data.push(i as u8);
-        }
-
-        // Align to 4 bytes before key values.
-        while (data.len() % 4) != 0 {
-            data.push(0);
-        }
-
-        // Key values as raw f32 quaternion data.
         for value in &normalized_values {
             data.extend_from_slice(&value.x.to_le_bytes());
             data.extend_from_slice(&value.y.to_le_bytes());
