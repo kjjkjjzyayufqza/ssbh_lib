@@ -1,9 +1,8 @@
 use super::common::{
-    align_up, compute_block_count, compute_block_count_type9, compute_block_len,
-    compute_block_len_type9, decode_residual_vector, expand_sparse_quat, read_f32_le, read_u16_le,
-    read_u32_le, read_vec3_f32_le, read_vec4_f32_le, quat_normalize,
+    align_up, compute_block_count_type9, compute_block_len_type9, decode_residual_vector,
+    expand_sparse_quat, read_f32_le, read_u16_le, read_u32_le, read_vec3_f32_le, read_vec4_f32_le,
 };
-use crate::anim_data::{bitutils::BitReader, error, Vector3, Vector4};
+use crate::anim_data::{bitutils::BitReader, error, Vector4};
 
 pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
     if bytes.len() < 12 {
@@ -13,11 +12,63 @@ pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
         return Err(error::Error::InvalidData);
     }
     let frame_count = read_u32_le(bytes, 4)? as usize;
+    if frame_count == 0 {
+        return Ok(vec![Vector4 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+            w: 1.0,
+        }]);
+    }
+
+    // Variant A: 16-byte header (unk1 + unk2) + frame_count * vec4<f32>.
+    // Variant B: 12-byte header (unk1 only) + frame_count * vec4<f32>.
+    // Variant C (observed in game data): 12-byte header + u8 frame_indices[frame_count] + align4 + frame_count * vec4<f32>.
+    //
+    // The same magic (0x4300) is used for these variants, so we must infer the layout from length.
+
+    // Prefer the indexed-key variant if it matches exactly.
+    let indexed_payload_off = align_up(12 + frame_count, 4);
+    if indexed_payload_off <= bytes.len() && indexed_payload_off + frame_count * 16 == bytes.len() {
+        let frame_indices: Vec<usize> = bytes[12..12 + frame_count]
+            .iter()
+            .map(|v| *v as usize)
+            .collect();
+        let mut key_vals = Vec::with_capacity(frame_count);
+        let mut pos = indexed_payload_off;
+        for _ in 0..frame_count {
+            let mut q = read_vec4_f32_le(bytes, pos)?;
+            pos += 16;
+            let len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
+            if len2 > 0.0 {
+                let inv = 1.0 / len2.sqrt();
+                q.x *= inv;
+                q.y *= inv;
+                q.z *= inv;
+                q.w *= inv;
+            } else {
+                q = Vector4 {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                    w: 1.0,
+                };
+            }
+            key_vals.push((q.x, q.y, q.z, q.w));
+        }
+        let total_frames = frame_indices.iter().copied().max().unwrap_or(0) + 1;
+        return Ok(expand_sparse_quat(&frame_indices, &key_vals, total_frames));
+    }
+
+    // Fallback to raw stream variants.
     let pos = if bytes.len() >= 16 + frame_count * 16 && bytes.len() != 12 + frame_count * 16 {
         16
     } else {
         12
     };
+    if pos + frame_count * 16 > bytes.len() {
+        return Err(error::Error::InvalidData);
+    }
     let mut frames = Vec::with_capacity(frame_count);
     let mut pos = pos;
     for _ in 0..frame_count {

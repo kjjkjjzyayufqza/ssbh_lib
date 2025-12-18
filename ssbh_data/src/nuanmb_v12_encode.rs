@@ -4,7 +4,7 @@
 // the game's expectations for playback.
 // -----------------------------------------------------------------------------
 
-use crate::anim_data::{error, Vector3};
+use crate::anim_data::{error, Vector3, Vector4};
 
 // -------------------------- Helper Functions -------------------------------
 
@@ -319,6 +319,135 @@ pub fn encode_translate_3409(values: &[Vector3]) -> Result<Vec<u8>, error::Error
 /// This is an alias for `encode_vector3_3409` for clarity when encoding scale.
 pub fn encode_scale_3409(values: &[Vector3]) -> Result<Vec<u8>, error::Error> {
     encode_vector3_3409(values)
+}
+
+// ========================== 0x4409 Quaternion Encoder ======================
+
+/// Encode quaternion data to 0x4409 compressed format.
+///
+/// This encoder targets EXVS2 Anim v1.2 compatibility. The format matches the
+/// validated decode model in `nuanmb_v12/rotate_4409.rs`:
+/// - 33-key blocks
+/// - vec4<f32> endpoints (block_count + 1)
+/// - residual stream encoded using the same residual/kernel family as 0x3409/0x4409 decoders
+///
+/// Note: This is a lossy encoder.
+pub fn encode_rotate_4409(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
+    if values.is_empty() {
+        return Err(error::Error::InvalidData);
+    }
+
+    let key_count = values.len();
+    let blocks = compute_block_count(key_count);
+    let endpoint_count = blocks + 1;
+
+    // Step 1: Fit endpoints (use first key of each block, plus final key).
+    let mut endpoints = Vec::with_capacity(endpoint_count);
+    for block_idx in 0..blocks {
+        let start_key = block_idx * 33;
+        endpoints.push(values[start_key]);
+    }
+    endpoints.push(values[key_count - 1]);
+
+    // Step 2: Compute residuals.
+    let mut residuals = Vec::with_capacity(key_count);
+    let mut max_residual = 0.0f32;
+    for key_idx in 0..key_count {
+        let block_idx = key_idx / 33;
+        let local = key_idx - 33 * block_idx;
+        let block_len = compute_block_len(key_count, block_idx).max(1);
+        let t = local as f32 / block_len as f32;
+
+        let e0 = endpoints[block_idx];
+        let e1 = endpoints[block_idx + 1];
+        let predicted = Vector4 {
+            x: e0.x + (e1.x - e0.x) * t,
+            y: e0.y + (e1.y - e0.y) * t,
+            z: e0.z + (e1.z - e0.z) * t,
+            w: e0.w + (e1.w - e0.w) * t,
+        };
+
+        let actual = values[key_idx];
+        let r = Vector4 {
+            x: actual.x - predicted.x,
+            y: actual.y - predicted.y,
+            z: actual.z - predicted.z,
+            w: actual.w - predicted.w,
+        };
+
+        max_residual = max_residual
+            .max(r.x.abs())
+            .max(r.y.abs())
+            .max(r.z.abs())
+            .max(r.w.abs());
+        residuals.push(r);
+    }
+
+    // Step 3: Compute base_scale (max absolute residual).
+    let base_scale = if max_residual > 1e-6 { max_residual } else { 1.0 };
+
+    // Step 4: Encode residual stream.
+    let residual_stream = encode_residuals_vec4(&residuals, key_count, base_scale);
+
+    // Step 5: Pack buffer.
+    let mut data = Vec::new();
+    data.extend_from_slice(&0x4409u32.to_le_bytes());
+    data.extend_from_slice(&(key_count as u32).to_le_bytes());
+    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
+    data.extend_from_slice(&base_scale.to_le_bytes());
+    data.extend_from_slice(&0u16.to_le_bytes()); // flags
+    data.extend_from_slice(&0u16.to_le_bytes()); // bits
+
+    // Endpoints as vec4<f32>.
+    for ep in &endpoints {
+        data.extend_from_slice(&ep.x.to_le_bytes());
+        data.extend_from_slice(&ep.y.to_le_bytes());
+        data.extend_from_slice(&ep.z.to_le_bytes());
+        data.extend_from_slice(&ep.w.to_le_bytes());
+    }
+
+    // Residual stream (already 4-byte aligned).
+    data.extend_from_slice(&residual_stream);
+    Ok(data)
+}
+
+fn encode_residuals_vec4(residuals: &[Vector4], key_count: usize, base_scale: f32) -> Vec<u8> {
+    let blocks = compute_block_count(key_count);
+    let mut stream = Vec::new();
+
+    for block_idx in 0..blocks {
+        let block_len = compute_block_len(key_count, block_idx);
+        if block_len <= 1 {
+            continue;
+        }
+
+        let start_key = block_idx * 33 + 1; // Skip first key (endpoint).
+        let end_key = (block_idx * 33 + block_len + 1).min(key_count);
+
+        let mut bx = Vec::new();
+        let mut by = Vec::new();
+        let mut bz = Vec::new();
+        let mut bw = Vec::new();
+        for key_idx in start_key..end_key {
+            bx.push(residuals[key_idx].x);
+            by.push(residuals[key_idx].y);
+            bz.push(residuals[key_idx].z);
+            bw.push(residuals[key_idx].w);
+        }
+
+        encode_residual_component(&mut stream, &bx, base_scale);
+        encode_residual_component(&mut stream, &by, base_scale);
+        encode_residual_component(&mut stream, &bz, base_scale);
+        encode_residual_component(&mut stream, &bw, base_scale);
+    }
+
+    if stream.is_empty() {
+        stream.extend_from_slice(&[0u8; 4]);
+    }
+    while (stream.len() % 4) != 0 {
+        stream.push(0);
+    }
+    stream
 }
 
 // ========================== Tests ===========================================

@@ -173,7 +173,6 @@ impl AnimData {
     }
 }
 
-// TODO: Test these conversions.
 impl TryFrom<Anim> for AnimData {
     type Error = Box<dyn Error>;
 

@@ -252,7 +252,12 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
 
     Ok(Anim::V12 {
         name: "".into(), // Default empty name
-        unk1: 0.0,       // Default unknown value
+        // NOTE (empirically observed in-game):
+        // `unk1` behaves like a playback range multiplier for Anim v1.2.
+        // For an animation with N frames (0..N-1), setting `unk1 = 0.5` results in only the first
+        // half of the timeline being played (approximately 0..(N/2 - 1)).
+        // Setting `unk1 = 0.0` causes the animation to appear non-advancing (only the first frame).
+        unk1: 1.0,
         final_frame_index,
         unk2: 0.0,       // Default unknown value
         unk3: 0.0,       // Default unknown value
@@ -644,8 +649,10 @@ fn create_v12_uncompressed_vector3_data(
     Ok(data)
 }
 
-/// Create uncompressed Vector4 data for version 1.2 (quaternions)
-/// Uses constant format 0x4003 for single values or raw stream format 0x4300 for multi-frame data
+/// Create uncompressed Vector4 data for version 1.2 (quaternions).
+///
+/// Uses constant format 0x4003 for single values.
+/// For multi-frame data, uses the 0x4300 keyframed quaternion format with u8 frame indices.
 fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
     let mut data = Vec::new();
 
@@ -710,14 +717,33 @@ fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, e
         data.extend_from_slice(&normalized_values[0].z.to_le_bytes());
         data.extend_from_slice(&normalized_values[0].w.to_le_bytes());
     } else {
-        // Use raw stream format 0x4300
-        let frame_count = normalized_values.len() as u32;
-        data.extend_from_slice(&0x4300u32.to_le_bytes());
-        data.extend_from_slice(&frame_count.to_le_bytes());
-        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
-        data.extend_from_slice(&0.0f32.to_le_bytes()); // unk2 - typically 0.0
+        // Use 0x4300 keyframed quaternion format with u8 frame indices.
+        // Observed game data can omit the second f32 header field and instead store:
+        // u32 magic + u32 key_count + f32 unk1 + u8 frame_indices[key_count] + align4 + key_count * vec4<f32>
+        //
+        // We currently emit a dense index table (0..key_count-1), which preserves all frames.
+        let key_count = normalized_values.len();
+        if key_count > u8::MAX as usize + 1 {
+            return Err(error::Error::InvalidFinalFrameIndex {
+                final_frame_index: key_count as f32 - 1.0,
+            });
+        }
 
-        // Write all frame values as raw f32 quaternion data
+        data.extend_from_slice(&0x4300u32.to_le_bytes());
+        data.extend_from_slice(&(key_count as u32).to_le_bytes());
+        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
+
+        // Frame indices (one byte per key).
+        for i in 0..key_count {
+            data.push(i as u8);
+        }
+
+        // Align to 4 bytes before key values.
+        while (data.len() % 4) != 0 {
+            data.push(0);
+        }
+
+        // Key values as raw f32 quaternion data.
         for value in &normalized_values {
             data.extend_from_slice(&value.x.to_le_bytes());
             data.extend_from_slice(&value.y.to_le_bytes());
