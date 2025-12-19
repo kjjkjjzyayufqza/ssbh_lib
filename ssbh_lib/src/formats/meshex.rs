@@ -1,3 +1,5 @@
+#![allow(unused_parens)]
+
 use binrw::io::SeekFrom;
 
 use crate::mesh::BoundingSphere;

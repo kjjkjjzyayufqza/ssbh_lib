@@ -5,6 +5,8 @@
 //! [Group] -> [Node] -> [TrackV2] to organize animations.
 //! The data for each frame is stored in a buffer that is usually compressed.
 //! For a higher level API that handles compression and decompression, see [ssbh_data](https://crates.io/crates/ssbh_data).
+#![allow(unused_parens)]
+
 use crate::SsbhArray;
 use crate::SsbhByteBuffer;
 use crate::SsbhString;

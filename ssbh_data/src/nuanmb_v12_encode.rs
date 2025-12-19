@@ -7,7 +7,7 @@
 use crate::anim_data::{error, Vector3, Vector4};
 
 // -------------------------- Helper Functions -------------------------------
-
+#[allow(dead_code)]
 #[inline]
 fn align_up(x: usize, align: usize) -> usize {
     if align == 0 {

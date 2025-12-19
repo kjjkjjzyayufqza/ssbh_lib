@@ -1,3 +1,6 @@
+
+#![allow(unused_parens)]
+
 use binrw::{BinRead, BinResult};
 use bitvec::prelude::*;
 use modular_bitfield::prelude::*;

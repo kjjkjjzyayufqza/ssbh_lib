@@ -1,6 +1,6 @@
 use super::common::{
-    compute_block_count, compute_block_len, compute_block_qcounts, decode_residual_vector,
-    quat_normalize, read_f32_le, read_u16_le, read_u32_le, read_vec4_f32_le,
+    compute_block_len, compute_block_qcounts, decode_residual_vector, quat_normalize, read_f32_le,
+    read_u16_le, read_u32_le, read_vec4_f32_le,
 };
 use crate::anim_data::{error, Vector4};
 
@@ -68,11 +68,17 @@ pub fn decode_rotate_4409(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
         }
 
         for comp_bits in [4usize, 3, 2, 1] {
-            let end_off =
-                match walk_residual_4409(bytes, residual_off, base_scale, comp_bits, key_count, block_count) {
-                    Ok(v) => v,
-                    Err(_) => continue,
-                };
+            let end_off = match walk_residual_4409(
+                bytes,
+                residual_off,
+                base_scale,
+                comp_bits,
+                key_count,
+                block_count,
+            ) {
+                Ok(v) => v,
+                Err(_) => continue,
+            };
             if end_off > bytes.len() {
                 continue;
             }
@@ -112,7 +118,8 @@ pub fn decode_rotate_4409(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
             w: e0.w + (e1.w - e0.w) * t_block,
         };
         let rs = residual_off + 4 * prefix_words[block_idx];
-        let (r_vec, _) = decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
+        let (r_vec, _) =
+            decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
         let q = quat_normalize(
             k.x + r_vec.get(0).copied().unwrap_or(0.0),
             k.y + r_vec.get(1).copied().unwrap_or(0.0),
@@ -138,7 +145,8 @@ fn walk_residual_4409(
         if block_len <= 1 {
             continue;
         }
-        let (_, end_off) = decode_residual_vector(payload, cursor, base_scale, 1, comp_bits, block_len)?;
+        let (_, end_off) =
+            decode_residual_vector(payload, cursor, base_scale, 1, comp_bits, block_len)?;
         let delta = end_off.saturating_sub(cursor);
         if delta == 0 || (delta % 4) != 0 {
             return Err(error::Error::InvalidData);

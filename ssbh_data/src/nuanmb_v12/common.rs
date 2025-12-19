@@ -4,7 +4,7 @@ use std::sync::OnceLock;
 
 use binrw::BinRead;
 
-use crate::anim_data::{bitutils::BitReader, error, Vector3, Vector4};
+use crate::anim_data::{error, Vector3, Vector4};
 
 pub(super) const G_CURVE_SHORT4_SCALE: f32 = 3.051_850_9e-5;
 pub(super) const G_CURVE_INT8_SCALE: f32 = 0.007_874_015_7;

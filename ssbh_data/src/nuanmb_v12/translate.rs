@@ -15,7 +15,11 @@ pub fn decode_translate_3200(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let unk1 = read_f32_le(bytes, 8)?;
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
@@ -47,7 +51,11 @@ pub fn decode_translate_3208(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let unk1 = read_f32_le(bytes, 8)?;
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
     if key_count > 34 {
         return Err(error::Error::InvalidData);
@@ -95,12 +103,19 @@ pub fn decode_translate_3300(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let unk1 = read_f32_le(bytes, 8)?;
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round() as usize);
+        frame_indices.push(
+            (bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round()
+                as usize,
+        );
         pos += 1;
     }
     pos = align_up(pos, 4);
@@ -126,7 +141,11 @@ pub fn decode_translate_3308(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let unk1 = read_f32_le(bytes, 8)?;
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
     if key_count > 33 {
         return Err(error::Error::InvalidData);
@@ -134,7 +153,10 @@ pub fn decode_translate_3308(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round() as usize);
+        frame_indices.push(
+            (bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round()
+                as usize,
+        );
         pos += 1;
     }
     pos = align_up(pos, 4);
@@ -174,7 +196,11 @@ pub fn decode_translate_3209(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let unk1 = read_f32_le(bytes, 8)?;
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
@@ -254,12 +280,19 @@ pub fn decode_translate_3309(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let unk1 = read_f32_le(bytes, 8)?;
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round() as usize);
+        frame_indices.push(
+            (bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round()
+                as usize,
+        );
         pos += 1;
     }
     pos = align_up(pos, 4);
@@ -332,7 +365,7 @@ pub fn decode_translate_3400(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
         return Err(error::Error::InvalidData);
     }
     let frame_count = read_u32_le(bytes, 4)? as usize;
-    let mut pos = 12;
+    let pos = 12;
     let mut frames = Vec::with_capacity(frame_count);
     for i in 0..frame_count {
         frames.push(read_vec3_f32_le(bytes, pos + i * 12)?);
@@ -350,7 +383,11 @@ pub fn decode_translate_3408(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let _unk1 = read_f32_le(bytes, 8)?;
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
     let blocks = compute_block_count(key_count);
     let endpoint_count = blocks + 1;
@@ -370,10 +407,12 @@ pub fn decode_translate_3408(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
             endpoints.push(read_vec3_f32_le(bytes, endpoint_base + i * 12)?);
         }
         let end_ep = endpoint_base + endpoints_size;
-        for base_scale_off in (end_ep..=(end_ep + 0x10).min(bytes.len().saturating_sub(4))).step_by(4)
+        for base_scale_off in
+            (end_ep..=(end_ep + 0x10).min(bytes.len().saturating_sub(4))).step_by(4)
         {
             let base_scale = read_f32_le(bytes, base_scale_off)?;
-            for residual_off in (base_scale_off + 4..=(base_scale_off + 0x80).min(bytes.len())).step_by(4)
+            for residual_off in
+                (base_scale_off + 4..=(base_scale_off + 0x80).min(bytes.len())).step_by(4)
             {
                 if residual_off >= bytes.len() {
                     continue;
@@ -396,7 +435,13 @@ pub fn decode_translate_3408(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
                     let slack = bytes.len() - end_off;
                     let cand_key = (slack, -(comp_bits as isize), residual_off);
                     if best.is_none() || cand_key < best_key.unwrap() {
-                        best = Some((endpoints.clone(), base_scale, comp_bits, residual_off, q_counts));
+                        best = Some((
+                            endpoints.clone(),
+                            base_scale,
+                            comp_bits,
+                            residual_off,
+                            q_counts,
+                        ));
                         best_key = Some(cand_key);
                     }
                     break;
@@ -428,7 +473,8 @@ pub fn decode_translate_3408(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
         let ky = e0.y + (e1.y - e0.y) * t_block;
         let kz = e0.z + (e1.z - e0.z) * t_block;
         let rs = residual_off + 4 * prefix_words[block_idx];
-        let (r_vec, _) = decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
+        let (r_vec, _) =
+            decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
         out.push(Vector3 {
             x: kx + r_vec.get(0).copied().unwrap_or(0.0),
             y: ky + r_vec.get(1).copied().unwrap_or(0.0),
@@ -452,7 +498,11 @@ pub fn decode_translate_3409(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let _bits = read_u16_le(bytes, 18)?;
 
     if key_count == 0 {
-        return Ok(vec![Vector3 { x: 0.0, y: 0.0, z: 0.0 }]);
+        return Ok(vec![Vector3 {
+            x: 0.0,
+            y: 0.0,
+            z: 0.0,
+        }]);
     }
 
     let blocks = compute_block_count(key_count);
@@ -483,8 +533,7 @@ pub fn decode_translate_3409(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
         }
     }
 
-    let (endpoints, comp_bits, residual_off, q_counts) =
-        best.ok_or(error::Error::InvalidData)?;
+    let (endpoints, comp_bits, residual_off, q_counts) = best.ok_or(error::Error::InvalidData)?;
 
     let mut prefix_words = vec![0usize];
     for q in &q_counts {
@@ -506,7 +555,8 @@ pub fn decode_translate_3409(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
         let ky = e0.y + (e1.y - e0.y) * t_block;
         let kz = e0.z + (e1.z - e0.z) * t_block;
         let rs = residual_off + 4 * prefix_words[block_idx];
-        let (r_vec, _) = decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
+        let (r_vec, _) =
+            decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
         out.push(Vector3 {
             x: kx + r_vec.get(0).copied().unwrap_or(0.0),
             y: ky + r_vec.get(1).copied().unwrap_or(0.0),
@@ -533,10 +583,11 @@ fn infer_3409_layout(
             continue;
         }
 
-        let endpoints = match try_parse_endpoints_3409(bytes, endpoint_base, endpoint_count, elem_size) {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
+        let endpoints =
+            match try_parse_endpoints_3409(bytes, endpoint_base, endpoint_count, elem_size) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
 
         for pad in (0..=32).step_by(4) {
             let residual_off = endpoints_end + pad;
@@ -545,7 +596,13 @@ fn infer_3409_layout(
             }
 
             for comp_bits in [3, 2, 1, 4] {
-                let q_counts = match compute_block_qcounts(bytes, residual_off, base_scale, comp_bits, key_count) {
+                let q_counts = match compute_block_qcounts(
+                    bytes,
+                    residual_off,
+                    base_scale,
+                    comp_bits,
+                    key_count,
+                ) {
                     Ok(q) => q,
                     Err(_) => continue,
                 };

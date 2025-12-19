@@ -406,6 +406,7 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
 /// Create compressed Vector3 data for version 1.2 using format 0x3409
 /// Uses the proper EXVS2-compatible encoder with 33-key blocks and residual encoding.
 /// This is used for both Scale and Translate properties as they share the same format.
+#[allow(dead_code)]
 fn create_v12_compressed_vector3_data(values: &[Vector3]) -> Result<Vec<u8>, error::Error> {
     if values.is_empty() {
         return Ok(Vec::new());
@@ -417,6 +418,7 @@ fn create_v12_compressed_vector3_data(values: &[Vector3]) -> Result<Vec<u8>, err
 }
 
 /// Calculate interpolation index for a value within the range [first, middle, last]
+#[allow(dead_code)]
 fn calculate_interpolation_index(
     value: f32,
     first: f32,
@@ -450,6 +452,7 @@ fn calculate_interpolation_index(
 }
 
 /// Write bits to a BitVec
+#[allow(dead_code)]
 fn write_bits(bits: &mut BitVec<u8, Lsb0>, value: u32, count: usize) {
     for i in 0..count {
         bits.push((value >> i) & 1 == 1);
@@ -458,6 +461,7 @@ fn write_bits(bits: &mut BitVec<u8, Lsb0>, value: u32, count: usize) {
 
 /// Create compressed Vector4 data for version 1.2 using format 0x4409
 /// Used for quaternion rotations - based on GitHub discussion format 0x0944/0x4409
+#[allow(dead_code)]
 fn create_v12_compressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
     let frame_count = values.len() as u32;
     let mut data = Vec::new();

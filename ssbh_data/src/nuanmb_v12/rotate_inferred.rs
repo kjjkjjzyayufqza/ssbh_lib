@@ -1,7 +1,6 @@
 use super::common::{
-    align_up, compute_block_count_4309, compute_block_len_4309, compute_block_qcounts_4309,
-    decode_residual_vector, quat_normalize, quat_nlerp, read_f32_le, read_u32_le,
-    try_parse_endpoints_4309, try_pick_comp_bits_4309,
+    align_up, compute_block_count_4309, compute_block_len_4309, decode_residual_vector, quat_nlerp,
+    quat_normalize, read_f32_le, read_u32_le, try_parse_endpoints_4309, try_pick_comp_bits_4309,
 };
 use crate::anim_data::{error, Vector4};
 
@@ -65,8 +64,14 @@ pub fn decode_rotate_4309(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
         };
 
         let rs = 4 * prefix_words[block_idx];
-        let (r_vec, _) =
-            decode_residual_vector(&residual_payload, rs, base_scale, local, comp_bits, block_len)?;
+        let (r_vec, _) = decode_residual_vector(
+            &residual_payload,
+            rs,
+            base_scale,
+            local,
+            comp_bits,
+            block_len,
+        )?;
         let qx = k.x + r_vec[0];
         let qy = k.y + r_vec[1];
         let qz = k.z + r_vec[2];
@@ -121,10 +126,11 @@ fn infer_4309_layout(
     let mut best_key: Option<(usize, i32, usize, usize)> = None;
 
     for elem_size in [16, 12] {
-        let endpoints = match try_parse_endpoints_4309(curve_bytes, base_offset, endpoint_count, elem_size) {
-            Ok(e) => e,
-            Err(_) => continue,
-        };
+        let endpoints =
+            match try_parse_endpoints_4309(curve_bytes, base_offset, endpoint_count, elem_size) {
+                Ok(e) => e,
+                Err(_) => continue,
+            };
 
         let endpoints_end = base_offset + endpoint_count * elem_size;
         for pad in (0..=0x20).step_by(4) {
@@ -147,7 +153,12 @@ fn infer_4309_layout(
             let elem_rank = if elem_size == 16 { 0 } else { 1 };
             let cand_key = (slack, -(comp_bits as i32), elem_rank, residual_off);
             if best_key.is_none() || cand_key < best_key.unwrap() {
-                best = Some((endpoints.clone(), residual_payload.clone(), comp_bits, q_counts.clone()));
+                best = Some((
+                    endpoints.clone(),
+                    residual_payload.clone(),
+                    comp_bits,
+                    q_counts.clone(),
+                ));
                 best_key = Some(cand_key);
             }
             if slack <= 16 {
