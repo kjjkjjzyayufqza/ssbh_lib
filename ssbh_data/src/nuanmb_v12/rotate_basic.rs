@@ -11,8 +11,8 @@ pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
     if read_u32_le(bytes, 0)? != 0x4300 {
         return Err(error::Error::InvalidData);
     }
-    let frame_count = read_u32_le(bytes, 4)? as usize;
-    if frame_count == 0 {
+    let key_count = read_u32_le(bytes, 4)? as usize;
+    if key_count == 0 {
         return Ok(vec![Vector4 {
             x: 0.0,
             y: 0.0,
@@ -21,22 +21,22 @@ pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
         }]);
     }
 
-    // Variant A: 16-byte header (unk1 + unk2) + frame_count * vec4<f32>.
-    // Variant B: 12-byte header (unk1 only) + frame_count * vec4<f32>.
-    // Variant C (observed in game data): 12-byte header + u8 frame_indices[frame_count] + align4 + frame_count * vec4<f32>.
+    // Variant A: 16-byte header (unk1 + unk2) + key_count * vec4<f32>.
+    // Variant B: 12-byte header (unk1 only) + key_count * vec4<f32>.
+    // Variant C (observed in game data): 12-byte header + u8 frame_indices[key_count] + align4 + key_count * vec4<f32>.
     //
     // The same magic (0x4300) is used for these variants, so we must infer the layout from length.
 
     // Prefer the indexed-key variant if it matches exactly.
-    let indexed_payload_off = align_up(12 + frame_count, 4);
-    if indexed_payload_off <= bytes.len() && indexed_payload_off + frame_count * 16 == bytes.len() {
-        let frame_indices: Vec<usize> = bytes[12..12 + frame_count]
+    let indexed_payload_off = align_up(12 + key_count, 4);
+    if indexed_payload_off <= bytes.len() && indexed_payload_off + key_count * 16 == bytes.len() {
+        let frame_indices: Vec<usize> = bytes[12..12 + key_count]
             .iter()
             .map(|v| *v as usize)
             .collect();
-        let mut key_vals = Vec::with_capacity(frame_count);
+        let mut key_vals = Vec::with_capacity(key_count);
         let mut pos = indexed_payload_off;
-        for _ in 0..frame_count {
+        for _ in 0..key_count {
             let mut q = read_vec4_f32_le(bytes, pos)?;
             pos += 16;
             let len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
@@ -61,17 +61,17 @@ pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
     }
 
     // Fallback to raw stream variants.
-    let pos = if bytes.len() >= 16 + frame_count * 16 && bytes.len() != 12 + frame_count * 16 {
+    let pos = if bytes.len() >= 16 + key_count * 16 && bytes.len() != 12 + key_count * 16 {
         16
     } else {
         12
     };
-    if pos + frame_count * 16 > bytes.len() {
+    if pos + key_count * 16 > bytes.len() {
         return Err(error::Error::InvalidData);
     }
-    let mut frames = Vec::with_capacity(frame_count);
+    let mut frames = Vec::with_capacity(key_count);
     let mut pos = pos;
-    for _ in 0..frame_count {
+    for _ in 0..key_count {
         let mut q = read_vec4_f32_le(bytes, pos)?;
         pos += 16;
         let len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;

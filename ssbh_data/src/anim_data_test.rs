@@ -965,13 +965,13 @@ pub struct Unk3409 {
 #[allow(dead_code)]
 #[derive(Debug, BinRead)]
 pub struct Unk4300 {
-    pub frame_count: u32,
+    pub key_count: u32,
     pub unk1: f32,
 
-    #[br(count = frame_count, align_after = 4)] // align to float boundary
-    pub unk2: Vec<u8>, // TODO: key frames?
+    #[br(count = key_count, align_after = 4)] // align to float boundary
+    pub frame_indices: Vec<u8>,
 
-    #[br(count = frame_count)]
+    #[br(count = key_count)]
     pub values: Vec<Vector4>,
 }
 

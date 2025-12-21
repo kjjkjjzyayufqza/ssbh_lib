@@ -100,7 +100,7 @@ impl AnimData {
     /// 
     /// # Encoding Strategy
     /// - Constant tracks (all frames identical): Uses constant formats (0x3003, 0x4003, etc.)
-    /// - Multi-frame tracks: Uses raw stream formats (0x3400, 0x4300, etc.)
+    /// - Multi-frame tracks: Uses uncompressed formats (e.g. 0x3400 for Vector3, 0x4300 for quaternions)
     /// - Quaternions are automatically normalized before writing
     /// 
     /// # Errors
@@ -259,6 +259,11 @@ pub mod error {
             final_frame_index
         )]
         InvalidFinalFrameIndex { final_frame_index: f32 },
+
+        /// The v1.2 quaternion keyframe encoding uses u8 frame indices and cannot represent
+        /// animations with more than 256 keyframes without changing formats.
+        #[error("anim v1.2 rotate 0x4300 key_count {key_count} exceeds u8 frame index limit (max 256)")]
+        V12Rotate4300KeyCountTooLarge { key_count: usize },
 
         /// An error occurred while writing data to a buffer.
         #[error(transparent)]
