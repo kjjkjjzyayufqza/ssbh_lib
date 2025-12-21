@@ -2,112 +2,87 @@
 
 Generate Anim v1.2 (`.nuanmb`) files from `.anim` that the game can load and play correctly (no crash, correct motion).
 
-This document focuses on a single strategic direction:
+This document now focuses on a single strategic direction:
 
-- Stop relying on "uncompressed" / indexed keyframe formats for multi-frame Transform properties.
-- Always use the game's residual-based compressed formats for multi-frame data, using the 33-key block model.
+- Prefer **non-compressed** (raw/constant) formats for Transform playback to maximize runtime compatibility.
+- Treat `0x3409/0x4409` residual compression as **blocked** until we can reverse engineer the runtime behavior from IDA Pro.
 
 ## Why We Are Changing Direction
 
-### 1) `0x3300` has a hard frame index ceiling
+### 1) The residual-compressed formats are strict and we cannot guarantee correctness yet
 
-`0x3300` stores per-key frame indices as `u8` (1 byte). That means the maximum frame index is `0xFF` (255).
-Any animation longer than 256 frames cannot be represented without either splitting timelines or switching format.
+We tried hard to generate `0x3409` (Vector3) and `0x4409` (Quaternion) buffers that match shipped assets:
 
-For files like `final_frame_index = 360` (361 frames), `0x3300` is fundamentally the wrong encoding.
+- endpoint-base variants (`0x14` vs `0x18`)
+- `flags`/`bits` combinations
+- per-block word counts and prefix sums
+- residual header shapes and quantization rules
 
-### 2) "Uncompressed" formats may not be supported by the runtime path we need
+Despite extensive iteration, the game still crashes on our generated compressed buffers.
 
-Even if a format can be decoded by our tooling, the game runtime may only support a subset of v1.2 formats (or may only enable some of them for Transform playback).
-Symptoms we saw that match this:
+The root issue is that we do **not** fully understand the compression format semantics.
+In particular, a field at **offset `0x14`** is critical for at least one variant and is **not padding**.
+Without knowing the exact runtime meaning of this field (and how it interacts with `flags`, `bits`, block layout, and component selection),
+we cannot guarantee the game will read the buffer safely.
 
-- First frame looks correct, but no motion afterward.
-- Motion is different from the source `.anim`.
-- In some cases, the game crashes (strict decoder reads unexpected buffer layout).
+### 2) Our current decoder behavior is heuristic, not a strict runtime clone
 
-### 3) Residual compression is the most likely to match game expectations
+Our Python/Rust decoders can "successfully" decode many inputs by **scanning and picking a plausible layout**.
+This is useful for inspection, but it is not proof that we are decoding exactly like the game:
 
-Known-good v1.2 assets often use:
+- the tooling is effectively doing *best-effort matching*
+- the game runtime likely has a strict path (no scanning) and strict invariants
+- therefore, encoder changes that appear to roundtrip in tooling can still crash in-game
 
-- `0x3409` for Vector3 curves (Translate / Scale).
-- `0x4409` for Quaternion curves (Rotate).
+Because the decoder is not a strict clone, continuing to "match bytes" is too risky for shipping output.
 
-These are block-based formats with:
+### 3) We still need long animations (361 frames) without index ceilings
 
-- 33-key blocks
-- endpoints per block
-- residual stream using the kernel/weight model
+Some "uncompressed" formats have constraints (e.g. `0x3300` uses `u8` indices and cannot represent 361 frames).
+Therefore, the non-compressed plan must use formats that support arbitrary frame counts.
 
-If we can match these buffers structurally and semantically, we maximize the chance of correct in-game playback.
+## Status Update: Compression Experiments Are Not Shippable Yet
 
-## Update (POC): A Deterministic 0x3409 Encoder Exists in This Repo
+We attempted multiple compression approaches (both "template-matching" and "model-based"):
 
-We implemented a standalone **curve-magic** `0x3409` encoder and verified it can reproduce a known-good `3409.bin` **byte-for-byte**.
+- matching headers observed in shipped assets (including the `0x18` endpoint-base variants)
+- matching residual header shapes and stream sizes
+- matching block word counts and writing prefix sums at `0x14` where applicable
+- matching quantization math (float32 rounding paths)
 
-Files:
+Even when a buffer can be decoded by our tooling, the game still crashes.
 
-- `test/curve_3409_encode.py`
-  - Reads per-frame samples from CSV (`frame,x,y,z`).
-  - Uses `test/kernel_table.py` (DCT-IV kernel) and `test/lib_3409.py` (verified residual decoder model).
-  - Encodes endpoints + residual stream into a curve-level `0x3409` buffer.
-  - Supports a template mode (`--ref-bin`) to match header fields and residual header layout exactly.
-  - Uses **float32-style rounding** during critical math steps to achieve byte-level reproducibility.
-- `test/map_3409_offset.py`
-  - Debug helper that maps a byte offset to (block, component, coefficient region) when investigating diffs.
+Conclusion:
 
-How it works (high-level):
-
-- **Endpoints**
-  - Uses the curve-magic 33-key block model.
-  - `block_count = (N - 1) // 33 + 1` for `N > 1`
-  - `endpoint_count = block_count + 1`
-  - Endpoint `b` is `sample[b*33]`, plus the final endpoint `sample[N-1]`.
-- **Kernel baseline**
-  - For each block and each component, baseline is linear interpolation between adjacent endpoints:
-    - `t = local / block_len`, `block_len = 33` except the last block where `block_len = N - 33*block_idx - 1`
-    - `K(local) = lerp(endpoint[b], endpoint[b+1], t)`
-- **Residual**
-  - `R(local) = sample(local) - K(local)`
-  - Residual is encoded using the same kernel/weight model as the verified decoder (`sub_140056750` behavior).
-  - The encoder solves for coefficient vectors in a way that matches the decoder’s dot-product reconstruction and then quantizes into i16 / i8 / nibble-packed lanes.
-  - Some headers use `v12` as implicit (non-stored) slots that still affect the kernel size; the encoder supports this.
-
-Validation:
-
-- Decode `test/3409.bin` to CSV:
-  - `python .\nuanmb_decompress.py --bin .\3409.bin --out .\3409_decoded.csv --magic 0x3409`
-- Re-encode and compare:
-  - `python .\curve_3409_encode.py --in-csv .\3409_decoded.csv --ref-bin .\3409.bin --out-bin .\3409_reencoded.bin --compare`
-  - Expected output: `byte_compare: identical`
+- We should **stop shipping compressed output** for now.
+- We should only revisit compression after **IDA Pro** analysis confirms the exact runtime rules and invariants.
 
 ## Target Output Formats
 
 For Transform tracks:
 
+### Non-compressed (preferred for now)
+
 - **Translate (Vector3)**:
-  - Single frame: `0x3003`
-  - Multi-frame: `0x3409`
+  - Single frame: `0x3003` (constant Vector3)
+  - Multi-frame: `0x3400` (raw per-frame Vector3 stream)
 
 - **Scale (Vector3)**:
   - Single frame: `0x3003`
-  - Multi-frame: `0x3409`
+  - Multi-frame: `0x3400`
 
-- **Rotate (Experimental: Euler Vector3)**:
-  - Single frame: `0x4003` (Quaternion Vector4)
-  - Multi-frame: `0x3409`
+- **Rotate (Quaternion Vector4)**:
+  - Single frame: `0x4003` (constant quaternion)
+  - Multi-frame: `0x4300` (raw per-frame quaternion stream)
 
-Important note about Rotate:
+Notes:
 
-- The “known-good” direction is still `0x4409` for quaternion curves, but this document records an **experimental hypothesis**:
-  - Convert quaternion rotation to a stable Euler representation, then compress Euler as `Vector3` using curve-magic `0x3409`.
-- This may fail in runtime or produce different motion due to Euler conventions, discontinuities, or gimbal behavior.
-  - If this happens, revert multi-frame Rotate back to quaternion (`0x4409`) and keep `0x3409` for Translate/Scale.
-
-This plan intentionally does not rely on `0x3200`, `0x3300`, or `0x3400` for multi-frame playback.
+- Avoid `0x3300` for long animations because it uses `u8` frame indices (hard ceiling at 256 frames).
+- Avoid `0x3409/0x4409` until runtime behavior is confirmed via IDA Pro.
 
 ## Work Plan (Phased)
 
-### Phase A: Build a comparison and inspection harness (must-have)
+### Phase A: Build a strict inspection harness (must-have)
 
 We need a deterministic way to compare:
 
@@ -125,6 +100,7 @@ Deliverables:
     - the key header fields used by the runtime (`unk1`, base scale, flags/bits, etc.)
     - buffer byte length
     - a short hex prefix of the payload
+  - Explicitly marks fields that are currently **unknown / not proven** (e.g. `u32@0x14` for some variants).
 
 Success criteria:
 
@@ -145,44 +121,41 @@ Success criteria:
 
 - Generated `.nuanmb` property lists match known-good files for the same track set.
 
-### Phase C: Implement strict v1.2 residual encoders (core work)
+### Phase C: Ship a safe non-compressed writer (core work)
 
-#### C1) `0x3409` Vector3 encoder (Translate / Scale)
+#### C1) Vector3: `0x3003` / `0x3400`
 
 Requirements:
 
-- Use 33-key blocks.
-- Write endpoints and residual stream in a layout that the game runtime expects.
-- Populate header fields (`unk1`, base scale, flags/bits) in a way consistent with known-good files.
-  - Use float32-style math for reproducible quantization decisions.
+- Use `0x3003` for constant single-frame values.
+- Use `0x3400` for multi-frame values (raw stream, no inference fields).
 
 Validation:
 
-- A "strict parser" (no inference) can parse our output without scanning.
+- A strict parser can parse our output without scanning.
 - The file loads and plays in-game without crashing.
-- Numeric error is within acceptable lossy tolerance.
+- Motion matches the source `.anim` exactly (no compression loss).
 
-#### C2) `0x3409` Rotate encoder (Experimental: Euler Vector3)
+#### C2) Quaternion: `0x4003` / `0x4300`
 
 Requirements:
 
-- Convert quaternion curves to Euler consistently (choose and document one convention).
-- Enforce continuity rules in Euler space (avoid sudden ±360 jumps).
-- Encode Euler as `Vector3` using the same `0x3409` encoder logic as C1.
+- Use `0x4003` for constant single-frame quaternions.
+- Use `0x4300` for multi-frame quaternion streams.
+- Normalize and enforce sign continuity for stable playback.
 
 Validation:
 
-- Same strict parsing and in-game criteria as `0x3409`.
-- If runtime playback is incorrect or unstable, switch Rotate back to quaternion `0x4409`.
+- Same strict parsing and in-game criteria as C1.
 
 ### Phase D: Integration in `ssbh_editor` export path
 
 Deliverables:
 
-- Update `.anim -> .nuanmb v1.2` to use the compressed writer by default:
-  - Translate multi-frame -> `0x3409`
-  - Scale multi-frame -> `0x3409`
-  - Rotate multi-frame -> `0x3409` (experimental Euler path)
+- Update `.anim -> .nuanmb v1.2` to use the **non-compressed** writer by default:
+  - Translate multi-frame -> `0x3400`
+  - Scale multi-frame -> `0x3400`
+  - Rotate multi-frame -> `0x4300`
 
 Optional:
 
@@ -213,6 +186,13 @@ For a curve of `N` keys:
 - Converting a 361-frame `.anim` produces a `.nuanmb` that:
   - loads in-game without crashing
   - plays translation/rotation/scale over time (not only the first frame)
-  - matches the source animation within expected lossy compression error
+  - matches the source animation without compression loss
+
+## When To Revisit Compression
+
+Only after:
+
+- Confirming the exact runtime invariants via **IDA Pro** (including the meaning of `u32@0x14` and how `flags/bits` select variants).
+- Replacing heuristic decoding with a strict, single-path implementation that matches the IDA Pro control flow.
 
 

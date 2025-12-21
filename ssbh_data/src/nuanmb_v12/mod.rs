@@ -18,6 +18,13 @@ pub use translate::{
     decode_translate_3408, decode_translate_3409,
 };
 
+// Internal helpers for encoders within this crate.
+pub(crate) const G_CURVE_SHORT4_SCALE: f32 = common::G_CURVE_SHORT4_SCALE;
+
+pub(crate) fn kernel_row(v18: usize, row_idx: usize) -> &'static [f32] {
+    common::kernel().row(v18, row_idx)
+}
+
 #[cfg(test)]
 mod tests {
     use super::common::kernel;

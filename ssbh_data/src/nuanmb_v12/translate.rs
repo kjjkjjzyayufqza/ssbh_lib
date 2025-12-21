@@ -494,7 +494,7 @@ pub fn decode_translate_3409(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let key_count = read_u32_le(bytes, 4)? as usize;
     let _unk1 = read_f32_le(bytes, 8)?;
     let base_scale = read_f32_le(bytes, 12)?;
-    let _flags = read_u16_le(bytes, 16)?;
+    let flags = read_u16_le(bytes, 16)? as usize;
     let _bits = read_u16_le(bytes, 18)?;
 
     if key_count == 0 {
@@ -511,7 +511,12 @@ pub fn decode_translate_3409(bytes: &[u8]) -> Result<Vec<Vector3>, error::Error>
     let mut best: Option<(Vec<Vector3>, usize, usize, Vec<usize>)> = None;
     let mut best_key: Option<(usize, i32, usize)> = None;
 
-    for scan_start in [0x14usize, 0x18usize] {
+    // Choose probing order based on observed variants:
+    // - Many 0x3409 buffers with 2 blocks use endpoint_base=0x14.
+    // - Many 0x3409 buffers with 3+ blocks use endpoint_base=0x18 and store a u32 at 0x14.
+    // The runtime appears to be strict, so prefer the variant implied by flags.
+    let scan_order: [usize; 2] = if flags >= 3 { [0x18, 0x14] } else { [0x14, 0x18] };
+    for scan_start in scan_order {
         if scan_start > bytes.len() {
             continue;
         }

@@ -14,6 +14,7 @@ pub fn decode_rotate_4409(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
     let key_count = read_u32_le(bytes, 4)? as usize;
     let _unk1 = read_f32_le(bytes, 8)?;
     let base_scale = read_f32_le(bytes, 12)?;
+    let flags = read_u16_le(bytes, 16)?;
     let _bits = read_u16_le(bytes, 18)?;
 
     if key_count == 0 {
@@ -35,7 +36,15 @@ pub fn decode_rotate_4409(bytes: &[u8]) -> Result<Vec<Vector4>, error::Error> {
     let mut best: Option<(Vec<Vector4>, usize, usize)> = None;
     let mut best_key: Option<(usize, i32, usize)> = None;
 
-    for endpoint_base in [0x14usize, 0x18usize] {
+    // Prefer endpoint_base based on observed in-game behavior:
+    // - flags >= 3 (block_count >= 3): endpoint_base is commonly 0x18.
+    // - otherwise: endpoint_base is commonly 0x14.
+    let scan_order = if flags >= 3 {
+        [0x18usize, 0x14usize]
+    } else {
+        [0x14usize, 0x18usize]
+    };
+    for endpoint_base in scan_order {
         let endpoints_size = endpoint_count * 16;
         let residual_off = endpoint_base + endpoints_size;
         if residual_off > bytes.len() {
