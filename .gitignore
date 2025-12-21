@@ -12,3 +12,4 @@ Cargo.lock
 # Code coverage
 /coverage/*
 *.sh
+ssbh_lib.code-workspace
