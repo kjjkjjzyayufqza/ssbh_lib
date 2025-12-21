@@ -602,8 +602,7 @@ fn create_v12_uncompressed_vector3_data(
 /// Create uncompressed Vector4 data for version 1.2 (quaternions).
 ///
 /// Uses constant format 0x4003 for single values.
-/// For multi-frame data, uses 0x4300 keyframed quaternions with u8 frame indices (EXVS2-style).
-/// If the animation exceeds the u8 index range, returns an error.
+/// For multi-frame data, uses 0x4400 raw quaternion stream (no frame indices).
 fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, error::Error> {
     let mut data = Vec::new();
 
@@ -668,33 +667,20 @@ fn create_v12_uncompressed_vector4_data(values: &[Vector4]) -> Result<Vec<u8>, e
         data.extend_from_slice(&normalized_values[0].z.to_le_bytes());
         data.extend_from_slice(&normalized_values[0].w.to_le_bytes());
     } else {
-        let key_count = normalized_values.len();
-
-        // Prefer EXVS2-style 0x4300: u8 frame indices + key quaternions.
-        // This matches observed samples like:
-        // 0x4300 + key_count + 1.0f + frame_indices[key_count] + align4 + key_count*vec4<f32>.
-        if key_count <= (u8::MAX as usize + 1) {
-            data.extend_from_slice(&0x4300u32.to_le_bytes());
-            data.extend_from_slice(&(key_count as u32).to_le_bytes());
-            data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
-
-            // Frame indices (one byte per key). Use dense keys by default (0..key_count-1).
-            for i in 0..key_count {
-                data.push(i as u8);
-            }
-            // Align to 4 bytes before quaternion payload.
-            while (data.len() % 4) != 0 {
-                data.push(0);
-            }
-
-            for value in &normalized_values {
-                data.extend_from_slice(&value.x.to_le_bytes());
-                data.extend_from_slice(&value.y.to_le_bytes());
-                data.extend_from_slice(&value.z.to_le_bytes());
-                data.extend_from_slice(&value.w.to_le_bytes());
-            }
-        } else {
-            return Err(error::Error::V12Rotate4300KeyCountTooLarge { key_count });
+        // Use raw per-frame quaternion stream (0x4400) to avoid u8 frame index limits.
+        // Layout (see decode_rotate_4400):
+        // - u32 magic = 0x4400
+        // - u32 frame_count
+        // - f32 unk1 (commonly 1.0)
+        // - frame_count * vec4<f32>
+        data.extend_from_slice(&0x4400u32.to_le_bytes());
+        data.extend_from_slice(&(normalized_values.len() as u32).to_le_bytes());
+        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
+        for q in &normalized_values {
+            data.extend_from_slice(&q.x.to_le_bytes());
+            data.extend_from_slice(&q.y.to_le_bytes());
+            data.extend_from_slice(&q.z.to_le_bytes());
+            data.extend_from_slice(&q.w.to_le_bytes());
         }
     }
 
@@ -806,3 +792,4 @@ fn create_v12_compressed_uv_data(values: &[UvTransform]) -> Result<Vec<u8>, erro
 
     Ok(data)
 }
+
