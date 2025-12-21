@@ -194,8 +194,17 @@ impl TryFrom<&Anim> for AnimData {
             minor_version,
             final_frame_index: match &anim {
                 Anim::V12 {
-                    final_frame_index, ..
-                } => *final_frame_index,
+                    final_frame_index,
+                    unk2,
+                    ..
+                } => {
+                    // See `read_anim_groups` for details on the dual v1.2 header conventions.
+                    if (*final_frame_index - 60.0).abs() <= 1.0e-3 && *unk2 >= 0.0 {
+                        *unk2
+                    } else {
+                        *final_frame_index
+                    }
+                }
                 Anim::V20 {
                     final_frame_index, ..
                 } => *final_frame_index,
@@ -464,10 +473,27 @@ fn read_anim_groups(anim: &Anim) -> Result<Vec<GroupData>, error::Error> {
     match anim {
         // TODO: Create fake groups for version 1.0?
         ssbh_lib::prelude::Anim::V12 {
-            tracks, buffers, final_frame_index, ..
+            tracks,
+            buffers,
+            final_frame_index,
+            unk2,
+            ..
         } => {
-            // For version 1.2, use the animation's final_frame_index to determine frame count
-            let frame_count = (*final_frame_index as usize).saturating_add(1);
+            // Version 1.2 has at least two observed header conventions.
+            //
+            // Smash Ultimate style:
+            // - `final_frame_index` is the last frame index (frame_count - 1).
+            //
+            // EXVS2 style (empirically observed from Front.bin):
+            // - `final_frame_index` is a timebase value (commonly 60.0).
+            // - `unk2` stores the effective end frame (commonly frame_count - 1).
+            //
+            // Prefer the EXVS2 convention when it matches to avoid inflating frame counts.
+            let frame_count = if (*final_frame_index - 60.0).abs() <= 1.0e-3 && *unk2 >= 0.0 {
+                (*unk2).round().max(0.0) as usize + 1
+            } else {
+                (*final_frame_index).round().max(0.0) as usize + 1
+            };
             read_groups_v12(&tracks.elements, &buffers.elements, frame_count)
         }
         ssbh_lib::formats::anim::Anim::V20 { groups, buffer, .. } => {

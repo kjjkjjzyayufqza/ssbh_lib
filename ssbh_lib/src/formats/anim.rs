@@ -30,15 +30,36 @@ use strum::{Display, EnumIter, EnumString, FromRepr};
 pub enum Anim {
     #[br(pre_assert(major_version == 1 && minor_version == 2))]
     V12 {
-        name: SsbhString,
-        unk1: f32,
-        /// The index of the last frame in the animation,
-        /// which is calculated as `(frame_count - 1) as f32`.
+        /// The animation name.
         ///
-        /// Frames use floating point to allow the rendering speed to differ from the animation speed.
-        /// For example, some animations in Smash Ultimate interpolate when playing the game at 60fps but 1/4 speed.
+        /// This is often empty in practice and may be derived from the file name by tools.
+        name: SsbhString,
+
+        /// Playback range multiplier for the animation timeline.
+        ///
+        /// This field's meaning differs by runtime.
+        ///
+        /// Empirically (EXVS2), this stores the duration in seconds, and the relationship
+        /// `unk1 * final_frame_index == unk2` holds (e.g. `0.65 * 60.0 == 39.0`).
+        unk1: f32,
+
+        /// Timeline timebase or end frame index depending on the runtime.
+        ///
+        /// Two conventions have been observed for v1.2:
+        /// - Smash Ultimate style: `final_frame_index` is the last frame index (commonly `frame_count - 1`).
+        /// - EXVS2 style: `final_frame_index` stores a timebase value (commonly `60.0`), and the
+        ///   end frame is stored in `unk2`.
         final_frame_index: f32,
+
+        /// End frame index.
+        ///
+        /// Empirically (EXVS2), this is commonly `frame_count - 1`, and can be recovered from
+        /// `unk1 * final_frame_index`.
         unk2: f32,
+
+        /// Effective start frame index or reserved value.
+        ///
+        /// Empirically (EXVS2), this is commonly `0.0`.
         unk3: f32,
         tracks: SsbhArray<TrackV1>,
         buffers: SsbhArray<SsbhByteBuffer>,
