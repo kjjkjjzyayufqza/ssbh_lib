@@ -445,15 +445,31 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
                                 buffer_index: (buffers.len() - 1) as u64,
                             });
 
-                            // CompensateScale property if needed
-                            if track.compensate_scale {
+                            // CompensateScale is represented as a boolean-like 0x1013 u16 in Anim v1.2.
+                            // Preserve property presence by always writing it, even when false.
+                            {
                                 let mut compensate_data = Vec::new();
-                                compensate_data.extend_from_slice(&0x1003u32.to_le_bytes());
-                                compensate_data.extend_from_slice(&1.0f32.to_le_bytes()); // true = 1.0
+                                compensate_data.extend_from_slice(&0x1013u32.to_le_bytes());
+                                let v: u16 = if track.compensate_scale { 0x7FFF } else { 0x0000 };
+                                compensate_data.extend_from_slice(&v.to_le_bytes());
 
                                 buffers.push(SsbhByteBuffer { elements: compensate_data });
                                 properties.push(Property {
                                     name: "CompensateScale".into(),
+                                    buffer_index: (buffers.len() - 1) as u64,
+                                });
+                            }
+
+                            // Visibility is commonly present as a 0x1013 u16 on Transform tracks.
+                            // The high level representation does not currently preserve it, so default to true.
+                            {
+                                let mut visibility_data = Vec::new();
+                                visibility_data.extend_from_slice(&0x1013u32.to_le_bytes());
+                                visibility_data.extend_from_slice(&0x7FFFu16.to_le_bytes());
+
+                                buffers.push(SsbhByteBuffer { elements: visibility_data });
+                                properties.push(Property {
+                                    name: "Visibility".into(),
                                     buffer_index: (buffers.len() - 1) as u64,
                                 });
                             }
@@ -480,24 +496,19 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
                         }
                     }
                     _ => {
-                        // Create a default empty property for unsupported combinations
-                        let mut default_data = Vec::new();
-                        default_data.extend_from_slice(&0x0000u32.to_le_bytes());
-
-                        buffers.push(SsbhByteBuffer { elements: default_data });
-                        properties.push(Property {
-                            name: track.name.as_str().into(),
-                            buffer_index: (buffers.len() - 1) as u64,
-                        });
+                        // Unsupported combinations should not generate invalid placeholder buffers.
+                        // Writing an unknown property with a 0x0000 header can crash consumers.
                     }
                 }
 
                 // Create the track
-                tracks.push(TrackV1 {
-                    name: node.name.as_str().into(),
-                    track_type,
-                    properties: properties.into(),
-                });
+                if !properties.is_empty() {
+                    tracks.push(TrackV1 {
+                        name: node.name.as_str().into(),
+                        track_type,
+                        properties: properties.into(),
+                    });
+                }
             }
         }
     }
@@ -559,10 +570,8 @@ fn create_v12_uncompressed_vector3_data(
     values: &[Vector3],
     _property_name: &str,
 ) -> Result<Vec<u8>, error::Error> {
-    let mut data = Vec::new();
-
     if values.is_empty() {
-        return Ok(data);
+        return Ok(Vec::new());
     }
 
     // Check if all values are identical (constant track)
@@ -573,43 +582,17 @@ fn create_v12_uncompressed_vector3_data(
     });
 
     if all_same || values.len() == 1 {
+        let mut data = Vec::new();
         // Use constant format 0x3003
         data.extend_from_slice(&0x3003u32.to_le_bytes());
         data.extend_from_slice(&values[0].x.to_le_bytes());
         data.extend_from_slice(&values[0].y.to_le_bytes());
         data.extend_from_slice(&values[0].z.to_le_bytes());
+        Ok(data)
     } else {
-        // Use indexed keyframe format 0x3300 for compatibility.
-        // This stores uncompressed f32 Vector3 values with explicit frame indices.
-        let key_count = values.len();
-        if key_count > u8::MAX as usize + 1 {
-            return Err(error::Error::InvalidFinalFrameIndex {
-                final_frame_index: key_count as f32 - 1.0,
-            });
-        }
-
-        data.extend_from_slice(&0x3300u32.to_le_bytes());
-        data.extend_from_slice(&(key_count as u32).to_le_bytes());
-        data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1 - typically 1.0
-
-        // Frame indices (one byte per key).
-        for i in 0..key_count {
-            data.push(i as u8);
-        }
-        // Align to 4 bytes before key values.
-        while (data.len() % 4) != 0 {
-            data.push(0);
-        }
-
-        // Key values as raw f32 data.
-        for value in values {
-            data.extend_from_slice(&value.x.to_le_bytes());
-            data.extend_from_slice(&value.y.to_le_bytes());
-            data.extend_from_slice(&value.z.to_le_bytes());
-        }
+        // Use raw per-frame Vector3 stream (0x3400) to avoid u8 frame index limits.
+        create_v12_raw_stream_vector3_3400(values)
     }
-
-    Ok(data)
 }
 
 /// Create uncompressed Vector4 data for version 1.2 (quaternions).
@@ -714,23 +697,11 @@ fn create_v12_uncompressed_bool_data(values: &[bool]) -> Result<Vec<u8>, error::
         return Ok(data);
     }
 
-    // Check if all values are identical (constant track)
-    let all_same = values.iter().all(|&v| v == values[0]);
-
-    if all_same || values.len() == 1 {
-        // Use constant format 0x1013
-        data.extend_from_slice(&0x1013u32.to_le_bytes());
-        data.extend_from_slice(&(if values[0] { 1u16 } else { 0u16 }).to_le_bytes());
-    } else {
-        // Use raw stream format - write header and all values
-        // Format: 0x1019 header + frame_count + values as u16
-        data.extend_from_slice(&0x1019u32.to_le_bytes());
-        let frame_count = values.len() as u32;
-        data.extend_from_slice(&frame_count.to_le_bytes());
-
-        for &value in values {
-            data.extend_from_slice(&(if value { 1u16 } else { 0u16 }).to_le_bytes());
-        }
+    // Use 0x1013 for both single and multi-frame visibility to match common v1.2 patterns.
+    // For multi-frame data, write one u16 per frame after the header.
+    data.extend_from_slice(&0x1013u32.to_le_bytes());
+    for &value in values {
+        data.extend_from_slice(&(if value { 1u16 } else { 0u16 }).to_le_bytes());
     }
 
     Ok(data)
@@ -764,12 +735,9 @@ fn create_v12_uncompressed_uv_data(values: &[UvTransform]) -> Result<Vec<u8>, er
         data.extend_from_slice(&uv.translate_u.to_le_bytes());
         data.extend_from_slice(&uv.translate_v.to_le_bytes());
     } else {
-        // Use raw stream - write header with frame count, then all values
-        // Format: 0x5019 header + frame_count + all UV transforms
-        data.extend_from_slice(&0x5019u32.to_le_bytes());
-        let frame_count = values.len() as u32;
-        data.extend_from_slice(&frame_count.to_le_bytes());
-
+        // Use 0x5014 for both single and multi-frame UV transform to avoid unknown headers.
+        // For multi-frame data, write one 5-f32 tuple per frame after the header.
+        data.extend_from_slice(&0x5014u32.to_le_bytes());
         for uv in values {
             data.extend_from_slice(&uv.scale_u.to_le_bytes());
             data.extend_from_slice(&uv.scale_v.to_le_bytes());

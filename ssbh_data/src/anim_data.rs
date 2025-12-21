@@ -22,20 +22,23 @@ for group in anim.groups {
  */
 //!
 //! # Compression
-//! Compressed animations use lossy compression for all data types except [TrackValues::Boolean].
-//! Float compression encodes values using a configurable number of
-//! values between two floating point endpoints.
-//! Depending on the endpoints and number of bits, the encoded values
-//! between the two endpoints may not be representable by 32 bit floating point.
-//! This means that decompression may introduce some error, so compressing an animation
-//! again with the same settings may produce slightly different compressed data.
+//! Anim v2.0+ may use lossy compression for most data types except [TrackValues::Boolean].
+//! Float compression encodes values using a configurable number of values between two floating
+//! point endpoints. Depending on the endpoints and number of bits, the encoded values between the
+//! two endpoints may not be representable by 32 bit floating point.
+//!
+//! This means decompression may introduce some error, so compressing an animation again with the
+//! same settings may produce slightly different compressed data.
 //!
 //! # File Differences
 //! Unmodified files are not guaranteed to be binary identical after saving.
-//! Compressed animations use lossy compression for all data types except [TrackValues::Boolean].
-//! When converting to [Anim], compression is enabled for a track if compression would save space.
-//! This may produce differences with the original due to compression differences.
-//! These errors are small in practice but may cause gameplay differences such as online desyncs.
+//!
+//! - For Anim v1.2, the default conversion path writes uncompressed buffers for simplicity and
+//!   compatibility. Use `AnimData::to_anim_v12_compressed()` to explicitly request EXVS2-style
+//!   compression (e.g. 0x3409/0x4409).
+//! - For Anim v2.0+, compression may be enabled for a track if it would save space. This may
+//!   produce differences with the original due to compression differences. These errors are small
+//!   in practice but may cause gameplay differences such as online desyncs.
 use binrw::io::{Cursor, Seek, Write};
 use binrw::{BinRead, BinReaderExt};
 #[cfg(feature = "serde")]
@@ -307,8 +310,9 @@ enum AnimVersion {
 // TODO: Test this for a small example?
 fn create_anim(data: &AnimData) -> Result<Anim, error::Error> {
     let version = match (data.major_version, data.minor_version) {
-        // Use compressed format for v1.2 (EXVS2 compatibility)
-        (1, 2) => return create_anim_v12(data),
+        // Default to uncompressed format for v1.2.
+        // Use `AnimData::to_anim_v12_compressed()` for EXVS2 compatible compression.
+        (1, 2) => return create_anim_v12_uncompressed(data),
         (2, 0) => Ok(AnimVersion::Version20),
         (2, 1) => Ok(AnimVersion::Version21),
         _ => Err(error::Error::UnsupportedVersion {
