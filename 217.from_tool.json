@@ -1,0 +1,5166 @@
+{
+  "major_version": 1,
+  "minor_version": 5,
+  "entries": [
+    {
+      "material_label": "m_stage022_road08",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road08_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_road08_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road08_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road08_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road08_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road09",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road09_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road09_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road09_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_road09_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road09_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_water01_bm",
+      "shader_label": "FeRendererMovableBlend2MultiUV",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        },
+        {
+          "param_id": "EnableTransparency",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "NormalMapLayer1",
+          "data": "../../textures/stage022_water01_normal"
+        },
+        {
+          "param_id": "RoughnessMapLayer1",
+          "data": "../../textures/stage022_water01_roughness"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_water01_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_water01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMapLayer1",
+          "data": "../../textures/stage022_water01_specular"
+        },
+        {
+          "param_id": "DiffuseMapLayer1",
+          "data": "../../textures/stage022_water01_diffuse"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_water01_diffuse"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_water01_roughness"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_water01_specular"
+        },
+        {
+          "param_id": "BlendMap",
+          "data": "../../textures/stage022_mask02_blendmap"
+        }
+      ],
+      "uv_transforms": [
+        {
+          "param_id": "DiffuseUvTransform",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        },
+        {
+          "param_id": "DiffuseUvTransform1",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "material_label": "m_stage022_lake_bm",
+      "shader_label": "FeRendererMovableBlend2MultiUV",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMapLayer1",
+          "data": "../../textures/stage022_lake01_specular"
+        },
+        {
+          "param_id": "RoughnessMapLayer1",
+          "data": "../../textures/stage022_lake01_roughness"
+        },
+        {
+          "param_id": "NormalMapLayer1",
+          "data": "../../textures/stage022_lake01_normal"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_lake01_diffuse"
+        },
+        {
+          "param_id": "DiffuseMapLayer1",
+          "data": "../../textures/stage022_lake01_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_lake01_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_lake01_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_lake01_roughness"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_lake01_specular"
+        },
+        {
+          "param_id": "BlendMap",
+          "data": "../../textures/stage022_mask01_blendmap"
+        }
+      ],
+      "uv_transforms": [
+        {
+          "param_id": "DiffuseUvTransform",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        },
+        {
+          "param_id": "DiffuseUvTransform1",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "material_label": "m_stage022_plate01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_plate01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_plate01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_plate01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_plate01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_plate01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road06_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road06_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road06_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road06_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road06_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_ao01_ambientocclusion"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road06",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road06_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road06_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road06_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_road06_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road06_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_plate03_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_plate03_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_plate03_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_plate03_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_plate03_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_ao01_ambientocclusion"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_building06",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_building06_specular"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_building06_ambientocclusion"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_building06_normal"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_building06_diffuse"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_building06_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_containers01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_containers01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_containers01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_containers01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_containers01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_containers01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_building04",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_building04_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_building04_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_building04_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_building04_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_building04_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_rock02",
+      "shader_label": "FeRendererMovableVertexColor",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_rock02_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_rock02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_rock02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_rock02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_rock02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_building02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_building02_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_building02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_building02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_building02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_building02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_parkinglot02_a",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        },
+        {
+          "param_id": "EnableTransparency",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_parkinglot02_a_diffuse"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_parkinglot02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_parkinglot02_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_parkinglot02_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_parkinglot02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_grass01",
+      "shader_label": "FeRendererMovableVertexColor",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_grass01_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_grass01_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_grass01_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_grass01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_grass01_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_building01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_building01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_building01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_building01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_building01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_building01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_rock01_alp",
+      "shader_label": "vsngTransparentLighting_BeforeEffect",
+      "blend_states": [
+        {
+          "param_id": "BlendState0",
+          "data": {
+            "source_color": "SourceAlpha",
+            "color_operation": "Add",
+            "destination_color": "OneMinusSourceAlpha",
+            "source_alpha": "One",
+            "alpha_operation": "Add",
+            "destination_alpha": "OneMinusSourceAlpha",
+            "alpha_sample_to_coverage": false
+          }
+        }
+      ],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_rock01_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_rock01_normal"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_floor01_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor01_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor01_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor01_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_ao01_ambientocclusion"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_streetobjects",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_streetobjects_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_streetobjects_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_streetobjects_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_streetobjects_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_streetobjects_specular"
+        },
+        {
+          "param_id": "EmissiveMap",
+          "data": "../../textures/stage022_streetobjects_emissive"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_waterfall_b_a",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_waterfall_a_diffuse"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_waterfall_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_waterfall_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_waterfall_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_waterfall_roughness"
+        }
+      ],
+      "uv_transforms": [
+        {
+          "param_id": "DiffuseUvTransform",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "material_label": "m_stage022_planter02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_planter02_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_planter02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_planter02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_planter02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_planter02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_floor03_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor03_diffuse"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor02_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_ao01_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_lake",
+      "shader_label": "FeRendererMovableVertexColor",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "ClampToEdge",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_lake01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_lake01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_lake01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_lake01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_lake01_roughness"
+        }
+      ],
+      "uv_transforms": [
+        {
+          "param_id": "DiffuseUvTransform",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "material_label": "m_stage022_floor01_lightmap01",
+      "shader_label": "FeRendererStatic",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor01_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor01_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor01_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_floor01_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_01_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road07_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road07_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road07_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road07_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road07_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_ao01_ambientocclusion"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_base01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_base01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_base01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_base01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_base01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_base01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_base03",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_base03_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_base03_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_base03_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_base03_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_base03_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_base02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_base02_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_base02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_base02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_base02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_base02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_tank02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_tank02_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_tank02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_tank02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_tank02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_tank02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_parkinglot01_a",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        },
+        {
+          "param_id": "EnableTransparency",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_parkinglot01_a_diffuse"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_parkinglot01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_parkinglot01_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_parkinglot01_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_parkinglot01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_grass01_lightmap01",
+      "shader_label": "FeRendererStatic",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_grass01_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_grass01_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_grass01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_grass01_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_grass01_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_01_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_treeobject_a",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "EnableTransparency",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_treeobject_a_diffuse"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_treeobject_a_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_treeobject_a_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_treeobject_a_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_treeobject_a_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_smallbuilding03",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_smallbuilding03_normal"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_smallbuilding03_specular"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_smallbuilding03_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_smallbuilding03_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_smallbuilding03_diffuse"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_waterfall_a",
+      "shader_label": "vsngTransparent_BeforeEffect",
+      "blend_states": [
+        {
+          "param_id": "BlendState0",
+          "data": {
+            "source_color": "SourceAlpha",
+            "color_operation": "Add",
+            "destination_color": "OneMinusSourceAlpha",
+            "source_alpha": "One",
+            "alpha_operation": "Add",
+            "destination_alpha": "OneMinusSourceAlpha",
+            "alpha_sample_to_coverage": false
+          }
+        }
+      ],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        },
+        {
+          "param_id": "EnableTransparency",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_waterfall_specular"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_waterfall_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_waterfall_roughness"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_waterfall_normal"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_waterfall_a_diffuse"
+        }
+      ],
+      "uv_transforms": [
+        {
+          "param_id": "DiffuseUvTransform",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "material_label": "m_stage022_floor03",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor03_diffuse"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor02_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_floor02_ambientocclusion"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_floor02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor02_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor02_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor02_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_floor02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor02_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_floor01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor01_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor01_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor01_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_floor01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor01_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_fence02_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_fence02_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_fence02_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_fence02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_fence02_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_ao01_ambientocclusion"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_fence02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_fence02_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_fence02_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_fence02_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_fence02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_fence02_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_fence03",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_fence03_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_fence03_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_fence03_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_fence03_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_fence03_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_water01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_water01_diffuse"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_water01_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_water01_ambientocclusion"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_water01_normal"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_water01_specular"
+        }
+      ],
+      "uv_transforms": [
+        {
+          "param_id": "DiffuseUvTransform",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "material_label": "m_stage022_floor02_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor02_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor02_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor02_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_floor02_ambientocclusion"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road07_lightmap01",
+      "shader_label": "FeRendererStatic",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road07_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road07_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road07_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road07_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_road07_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_01_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road07",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road07_roughness"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road07_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road07_normal"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_road07_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road07_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_gravel01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_gravel01_diffuse"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_concrete01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_concrete01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_concrete01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_concrete01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_concrete01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_concrete01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road06_lightmap01",
+      "shader_label": "FeRendererStatic",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road06_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road06_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road06_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road06_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_road06_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_01_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_rock01",
+      "shader_label": "FeRendererMovableVertexColor",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_rock01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_rock01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_rock01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_rock01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_rock01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road09_ao01",
+      "shader_label": "FeRendererMovableMultiUVVertexColorAO",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road09_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road09_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road09_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road09_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_ao01_ambientocclusion"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_waterfall_alp",
+      "shader_label": "vsngTransparent_BeforeEffect",
+      "blend_states": [
+        {
+          "param_id": "BlendState0",
+          "data": {
+            "source_color": "SourceAlpha",
+            "color_operation": "Add",
+            "destination_color": "OneMinusSourceAlpha",
+            "source_alpha": "One",
+            "alpha_operation": "Add",
+            "destination_alpha": "OneMinusSourceAlpha",
+            "alpha_sample_to_coverage": false
+          }
+        }
+      ],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [],
+      "textures": [
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_waterfall_normal"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_waterfall_a_diffuse"
+        }
+      ],
+      "uv_transforms": [
+        {
+          "param_id": "DiffuseUvTransform",
+          "data": {
+            "scale_u": 1.0,
+            "scale_v": 1.0,
+            "rotation": 0.0,
+            "translate_u": -0.0,
+            "translate_v": 0.0
+          }
+        }
+      ]
+    },
+    {
+      "material_label": "m_stage022_mountain00base_lightmap02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_mountain01base_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_mountain01base_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_mountain01base_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_mountain01base_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_mountain01base_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_02_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_blend00_bm",
+      "shader_label": "FeRendererMovableBlend2MultiUV",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear2",
+            "mag_filter": "Linear2",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "Two"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_grass01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_grass01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_grass01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_grass01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_grass01_roughness"
+        },
+        {
+          "param_id": "BlendMap",
+          "data": "../../textures/stage022_grassmask00_blendmap"
+        },
+        {
+          "param_id": "DiffuseMapLayer1",
+          "data": "../../textures/stage022_ground00_diffuse"
+        },
+        {
+          "param_id": "SpecularMapLayer1",
+          "data": "../../textures/stage022_ground00_specular"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_outdome01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseSpecularMap",
+          "data": false
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": false
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_outdome01_diffuse"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_floor02_lightmap01",
+      "shader_label": "FeRendererStatic",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_floor02_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_floor02_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_floor02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_floor02_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_floor02_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_01_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_tunnel01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_tunnel01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_tunnel01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_tunnel01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_tunnel01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_tunnel01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_planter01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_planter01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_planter01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_planter01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_planter01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_planter01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_plate03",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_plate03_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_plate03_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_plate03_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_plate03_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_plate03_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_plate02",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_plate02_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_plate02_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_plate02_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_plate02_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_plate02_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_longbridge01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_longbridge01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_longbridge01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_longbridge01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_longbridge01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_longbridge01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_fountain01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_fountain01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_fountain01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_fountain01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_fountain01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_fountain01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_base03_lightmap02",
+      "shader_label": "FeRendererStatic",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_base03_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_base03_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_base03_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_base03_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_base03_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_02_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_glass01",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_glass01_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_glass01_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_glass01_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_glass01_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_glass01_roughness"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_road08_lightmap01",
+      "shader_label": "FeRendererStatic",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_road08_specular"
+        },
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_road08_diffuse"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_road08_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_road08_roughness"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_road08_ambientocclusion"
+        },
+        {
+          "param_id": "LightMap",
+          "data": "../../textures/stage022_01_lightmap"
+        }
+      ],
+      "uv_transforms": []
+    },
+    {
+      "material_label": "m_stage022_building03",
+      "shader_label": "FeRendererMovable",
+      "blend_states": [],
+      "floats": [],
+      "booleans": [
+        {
+          "param_id": "UseNormalMap",
+          "data": true
+        },
+        {
+          "param_id": "UseEmissiveMap",
+          "data": false
+        },
+        {
+          "param_id": "UseAmbientOcclusionMap",
+          "data": true
+        },
+        {
+          "param_id": "UseSpecularMap",
+          "data": true
+        },
+        {
+          "param_id": "UseRoughnessMap",
+          "data": true
+        },
+        {
+          "param_id": "NormalMapBc5",
+          "data": true
+        },
+        {
+          "param_id": "ReceiveShadow",
+          "data": false
+        }
+      ],
+      "vectors": [],
+      "rasterizer_states": [],
+      "samplers": [
+        {
+          "param_id": "DiffuseSampler",
+          "data": {
+            "wraps": "Repeat",
+            "wrapt": "Repeat",
+            "wrapr": "Repeat",
+            "min_filter": "LinearMipmapLinear",
+            "mag_filter": "Linear",
+            "border_color": {
+              "r": 0.0,
+              "g": 0.0,
+              "b": 0.0,
+              "a": 0.0
+            },
+            "lod_bias": 0.0,
+            "max_anisotropy": "One"
+          }
+        }
+      ],
+      "textures": [
+        {
+          "param_id": "DiffuseMap",
+          "data": "../../textures/stage022_building03_diffuse"
+        },
+        {
+          "param_id": "AmbientOcclusionMap",
+          "data": "../../textures/stage022_building03_ambientocclusion"
+        },
+        {
+          "param_id": "SpecularMap",
+          "data": "../../textures/stage022_building03_specular"
+        },
+        {
+          "param_id": "NormalMap",
+          "data": "../../textures/stage022_building03_normal"
+        },
+        {
+          "param_id": "RoughnessMap",
+          "data": "../../textures/stage022_building03_roughness"
+        }
+      ],
+      "uv_transforms": []
+    }
+  ]
+}

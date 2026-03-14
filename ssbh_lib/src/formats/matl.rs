@@ -5,9 +5,11 @@
 //! The materials in the [Matl] file are assigned to objects in the [Mesh](crate::formats::mesh::Mesh) file by the [Modl](crate::formats::modl::Modl) file.
 
 use crate::ssbh_enum;
-use crate::{Color4f, SsbhString, Vector4, Version};
+use crate::{Color4f, Matrix4x4, SsbhString, Vector4, Version};
 use crate::{SsbhArray, SsbhEnum64};
 use binrw::BinRead;
+use binrw::{BinResult, Endian};
+use std::io::{Read as IoRead, Seek as IoSeek, SeekFrom};
 use ssbh_write::SsbhWrite;
 
 #[cfg(feature = "serde")]
@@ -97,12 +99,77 @@ pub struct AttributeV16 {
     pub param: SsbhEnum64<ParamV16>,
 }
 
+/// Data for `data_type = 4` in version 1.5 material files.
+///
+/// Some files store a full 4x4 matrix here, while others store a 12-byte reserved
+/// payload (often all zero). Older JSON exports may contain an `InlineString`,
+/// but on disk this string is typically stored separately as an [SsbhString]
+/// (for example, as the shader label), not inside the type 4 payload.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
+#[derive(Debug, Clone, PartialEq)]
+pub enum ParamV15Type4 {
+    Matrix4x4(Matrix4x4),
+    Reserved([u8; 12]),
+    InlineString(String),
+}
+
+impl BinRead for ParamV15Type4 {
+    type Args<'a> = ();
+
+    fn read_options<R: IoRead + IoSeek>(
+        reader: &mut R,
+        endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let start_pos = reader.stream_position()?;
+
+        match Matrix4x4::read_options(reader, endian, ()) {
+            Ok(m) => Ok(Self::Matrix4x4(m)),
+            Err(_) => {
+                reader.seek(SeekFrom::Start(start_pos))?;
+                let mut reserved = [0u8; 12];
+                reader.read_exact(&mut reserved)?;
+                Ok(Self::Reserved(reserved))
+            }
+        }
+    }
+}
+
+impl SsbhWrite for ParamV15Type4 {
+    fn ssbh_write<W: std::io::Write + std::io::Seek>(
+        &self,
+        writer: &mut W,
+        data_ptr: &mut u64,
+    ) -> std::io::Result<()> {
+        match self {
+            Self::Matrix4x4(m) => m.ssbh_write(writer, data_ptr),
+            Self::Reserved(bytes) => writer.write_all(bytes),
+            Self::InlineString(_) => writer.write_all(&[0u8; 12]),
+        }
+    }
+
+    fn size_in_bytes(&self) -> u64 {
+        match self {
+            Self::Matrix4x4(m) => m.size_in_bytes(),
+            Self::Reserved(_) => 12,
+            // Keep writing stable even for older JSON that contained InlineString.
+            Self::InlineString(_) => 12,
+        }
+    }
+
+    fn alignment_in_bytes() -> u64 {
+        4
+    }
+}
+
 ssbh_enum!(
     /// A material parameter value.
     ParamV15,
     0u64 =>  Float(f32),
     1u64 =>  Float1(f32),
     2u64 =>  Boolean(u32),
+    4u64 => Type4(ParamV15Type4),
     /// A vector for storing RGBA colors, XYZW values, or up to four [f32] parameters.
     5u64 =>  Vector4(Vector4),
     /// A vector for storing RGBA colors.
@@ -110,6 +177,9 @@ ssbh_enum!(
     /// A string value used to store texture file names.
     /// Examples: `"../../textures/cos_149000_02"`, `"/common/shader/sfxPBS/default_Params"`, `"#replace_cubemap"`, `"asf_ashley_col"`.
     11u64 => String(SsbhString),
+    /// A string value used by some version 1.5 material files.
+    /// This appears to be functionally similar to [ParamV15::String].
+    12u64 => String2(SsbhString),
     14u64 => Sampler(Sampler),
     16u64 => UvTransform(UvTransform),
     17u64 => BlendState(BlendStateV15),
@@ -734,5 +804,52 @@ pub struct BlendStateV16 {
 impl Default for MaxAnisotropy {
     fn default() -> Self {
         Self::One
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::{error::Error, path::PathBuf};
+
+    const TEST_ROOT_NUMATB_REPRO_217: &str = "217.numatb";
+
+    fn error_chain_string(err: &(dyn Error + 'static)) -> String {
+        let mut s = String::new();
+        s.push_str(&format!("{err}"));
+        let mut current: &dyn Error = err;
+        while let Some(source) = current.source() {
+            s.push_str(&format!("\nCaused by: {source}"));
+            current = source;
+        }
+        s
+    }
+
+    #[test]
+    #[ignore]
+    fn read_root_numatb_217_is_version_15() {
+        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+            .join("..")
+            .join(TEST_ROOT_NUMATB_REPRO_217);
+        assert!(
+            path.exists(),
+            "expected repro file at {}",
+            path.display()
+        );
+
+        let matl = Matl::from_file(&path).unwrap_or_else(|e| {
+            panic!(
+                "failed to read repro {}:\n{}",
+                path.display(),
+                error_chain_string(&e)
+            )
+        });
+
+        assert_eq!(
+            (1, 5),
+            matl.major_minor_version(),
+            "expected repro Matl version 1.5 (V15)"
+        );
     }
 }
