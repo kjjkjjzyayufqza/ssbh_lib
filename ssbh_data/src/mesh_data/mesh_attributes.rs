@@ -70,14 +70,27 @@ pub fn create_attributes_v8(data: &MeshObjectData, is_vs2: bool) -> MeshAttribut
         .chain(get_vectors_v8_buffer0(&data.normals, AttributeUsageV8::Normal))
         .collect_vec();
     
-    // Interleave binormals and tangents
+    // Interleave binormals and tangents.
+    // Explicitly keep the original subindex per usage stream.
     let max_count = std::cmp::max(data.binormals.len(), data.tangents.len());
     for i in 0..max_count {
         if i < data.binormals.len() {
-            buffer0_data.extend(get_vectors_v8_buffer0(&data.binormals[i..i+1], AttributeUsageV8::Binormal));
+            let attr = &data.binormals[i];
+            buffer0_data.push((
+                attr.name.as_str(),
+                i,
+                AttributeUsageV8::Binormal,
+                VectorDataV8::from_vectors(&attr.data),
+            ));
         }
         if i < data.tangents.len() {
-            buffer0_data.extend(get_vectors_v8_buffer0(&data.tangents[i..i+1], AttributeUsageV8::Tangent));
+            let attr = &data.tangents[i];
+            buffer0_data.push((
+                attr.name.as_str(),
+                i,
+                AttributeUsageV8::Tangent,
+                VectorDataV8::from_vectors(&attr.data),
+            ));
         }
     }
 
@@ -173,17 +186,16 @@ fn get_attributes<U: Copy, V, F: Fn(&VectorData) -> V>(
         .map(move |(i, a)| (a.name.as_str(), i, usage, f(&a.data)))
 }
 
-// Special version for V8 format that uses zero subindex for buffer0 attributes
+// V8 buffer0 still requires stable subindex ordering per usage group.
 fn get_attributes_v8_buffer0<U: Copy, V, F: Fn(&VectorData) -> V>(
     attributes: &[AttributeData],
     usage: U,
     f: F,
 ) -> impl Iterator<Item = (&str, usize, U, V)> {
-    // For the target hex format, all buffer0 attributes should have subindex = 0
     attributes
         .iter()
         .enumerate()
-        .map(move |(_, a)| (a.name.as_str(), 0, usage, f(&a.data)))
+        .map(move |(i, a)| (a.name.as_str(), i, usage, f(&a.data)))
 }
 
 fn get_positions_v10(
