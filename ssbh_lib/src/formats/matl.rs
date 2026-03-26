@@ -163,6 +163,48 @@ impl SsbhWrite for ParamV15Type4 {
     }
 }
 
+/// Data for `data_type = 4` in version 1.6 material files.
+///
+/// EXVS2 `__nust__.numatb` files use this type for parameters like `Fresnel`.
+/// The observed on-disk payload is a fixed 16-byte blob, so preserve it as raw bytes
+/// instead of rejecting the entire material file.
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
+#[derive(Debug, Clone, PartialEq)]
+pub struct ParamV16Type4(pub [u8; 16]);
+
+impl BinRead for ParamV16Type4 {
+    type Args<'a> = ();
+
+    fn read_options<R: IoRead + IoSeek>(
+        reader: &mut R,
+        _endian: Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let mut bytes = [0u8; 16];
+        reader.read_exact(&mut bytes)?;
+        Ok(Self(bytes))
+    }
+}
+
+impl SsbhWrite for ParamV16Type4 {
+    fn ssbh_write<W: std::io::Write + std::io::Seek>(
+        &self,
+        writer: &mut W,
+        _data_ptr: &mut u64,
+    ) -> std::io::Result<()> {
+        writer.write_all(&self.0)
+    }
+
+    fn size_in_bytes(&self) -> u64 {
+        16
+    }
+
+    fn alignment_in_bytes() -> u64 {
+        4
+    }
+}
+
 ssbh_enum!(
     /// A material parameter value.
     ParamV15,
@@ -192,6 +234,7 @@ ssbh_enum!(
     0u64 =>  Float(f32),
     1u64 =>  Float1(f32),
     2u64 =>  Boolean(u32),
+    4u64 => Type4(ParamV16Type4),
     /// A vector for storing RGBA colors, XYZW values, or up to four [f32] parameters.
     5u64 =>  Vector4(Vector4),
     /// A vector for storing RGBA colors.

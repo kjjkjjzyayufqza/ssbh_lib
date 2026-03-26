@@ -35,10 +35,10 @@ pub use ssbh_lib::formats::matl::{
 use ssbh_lib::{
     formats::matl::{
         AttributeV15, AttributeV16, BlendStateV15, BlendStateV16, FilteringType, Matl,
-        MatlEntryV15, MatlEntryV16, ParamV15, ParamV16, RasterizerStateV15, RasterizerStateV16,
-        Sampler,
+        MatlEntryV15, MatlEntryV16, ParamV15, ParamV15Type4, ParamV16, ParamV16Type4,
+        RasterizerStateV15, RasterizerStateV16, Sampler,
     },
-    Color4f, RelPtr64, SsbhEnum64, Vector4, Version,
+    Color4f, Matrix4x4, RelPtr64, SsbhEnum64, Vector4, Version,
 };
 use std::{convert::TryFrom, ops::Deref};
 
@@ -49,7 +49,40 @@ pub type Vector4Param = ParamData<Vector4>;
 pub type RasterizerStateParam = ParamData<RasterizerStateData>;
 pub type SamplerParam = ParamData<SamplerData>;
 pub type TextureParam = ParamData<String>;
+pub type Texture2Param = ParamData<String>;
 pub type UvTransformParam = ParamData<UvTransform>;
+pub type ColorParam = ParamData<Color4f>;
+pub type Type4V16Param = ParamData<[u8; 16]>;
+pub type Type4V15Param = ParamData<ParamV15Type4Data>;
+
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
+#[derive(Debug, PartialEq, Clone)]
+pub enum ParamV15Type4Data {
+    Matrix4x4(Matrix4x4),
+    Reserved([u8; 12]),
+    InlineString(String),
+}
+
+impl From<&ParamV15Type4> for ParamV15Type4Data {
+    fn from(value: &ParamV15Type4) -> Self {
+        match value {
+            ParamV15Type4::Matrix4x4(m) => Self::Matrix4x4(m.clone()),
+            ParamV15Type4::Reserved(r) => Self::Reserved(*r),
+            ParamV15Type4::InlineString(s) => Self::InlineString(s.clone()),
+        }
+    }
+}
+
+impl From<ParamV15Type4Data> for ParamV15Type4 {
+    fn from(value: ParamV15Type4Data) -> Self {
+        match value {
+            ParamV15Type4Data::Matrix4x4(m) => Self::Matrix4x4(m),
+            ParamV15Type4Data::Reserved(r) => Self::Reserved(r),
+            ParamV15Type4Data::InlineString(s) => Self::InlineString(s),
+        }
+    }
+}
 
 pub mod error {
     use thiserror::Error;
@@ -97,11 +130,21 @@ pub struct MatlEntryData {
     pub shader_label: String,
     pub blend_states: Vec<BlendStateParam>,
     pub floats: Vec<FloatParam>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub float1s: Vec<FloatParam>,
     pub booleans: Vec<BooleanParam>,
     pub vectors: Vec<Vector4Param>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub colors: Vec<ColorParam>,
     pub rasterizer_states: Vec<RasterizerStateParam>,
     pub samplers: Vec<SamplerParam>,
     pub textures: Vec<TextureParam>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub textures2: Vec<Texture2Param>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub type4_v16: Vec<Type4V16Param>,
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub type4_v15: Vec<Type4V15Param>,
     #[cfg_attr(feature = "serde", serde(default))]
     pub uv_transforms: Vec<UvTransformParam>,
 }
@@ -523,6 +566,7 @@ impl From<&MatlEntryV16> for MatlEntryData {
             shader_label: e.shader_label.to_string_lossy(),
             vectors: get_attributes!(e.attributes.elements, ParamV16::Vector4),
             floats: get_attributes!(e.attributes.elements, ParamV16::Float),
+            float1s: get_attributes!(e.attributes.elements, ParamV16::Float1),
             booleans: e
                 .attributes
                 .elements
@@ -543,6 +587,18 @@ impl From<&MatlEntryV16> for MatlEntryData {
                     _ => None,
                 })
                 .collect(),
+            textures2: Vec::new(),
+            type4_v16: e
+                .attributes
+                .elements
+                .iter()
+                .filter_map(|a| match a.param.data.deref() {
+                    Some(ParamV16::Type4(v)) => Some(ParamData::new(a.param_id, v.0)),
+                    _ => None,
+                })
+                .collect(),
+            type4_v15: Vec::new(),
+            colors: get_attributes!(e.attributes.elements, ParamV16::Unk7),
             samplers: get_attributes!(e.attributes.elements, ParamV16::Sampler),
             blend_states: get_attributes!(e.attributes.elements, ParamV16::BlendState),
             rasterizer_states: get_attributes!(e.attributes.elements, ParamV16::RasterizerState),
@@ -570,9 +626,21 @@ impl From<&MatlEntryData> for MatlEntryV16 {
                     param_id: a.param_id,
                     param: a.data.to_param(),
                 }))
+                .chain(e.float1s.iter().map(|a| AttributeV16 {
+                    param_id: a.param_id,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV16::Float1(a.data)),
+                    },
+                }))
                 .chain(e.vectors.iter().map(|a| AttributeV16 {
                     param_id: a.param_id,
                     param: a.data.to_param(),
+                }))
+                .chain(e.colors.iter().map(|a| AttributeV16 {
+                    param_id: a.param_id,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV16::Unk7(a.data)),
+                    },
                 }))
                 .chain(e.rasterizer_states.iter().map(|a| AttributeV16 {
                     param_id: a.param_id,
@@ -590,6 +658,12 @@ impl From<&MatlEntryData> for MatlEntryV16 {
                     param_id: a.param_id,
                     param: a.data.to_param(),
                 }))
+                .chain(e.type4_v16.iter().map(|a| AttributeV16 {
+                    param_id: a.param_id,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV16::Type4(ParamV16Type4(a.data))),
+                    },
+                }))
                 .collect_vec()
                 .into(),
             shader_label: e.shader_label.as_str().into(),
@@ -604,6 +678,7 @@ impl From<&MatlEntryV15> for MatlEntryData {
             shader_label: e.shader_label.to_string_lossy(),
             vectors: get_attributes!(e.attributes.elements, ParamV15::Vector4),
             floats: get_attributes!(e.attributes.elements, ParamV15::Float),
+            float1s: get_attributes!(e.attributes.elements, ParamV15::Float1),
             booleans: e
                 .attributes
                 .elements
@@ -624,6 +699,28 @@ impl From<&MatlEntryV15> for MatlEntryData {
                     _ => None,
                 })
                 .collect(),
+            textures2: e
+                .attributes
+                .elements
+                .iter()
+                .filter_map(|a| match a.param.data.deref() {
+                    Some(ParamV15::String2(s)) => {
+                        Some(ParamData::new(a.param_id, s.to_string_lossy()))
+                    }
+                    _ => None,
+                })
+                .collect(),
+            type4_v16: Vec::new(),
+            type4_v15: e
+                .attributes
+                .elements
+                .iter()
+                .filter_map(|a| match a.param.data.deref() {
+                    Some(ParamV15::Type4(v)) => Some(ParamData::new(a.param_id, v.into())),
+                    _ => None,
+                })
+                .collect(),
+            colors: get_attributes!(e.attributes.elements, ParamV15::Unk7),
             samplers: get_attributes!(e.attributes.elements, ParamV15::Sampler),
             blend_states: get_attributes!(e.attributes.elements, ParamV15::BlendState),
             rasterizer_states: get_attributes!(e.attributes.elements, ParamV15::RasterizerState),
@@ -651,9 +748,21 @@ impl From<&MatlEntryData> for MatlEntryV15 {
                     param_id: a.param_id,
                     param: a.data.to_param_v15(),
                 }))
+                .chain(e.textures2.iter().map(|a| AttributeV15 {
+                    param_id: a.param_id,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV15::String2(a.data.as_str().into())),
+                    },
+                }))
                 .chain(e.vectors.iter().map(|a| AttributeV15 {
                     param_id: a.param_id,
                     param: a.data.to_param_v15(),
+                }))
+                .chain(e.colors.iter().map(|a| AttributeV15 {
+                    param_id: a.param_id,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV15::Unk7(a.data)),
+                    },
                 }))
                 .chain(e.samplers.iter().map(|a| AttributeV15 {
                     param_id: a.param_id,
@@ -663,6 +772,12 @@ impl From<&MatlEntryData> for MatlEntryV15 {
                     param_id: a.param_id,
                     param: a.data.to_param_v15(),
                 }))
+                .chain(e.float1s.iter().map(|a| AttributeV15 {
+                    param_id: a.param_id,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV15::Float1(a.data)),
+                    },
+                }))
                 .chain(e.uv_transforms.iter().map(|a| AttributeV15 {
                     param_id: a.param_id,
                     param: a.data.to_param_v15(),
@@ -670,6 +785,12 @@ impl From<&MatlEntryData> for MatlEntryV15 {
                 .chain(e.booleans.iter().map(|a| AttributeV15 {
                     param_id: a.param_id,
                     param: a.data.to_param_v15(),
+                }))
+                .chain(e.type4_v15.iter().map(|a| AttributeV15 {
+                    param_id: a.param_id,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV15::Type4(a.data.clone().into())),
+                    },
                 }))
                 .collect_vec()
                 .into(),
@@ -771,6 +892,7 @@ impl ToParamV16 for UvTransform {
     }
 }
 
+
 trait ToParamV15 {
     fn to_param_v15(&self) -> SsbhEnum64<ParamV15>;
 }
@@ -812,6 +934,7 @@ impl ToParamV15 for &str {
         }
     }
 }
+
 
 impl ToParamV15 for Sampler {
     fn to_param_v15(&self) -> SsbhEnum64<ParamV15> {
@@ -868,7 +991,7 @@ mod tests {
     use super::*;
 
     use ssbh_lib::{
-        formats::matl::{AttributeV16, MatlEntryV16, UvTransform},
+        formats::matl::{AttributeV15, AttributeV16, MatlEntryV15, MatlEntryV16, UvTransform},
         Color4f, SsbhArray,
     };
 
@@ -994,6 +1117,7 @@ mod tests {
                     param_id: ParamId::CustomFloat5,
                     data: 0.5
                 }],
+                float1s: vec![],
                 booleans: vec![
                     ParamData {
                         param_id: ParamId::CustomBoolean0,
@@ -1008,6 +1132,10 @@ mod tests {
                     param_id: ParamId::Texture1,
                     data: "abc".into()
                 }],
+                textures2: vec![],
+                type4_v16: vec![],
+                type4_v15: vec![],
+                colors: vec![],
                 samplers: vec![ParamData {
                     param_id: ParamId::Sampler0,
                     data: SamplerData {
@@ -1246,6 +1374,7 @@ mod tests {
                 param_id: ParamId::CustomFloat8,
                 data: 0.7,
             }],
+            float1s: vec![],
             booleans: vec![
                 ParamData {
                     param_id: ParamId::CustomBoolean1,
@@ -1278,6 +1407,7 @@ mod tests {
                     data: Vector4::new(1.0, 1.0, 1.0, 1.0),
                 },
             ],
+            colors: vec![],
             rasterizer_states: vec![ParamData {
                 param_id: ParamId::RasterizerState0,
                 data: RasterizerStateData {
@@ -1378,6 +1508,9 @@ mod tests {
                     data: "#replace_cubemap".into(),
                 },
             ],
+            textures2: vec![],
+            type4_v16: vec![],
+            type4_v15: vec![],
             uv_transforms: vec![],
         };
 
@@ -1502,6 +1635,7 @@ mod tests {
                 },
             }],
             floats: vec![],
+            float1s: vec![],
             booleans: vec![ParamData {
                 param_id: ParamId::UseDiffuseUvTransform,
                 data: true,
@@ -1510,6 +1644,7 @@ mod tests {
                 param_id: ParamId::Diffuse,
                 data: Vector4::new(1.0, 1.0, 1.0, 1.0),
             }],
+            colors: vec![],
             rasterizer_states: vec![ParamData {
                 param_id: ParamId::RasterizerState0,
                 data: RasterizerStateData {
@@ -1540,6 +1675,9 @@ mod tests {
                 param_id: ParamId::DiffuseMap,
                 data: "../../textures/cos_149000_02".into(),
             }],
+            textures2: vec![],
+            type4_v16: vec![],
+            type4_v15: vec![],
             uv_transforms: vec![ParamData {
                 param_id: ParamId::DiffuseUvTransform,
                 data: UvTransform {
@@ -1576,5 +1714,91 @@ mod tests {
                 std::mem::discriminant(actual.param.data.as_ref().unwrap())
             );
         }
+    }
+
+    #[test]
+    fn preserve_exvs_specific_matl_param_variants_v16() {
+        let entry = MatlEntryV16 {
+            material_label: "exvs_body".into(),
+            shader_label: "vsngCharaBasic".into(),
+            attributes: vec![
+                AttributeV16 {
+                    param_id: ParamId::CustomFloat0,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV16::Float1(0.37)),
+                    },
+                },
+                AttributeV16 {
+                    param_id: ParamId::CustomVector30,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV16::Unk7(Color4f {
+                            r: 0.1,
+                            g: 0.2,
+                            b: 0.3,
+                            a: 0.4,
+                        })),
+                    },
+                },
+                AttributeV16 {
+                    param_id: ParamId::Fresnel,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV16::Type4(ParamV16Type4([
+                            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16,
+                        ]))),
+                    },
+                },
+            ]
+            .into(),
+        };
+
+        let data = MatlEntryData::from(&entry);
+        assert_eq!(1, data.float1s.len());
+        assert_eq!(1, data.colors.len());
+        assert_eq!(1, data.type4_v16.len());
+        assert_eq!(
+            [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16],
+            data.type4_v16[0].data
+        );
+    }
+
+    #[test]
+    fn preserve_exvs_specific_matl_param_variants_v15() {
+        let entry = MatlEntryV15 {
+            material_label: "exvs_weapon".into(),
+            shader_label: "legacy".into(),
+            attributes: vec![
+                AttributeV15 {
+                    param_id: ParamId::DiffuseMap,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV15::String2("../../textures/exvs_diffuse".into())),
+                    },
+                },
+                AttributeV15 {
+                    param_id: ParamId::CustomFloat0,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV15::Float1(0.5)),
+                    },
+                },
+                AttributeV15 {
+                    param_id: ParamId::CustomBoolean0,
+                    param: SsbhEnum64 {
+                        data: RelPtr64::new(ParamV15::Type4(ParamV15Type4::Reserved([
+                            42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53,
+                        ]))),
+                    },
+                },
+            ]
+            .into(),
+        };
+
+        let data = MatlEntryData::from(&entry);
+        assert_eq!(1, data.textures2.len());
+        assert_eq!("../../textures/exvs_diffuse", data.textures2[0].data);
+        assert_eq!(1, data.float1s.len());
+        assert_eq!(1, data.type4_v15.len());
+        assert!(matches!(
+            data.type4_v15[0].data,
+            ParamV15Type4Data::Reserved([42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53])
+        ));
     }
 }
