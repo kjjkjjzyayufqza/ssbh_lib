@@ -28,6 +28,8 @@ If you find an SSBH format used in a game that isn't supported here, feel free t
 | [ssbh_lib](https://github.com/ultimate-research/ssbh_lib/tree/master/ssbh_lib) | A library to read and write SSBH formats | [![Latest Version](https://img.shields.io/crates/v/ssbh_lib.svg)](https://crates.io/crates/ssbh_lib) |[![docs.rs](https://docs.rs/ssbh_lib/badge.svg)](https://docs.rs/ssbh_lib) |
 | [ssbh_data](https://github.com/ultimate-research/ssbh_lib/tree/master/ssbh_data) | A high level API for reading and writing SSBH data | [![Latest Version](https://img.shields.io/crates/v/ssbh_data.svg)](https://crates.io/crates/ssbh_data) | [![docs.rs](https://docs.rs/ssbh_data/badge.svg)](https://docs.rs/ssbh_data) |
 
+**ssbh_data — Anim v1.2:** Reading and writing `.nuanmb` Anim v1.2 via `AnimData` is supported in **experimental** form. See [ssbh_data/README.md](ssbh_data/README.md) for details.
+
 For making quick edits to SSBH files in a text editor, use [ssbh_lib_json](#ssbh_lib_json). [ssbh_data_json](#ssbh_data_json) supports fewer formats than ssbh_lib_json but adds the ability to decode and edit the buffer data in Mesh or Anim files. Python bindings for ssbh_data are available with [ssbh_data_py](https://github.com/ScanMountGoat/ssbh_data_py).
 
 ## Tools
