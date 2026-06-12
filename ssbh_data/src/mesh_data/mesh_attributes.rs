@@ -67,9 +67,12 @@ pub fn create_attributes_v8(data: &MeshObjectData, is_vs2: bool) -> MeshAttribut
     // Create interleaved binormal and tangent attributes to match target hex order
     // Order: Position → Normal → Binormal0 → Tangent0 → Binormal1 → Tangent1 → ...
     let mut buffer0_data = get_positions_v8(&data.positions, AttributeUsageV8::Position)
-        .chain(get_vectors_v8_buffer0(&data.normals, AttributeUsageV8::Normal))
+        .chain(get_vectors_v8_buffer0(
+            &data.normals,
+            AttributeUsageV8::Normal,
+        ))
         .collect_vec();
-    
+
     // Interleave binormals and tangents.
     // Explicitly keep the original subindex per usage stream.
     let max_count = std::cmp::max(data.binormals.len(), data.tangents.len());
@@ -95,18 +98,19 @@ pub fn create_attributes_v8(data: &MeshObjectData, is_vs2: bool) -> MeshAttribut
     }
 
     // Separate texture coordinates and HalfFloat2 data based on naming convention
-    let (half_float2_data, regular_texture_coords): (Vec<_>, Vec<_>) = data.texture_coordinates
+    let (half_float2_data, regular_texture_coords): (Vec<_>, Vec<_>) = data
+        .texture_coordinates
         .iter()
         .cloned()
         .partition(|attr| attr.name.contains("HalfFloat2"));
 
-    let buffer1_data = get_vectors_v8(
-        &regular_texture_coords,
-        AttributeUsageV8::TextureCoordinate,
-    )
-    .chain(get_colors_v8(&data.color_sets, AttributeUsageV8::ColorSet))
-    .chain(get_vectors_v8(&half_float2_data, AttributeUsageV8::HalfFloat2))
-    .collect_vec();
+    let buffer1_data = get_vectors_v8(&regular_texture_coords, AttributeUsageV8::TextureCoordinate)
+        .chain(get_colors_v8(&data.color_sets, AttributeUsageV8::ColorSet))
+        .chain(get_vectors_v8(
+            &half_float2_data,
+            AttributeUsageV8::HalfFloat2,
+        ))
+        .collect_vec();
 
     create_attributes_from_data(
         buffer0_data,
@@ -288,8 +292,15 @@ fn create_buffer_attributes<
     let buffer_attributes = buffer_data
         .into_iter()
         .scan(0, |offset, (name, i, usage, data)| {
-            let attribute =
-                create_attribute(name, i, buffer_index, usage, data_type(&data), *offset, is_vs2);
+            let attribute = create_attribute(
+                name,
+                i,
+                buffer_index,
+                usage,
+                data_type(&data),
+                *offset,
+                is_vs2,
+            );
 
             *offset += size_in_bytes(&attribute);
 
@@ -412,7 +423,12 @@ fn create_attribute_v10(
     }
 }
 
-fn calculate_attribute_name(usage: AttributeUsageV9, subindex: usize, name: &str, is_vs2: bool) -> SsbhString {
+fn calculate_attribute_name(
+    usage: AttributeUsageV9,
+    subindex: usize,
+    name: &str,
+    is_vs2: bool,
+) -> SsbhString {
     if is_vs2 {
         // For VS2 format, use the original name without any renaming
         name.into()
@@ -564,13 +580,9 @@ mod tests {
             VectorDataV8::from_vectors(&VectorData::Vector3(vec![[0.0, 1.0, 2.0]]))
         );
 
+        // The VS2 fork keeps Vector4 vectors as Float4 to preserve full precision.
         assert_eq!(
-            VectorDataV8::HalfFloat4(vec![[
-                f16::from_f32(0.0),
-                f16::from_f32(1.0),
-                f16::from_f32(2.0),
-                f16::from_f32(3.0)
-            ]]),
+            VectorDataV8::Float4(vec![[0.0, 1.0, 2.0, 3.0]]),
             VectorDataV8::from_vectors(&VectorData::Vector4(vec![[0.0, 1.0, 2.0, 3.0]]))
         );
     }
@@ -638,7 +650,8 @@ mod tests {
             attributes,
             use_buffer2,
         } = create_attributes_v8(&data, false);
-        assert_eq!(32, stride0);
+        // The VS2 fork stores Vector4 tangents as Float4, so buffer0 is 12 + 12 + 16 bytes.
+        assert_eq!(40, stride0);
         assert_eq!(24, stride1);
         assert_eq!(32, stride2);
         assert_eq!(0, stride3);
@@ -673,7 +686,7 @@ mod tests {
         assert_eq!(
             &AttributeV8 {
                 usage: AttributeUsageV8::Tangent,
-                data_type: AttributeDataTypeV8::HalfFloat4,
+                data_type: AttributeDataTypeV8::Float4,
                 buffer_index: 0,
                 buffer_offset: 24,
                 subindex: 0,
@@ -781,7 +794,8 @@ mod tests {
             attributes,
             use_buffer2,
         } = create_attributes_v9(&data, false);
-        assert_eq!(56, stride0);
+        // The VS2 fork stores Vector4 tangents as Float4, so buffer0 is 12 * 4 + 16 bytes.
+        assert_eq!(64, stride0);
         assert_eq!(24, stride1);
         assert_eq!(32, stride2);
         assert_eq!(0, stride3);
@@ -847,7 +861,7 @@ mod tests {
         assert_eq!(
             &AttributeV9 {
                 usage: AttributeUsageV9::Tangent,
-                data_type: AttributeDataTypeV8::HalfFloat4,
+                data_type: AttributeDataTypeV8::Float4,
                 buffer_index: 0,
                 buffer_offset: 48,
                 subindex: 0,

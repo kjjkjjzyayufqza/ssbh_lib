@@ -55,6 +55,11 @@ pub use vector_data::VectorData;
 mod mesh_attributes;
 use mesh_attributes::*;
 
+#[cfg(test)]
+mod semantic_compare;
+#[cfg(test)]
+mod write_profile_tests;
+
 // A union of data types across all mesh versions.
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub(crate) enum DataType {
@@ -91,11 +96,13 @@ pub mod error {
         /// All vertex indices should be strictly less than the vertex count.
         /// For mesh objects with a vertex count of 0 due to having no vertices, the vertex indices collection should be empty.
         #[error(
-            "vertex index {} is out of range for a vertex collection of size {}",
+            "vertex index {} in mesh object {} is out of range for a vertex collection of size {}",
             vertex_index,
+            mesh_object_name,
             vertex_count
         )]
         VertexIndexOutOfRange {
+            mesh_object_name: String,
             vertex_index: usize,
             vertex_count: usize,
         },
@@ -138,6 +145,17 @@ pub mod error {
         DuplicateSubindex {
             mesh_object_name: String,
             mesh_object_subindex: u64,
+        },
+
+        /// An attribute references a vertex buffer that the selected write profile omits.
+        #[error(
+            "attribute in mesh object {} references vertex buffer {} omitted by the write profile",
+            mesh_object_name,
+            buffer_index
+        )]
+        AttributeReferencesOmittedBuffer {
+            mesh_object_name: String,
+            buffer_index: u64,
         },
 
         /// An error occurred while writing data to a buffer.
@@ -380,10 +398,9 @@ impl Weight for SsbhByteBuffer {
         // TODO: Handle errors before reaching eof?
         // Read as u32 + f32 instead of using VertexWeightV10 struct
         while reader.position() + 8 <= self.elements.len() as u64 {
-            if let (Ok(vertex_index), Ok(vertex_weight)) = (
-                reader.read_le::<u32>(),
-                reader.read_le::<f32>()
-            ) {
+            if let (Ok(vertex_index), Ok(vertex_weight)) =
+                (reader.read_le::<u32>(), reader.read_le::<f32>())
+            {
                 elements.push(VertexWeight {
                     vertex_index,
                     vertex_weight,
@@ -502,15 +519,55 @@ pub struct MeshData {
     pub major_version: u16,
     pub minor_version: u16,
     pub objects: Vec<MeshObjectData>,
-    /// Controls whether to use VS2 format (no attribute name strings)
+    /// Controls whether to use VS2 format naming conventions (no attribute name strings).
+    /// Serialization policy is selected separately by [MeshWriteProfile].
     pub is_vs2: bool,
+}
+
+/// Selects the serialization policy when converting [MeshData] to a [Mesh].
+///
+/// [MeshData::is_vs2] describes attribute naming conventions for the format,
+/// while the write profile selects how buffers and metadata are serialized.
+/// [TryFrom] conversions and [SsbhData::write_to_file](crate::SsbhData::write_to_file)
+/// always use [MeshWriteProfile::LegacyCompatible]; callers must opt in to
+/// [MeshWriteProfile::Vs2Canonical] explicitly.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MeshWriteProfile {
+    /// Preserve the established writer output, including the all-zero dummy
+    /// vertex buffer 2 written for mesh versions 1.8 and 1.9.
+    LegacyCompatible,
+    /// Match the compact EXVS2 reconstruction verified against StudioSB output.
+    /// Versions 1.8 and 1.9 omit the unused dummy vertex buffer 2 entirely:
+    /// no bytes are written, the file-level buffer size is zero, the object
+    /// keeps its 32-byte `stride2`, and `vertex_buffer2_offset` mirrors
+    /// `vertex_buffer1_offset`. Version 1.10 output is unchanged.
+    Vs2Canonical,
+}
+
+impl MeshData {
+    /// Converts the data to a [Mesh] using the given write `profile`.
+    pub fn to_mesh_with_profile(&self, profile: MeshWriteProfile) -> Result<Mesh, error::Error> {
+        create_mesh(self, profile)
+    }
+
+    /// Converts the data using the given write `profile` and writes to `path`.
+    /// The entire write is buffered for performance.
+    pub fn write_to_file_with_profile<P: AsRef<std::path::Path>>(
+        &self,
+        path: P,
+        profile: MeshWriteProfile,
+    ) -> Result<(), error::Error> {
+        self.to_mesh_with_profile(profile)?
+            .write_to_file(path)
+            .map_err(Into::into)
+    }
 }
 
 impl TryFrom<MeshData> for Mesh {
     type Error = error::Error;
 
     fn try_from(data: MeshData) -> Result<Self, Self::Error> {
-        create_mesh(&data)
+        create_mesh(&data, MeshWriteProfile::LegacyCompatible)
     }
 }
 
@@ -518,7 +575,7 @@ impl TryFrom<&MeshData> for Mesh {
     type Error = error::Error;
 
     fn try_from(data: &MeshData) -> Result<Self, Self::Error> {
-        create_mesh(data)
+        create_mesh(data, MeshWriteProfile::LegacyCompatible)
     }
 }
 
@@ -693,7 +750,7 @@ fn read_mesh_objects_inner<A: Attribute, W: Weight>(
     Ok(mesh_objects)
 }
 
-fn create_mesh(data: &MeshData) -> Result<Mesh, error::Error> {
+fn create_mesh(data: &MeshData, profile: MeshWriteProfile) -> Result<Mesh, error::Error> {
     validate_mesh_object_subindices(&data.objects)?;
 
     // TODO: It might be more efficient to reuse the data for mesh object bounding or reuse the generated points.
@@ -710,17 +767,23 @@ fn create_mesh(data: &MeshData) -> Result<Mesh, error::Error> {
     match (data.major_version, data.minor_version) {
         (1, 10) => Ok(Mesh::V10(create_mesh_inner(
             &all_positions,
-            create_mesh_objects(&data.objects, |obj| create_attributes_v10(obj, is_vs2))?,
+            create_mesh_objects(&data.objects, profile, |obj| {
+                create_attributes_v10(obj, is_vs2)
+            })?,
             data,
         )?)),
         (1, 8) => Ok(Mesh::V8(create_mesh_inner(
             &all_positions,
-            create_mesh_objects(&data.objects, |obj| create_attributes_v8(obj, is_vs2))?,
+            create_mesh_objects(&data.objects, profile, |obj| {
+                create_attributes_v8(obj, is_vs2)
+            })?,
             data,
         )?)),
         (1, 9) => Ok(Mesh::V9(create_mesh_inner(
             &all_positions,
-            create_mesh_objects(&data.objects, |obj| create_attributes_v9(obj, is_vs2))?,
+            create_mesh_objects(&data.objects, profile, |obj| {
+                create_attributes_v9(obj, is_vs2)
+            })?,
             data,
         )?)),
         _ => Err(error::Error::UnsupportedVersion {
@@ -910,6 +973,7 @@ enum VertexIndices {
 
 fn create_mesh_objects<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A> + Copy>(
     mesh_object_data: &[MeshObjectData],
+    profile: MeshWriteProfile,
     create_attributes: F,
 ) -> Result<MeshVertexData<A>, error::Error> {
     let mut mesh_objects = Vec::new();
@@ -932,6 +996,7 @@ fn create_mesh_objects<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>
             &mut [&mut buffer0, &mut buffer1, &mut buffer2, &mut buffer3],
             &mut vertex_buffer2_offset,
             &mut index_buffer,
+            profile,
             create_attributes,
         )?;
 
@@ -955,9 +1020,10 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
     buffers: &mut [&mut Cursor<Vec<u8>>; 4],
     vertex_buffer2_offset: &mut u64,
     index_buffer: &mut Cursor<Vec<u8>>,
+    profile: MeshWriteProfile,
     create_attributes: F,
 ) -> Result<MeshObject<A>, error::Error> {
-    if data.vertex_indices.len() % 3 != 0 {
+    if !data.vertex_indices.len().is_multiple_of(3) {
         return Err(error::Error::NonTriangulatedFaces {
             vertex_index_count: data.vertex_indices.len(),
         });
@@ -970,6 +1036,7 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
     if let Some(max_value) = data.vertex_indices.iter().max() {
         if *max_value as usize >= vertex_count {
             return Err(error::Error::VertexIndexOutOfRange {
+                mesh_object_name: data.name.clone(),
                 vertex_index: *max_value as usize,
                 vertex_count,
             });
@@ -978,12 +1045,12 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
 
     let vertex_indices = convert_indices(&data.vertex_indices);
 
-    // let draw_element_type = match vertex_indices {
-    //     VertexIndices::UnsignedInt(_) => DrawElementType::UnsignedInt,
-    //     VertexIndices::UnsignedShort(_) => DrawElementType::UnsignedShort,
-    // };
-    // for vs2
-    let draw_element_type = DrawElementType::UnsignedShort;
+    // Select the smallest lossless index width.
+    // The header type must match the bytes written by write_vertex_indices.
+    let draw_element_type = match &vertex_indices {
+        VertexIndices::UnsignedInt(_) => DrawElementType::UnsignedInt,
+        VertexIndices::UnsignedShort(_) => DrawElementType::UnsignedShort,
+    };
 
     let vertex_buffer0_offset = buffers[0].position();
     let vertex_buffer1_offset = buffers[1].position();
@@ -1001,6 +1068,23 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
     let stride2 = buffer_info[2].0;
     let stride3 = buffer_info[3].0;
 
+    // The EXVS2 canonical profile omits the all-zero dummy buffer2 written by the
+    // legacy profile for v1.8 and v1.9. Verified against StudioSB canonical output,
+    // the object keeps its stride2 and mirrors vertex_buffer1_offset instead.
+    let omit_dummy_buffer2 = profile == MeshWriteProfile::Vs2Canonical && use_buffer2;
+    if omit_dummy_buffer2 {
+        if let Some(attribute) = attributes
+            .elements
+            .iter()
+            .find(|a| a.to_attribute().index >= 2)
+        {
+            return Err(error::Error::AttributeReferencesOmittedBuffer {
+                mesh_object_name: data.name.clone(),
+                buffer_index: attribute.to_attribute().index,
+            });
+        }
+    }
+
     // TODO: Version 1.10 sets the offset for buffer2 but sets stride to 0 and doesn't write to the buffer.
     write_attributes(
         &buffer_info,
@@ -1015,7 +1099,7 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
 
     // Just write dummy data to buffer2 to match in game meshes for v1.8 and v.1.9.
     // Mesh v1.10 calculates offsets for this buffer but zeros stride and writes no data.
-    if use_buffer2 {
+    if use_buffer2 && !omit_dummy_buffer2 {
         buffers[2].write_all(&vec![0u8; stride2 as usize * vertex_count])?;
     }
 
@@ -1034,7 +1118,11 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
         unk2: 3, // TODO: Does this mean triangle faces?
         vertex_buffer0_offset: vertex_buffer0_offset as u32,
         vertex_buffer1_offset: vertex_buffer1_offset as u32,
-        vertex_buffer2_offset: *vertex_buffer2_offset as u32,
+        vertex_buffer2_offset: if omit_dummy_buffer2 {
+            vertex_buffer1_offset as u32
+        } else {
+            *vertex_buffer2_offset as u32
+        },
         vertex_buffer3_offset: vertex_buffer3_offset as u32,
         stride0,
         stride1,
@@ -1060,7 +1148,10 @@ fn create_mesh_object<A: Attribute, F: Fn(&MeshObjectData) -> MeshAttributes<A>>
     write_vertex_indices(&vertex_indices, index_buffer)?;
 
     // Assume stride2 is non zero for all versions.
-    *vertex_buffer2_offset += vertex_count as u64 * stride2 as u64;
+    // The canonical profile does not reserve dummy buffer2 space for this object.
+    if !omit_dummy_buffer2 {
+        *vertex_buffer2_offset += vertex_count as u64 * stride2 as u64;
+    }
 
     Ok(mesh_object)
 }
@@ -1306,6 +1397,10 @@ mod tests {
     use super::*;
     use hexlit::hex;
 
+    fn create_mesh_legacy(data: &MeshData) -> Result<Mesh, error::Error> {
+        create_mesh(data, MeshWriteProfile::LegacyCompatible)
+    }
+
     #[test]
     fn read_data_count0() {
         let mut reader = Cursor::new(hex!("01020304"));
@@ -1405,7 +1500,7 @@ mod tests {
     #[test]
     fn create_vertex_weights_mesh_v1_10() {
         // Version 1.10 writes the weights to a byte array.
-        // u16 for index and f32 for weight.
+        // The VS2 fork uses u32 for index and f32 for weight.
         let weights = vec![
             VertexWeight {
                 vertex_index: 0,
@@ -1418,7 +1513,10 @@ mod tests {
         ];
 
         let result = create_vertex_weights_v10(&weights).unwrap();
-        assert_eq!(&result.elements[..], &hex!("00000000 0000803f 01000000 0000803f"));
+        assert_eq!(
+            &result.elements[..],
+            &hex!("00000000 00000000 01000000 0000803f")
+        );
     }
 
     #[test]
@@ -1566,7 +1664,7 @@ mod tests {
 
     #[test]
     fn create_empty_mesh_1_10() {
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 10,
             objects: Vec::new(),
@@ -1581,7 +1679,7 @@ mod tests {
 
     #[test]
     fn create_empty_mesh_1_8() {
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 8,
             objects: Vec::new(),
@@ -1597,7 +1695,7 @@ mod tests {
 
     #[test]
     fn create_empty_mesh_v_1_9() {
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 9,
             objects: Vec::new(),
@@ -1613,7 +1711,7 @@ mod tests {
 
     #[test]
     fn create_empty_mesh_invalid_version() {
-        let result = create_mesh(&MeshData {
+        let result = create_mesh_legacy(&MeshData {
             major_version: 2,
             minor_version: 301,
             objects: Vec::new(),
@@ -1631,7 +1729,7 @@ mod tests {
 
     #[test]
     fn create_mesh_1_10() {
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 10,
             is_vs2: true,
@@ -1705,7 +1803,7 @@ mod tests {
     #[test]
     fn create_mesh_1_10_large_vertex_index() {
         // Test that version 1.10 now supports u32 vertex indices (no longer limited to u16)
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 10,
             is_vs2: true,
@@ -1731,7 +1829,7 @@ mod tests {
 
     #[test]
     fn create_mesh_1_10_duplicate_subindices() {
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 10,
             is_vs2: true,
@@ -1764,7 +1862,7 @@ mod tests {
 
     #[test]
     fn create_mesh_1_8() {
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 8,
             is_vs2: true,
@@ -1836,7 +1934,7 @@ mod tests {
 
     #[test]
     fn create_mesh_v_1_9() {
-        let mesh = create_mesh(&MeshData {
+        let mesh = create_mesh_legacy(&MeshData {
             major_version: 1,
             minor_version: 9,
             is_vs2: true,
@@ -2084,11 +2182,13 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
+            MeshWriteProfile::LegacyCompatible,
             |data| create_attributes_v10(data, false),
         )
         .unwrap();
 
-        assert_eq!(1, object.subindex);
+        // The VS2 fork always writes subindex 0 because VS2 objects have no subindices.
+        assert_eq!(0, object.subindex);
         assert_eq!(-5, object.sort_bias);
         assert_eq!(0, object.depth_flags.disable_depth_write);
         assert_eq!(1, object.depth_flags.disable_depth_test);
@@ -2117,6 +2217,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
+            MeshWriteProfile::LegacyCompatible,
             |data| create_attributes_v10(data, false),
         );
 
@@ -2149,6 +2250,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
+            MeshWriteProfile::LegacyCompatible,
             |data| create_attributes_v10(data, false),
         )
         .unwrap();
@@ -2178,6 +2280,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
+            MeshWriteProfile::LegacyCompatible,
             |data| create_attributes_v10(data, false),
         );
 
@@ -2213,6 +2316,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
+            MeshWriteProfile::LegacyCompatible,
             |data| create_attributes_v10(data, false),
         );
 
@@ -2220,7 +2324,8 @@ mod tests {
             result,
             Err(error::Error::VertexIndexOutOfRange {
                 vertex_index: 2,
-                vertex_count: 2
+                vertex_count: 2,
+                ..
             })
         ));
     }
@@ -2241,6 +2346,7 @@ mod tests {
             ],
             &mut 0,
             &mut Cursor::new(Vec::new()),
+            MeshWriteProfile::LegacyCompatible,
             |data| create_attributes_v10(data, false),
         );
 
@@ -2248,7 +2354,8 @@ mod tests {
             result,
             Err(error::Error::VertexIndexOutOfRange {
                 vertex_index: 0,
-                vertex_count: 0
+                vertex_count: 0,
+                ..
             })
         ));
     }
