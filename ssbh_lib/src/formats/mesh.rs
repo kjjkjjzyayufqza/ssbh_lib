@@ -370,4 +370,10 @@ pub enum AttributeUsageV8 {
     Unk7 = 7,
     HalfFloat2 = 8,
     Unk9 = 9,
+    /// EXVS2 extension: maps to D3D semantic `Color5` in vsac27 (`sub_14029ACB0`).
+    ExvsColor5 = 10,
+    /// EXVS2 extension: maps to D3D semantic `Color4` in vsac27 (`sub_14029ACB0`).
+    ExvsColor4 = 11,
+    /// EXVS2 extension: no semantic binding in vsac27 default branch; often Float4 color data.
+    ExvsColor12 = 12,
 }

@@ -294,6 +294,9 @@ impl Attribute for AttributeV8 {
             AttributeUsageV8::Unk7 => format!("Unk7_{}", self.subindex),
             AttributeUsageV8::HalfFloat2 => format!("HalfFloat2_{}", self.subindex),
             AttributeUsageV8::Unk9 => format!("Unk9_{}", self.subindex),
+            AttributeUsageV8::ExvsColor5 => format!("Color5_{}", self.subindex),
+            AttributeUsageV8::ExvsColor4 => format!("Color4_{}", self.subindex),
+            AttributeUsageV8::ExvsColor12 => format!("ExvsColor12_{}", self.subindex),
         };
 
         MeshAttribute {
@@ -316,6 +319,10 @@ impl Attribute for AttributeV8 {
             AttributeUsageV8::Unk7 => AttributeUsage::TextureCoordinate, // Map unknown usage 7 to TextureCoordinate as fallback
             AttributeUsageV8::HalfFloat2 => AttributeUsage::TextureCoordinate, // Map HalfFloat2 to TextureCoordinate as it's typically used for UVs
             AttributeUsageV8::Unk9 => AttributeUsage::TextureCoordinate, // Map unknown usage 9 to TextureCoordinate as fallback
+            AttributeUsageV8::ExvsColor5 => AttributeUsage::TextureCoordinate,
+            AttributeUsageV8::ExvsColor4 => AttributeUsage::TextureCoordinate,
+            // Observed on EXVS2 weapon meshes as Float4 with subindex >= 1.
+            AttributeUsageV8::ExvsColor12 => AttributeUsage::ColorSet,
         }
     }
 }
