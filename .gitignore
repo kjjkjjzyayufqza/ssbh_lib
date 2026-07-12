@@ -13,3 +13,6 @@ Cargo.lock
 /coverage/*
 *.sh
 ssbh_lib.code-workspace
+
+# Local agent / MCP tool dumps (never commit)
+/mcps/
