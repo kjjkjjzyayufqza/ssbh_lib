@@ -12,7 +12,7 @@ use bitvec::{order::Lsb0, vec::BitVec};
 use ssbh_lib::Vector4;
 
 use crate::anim_data::v1::buffers::read_track_values_v12;
-use crate::anim_data::{GroupData, NodeData, TrackData, TransformFlags};
+use crate::anim_data::{GroupData, NodeData, TrackData};
 use crate::anim_data::{UvTransform, error::Error};
 
 mod buffers;
@@ -77,9 +77,8 @@ fn create_track_data_v12(
     buffers: &[ssbh_lib::SsbhByteBuffer],
     animation_frame_count: usize,
 ) -> Result<TrackData, error::Error> {
-    let transform_flags = TransformFlags::default();
-
-    let (values, compensate_scale) = read_track_values_v12(track, buffers, animation_frame_count)?;
+    let (values, compensate_scale, transform_flags) =
+        read_track_values_v12(track, buffers, animation_frame_count)?;
 
     Ok(TrackData {
         name: match track.track_type {

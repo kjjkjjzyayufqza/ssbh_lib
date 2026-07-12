@@ -9,7 +9,7 @@ use ssbh_lib::{Vector3, Vector4, formats::anim::TrackTypeV1};
 
 use crate::{
     anim_data::{
-        TrackValues, Transform, UvTransform,
+        TrackValues, Transform, TransformFlags, UvTransform,
         error::Error,
         v1::{rotate_4409::*, rotate_basic::*, rotate_inferred::*, translate::*},
     },
@@ -402,7 +402,7 @@ pub fn read_track_values_v12(
     track: &ssbh_lib::formats::anim::TrackV1,
     buffers: &[ssbh_lib::SsbhByteBuffer],
     animation_frame_count: usize,
-) -> Result<(TrackValues, bool), Error> {
+) -> Result<(TrackValues, bool, TransformFlags), Error> {
     let mut compensate_scale = false;
     // Collect parsed property data
     let mut property_data = PropertyData {
@@ -412,8 +412,17 @@ pub fn read_track_values_v12(
         visibilities: Vec::new(),
         uv_transforms: Vec::new(),
     };
+    let mut has_scale = false;
+    let mut has_rotate = false;
+    let mut has_translate = false;
     for property in &track.properties.elements {
         let property_name = property.name.to_string_lossy();
+        match property_name.as_str() {
+            "Scale" => has_scale = true,
+            "Rotate" => has_rotate = true,
+            "Translate" => has_translate = true,
+            _ => {}
+        }
         let data =
             buffers
                 .get(property.buffer_index as usize)
@@ -429,6 +438,17 @@ pub fn read_track_values_v12(
             data,
         )?;
     }
+
+    // Anim v1.2 is property-sparse: many bones only encode Rotate.
+    // Missing channels must *not* be treated as authored zeros/identity when applied
+    // as absolute local TRS — that collapses the skeleton. Match SSBH TransformFlags:
+    // override_* = true means "use skeleton rest for this channel".
+    let transform_flags = TransformFlags {
+        override_translation: !has_translate,
+        override_rotation: !has_rotate,
+        override_scale: !has_scale,
+        override_compensate_scale: false,
+    };
 
     let values = match track.track_type {
         TrackTypeV1::Transform => {
@@ -469,7 +489,7 @@ pub fn read_track_values_v12(
             ))
         }
     };
-    Ok((values, compensate_scale))
+    Ok((values, compensate_scale, transform_flags))
 }
 
 fn add_property(
@@ -1433,5 +1453,39 @@ mod tests {
             ]),
             read_property_value_v12(&data, "test").unwrap()
         );
+    }
+}
+#[cfg(test)]
+mod transform_flags_tests {
+    use super::*;
+    use ssbh_lib::formats::anim::{Property, TrackTypeV1, TrackV1};
+    use ssbh_lib::{SsbhArray, SsbhByteBuffer, SsbhString};
+
+    fn prop(name: &str, idx: u64) -> Property {
+        Property {
+            name: SsbhString::from(name),
+            buffer_index: idx,
+        }
+    }
+
+    #[test]
+    fn missing_translate_sets_override_translation() {
+        // Constant identity rotate 0x4003
+        let mut rot = Vec::new();
+        rot.extend_from_slice(&0x4003u32.to_le_bytes());
+        rot.extend_from_slice(&0.0f32.to_le_bytes());
+        rot.extend_from_slice(&0.0f32.to_le_bytes());
+        rot.extend_from_slice(&0.0f32.to_le_bytes());
+        rot.extend_from_slice(&1.0f32.to_le_bytes());
+        let track = TrackV1 {
+            name: SsbhString::from("BONE"),
+            track_type: TrackTypeV1::Transform,
+            properties: SsbhArray::from_vec(vec![prop("Rotate", 0)]),
+        };
+        let buffers = [SsbhByteBuffer::from_vec(rot)];
+        let (_, _, flags) = read_track_values_v12(&track, &buffers, 1).unwrap();
+        assert!(flags.override_translation);
+        assert!(!flags.override_rotation);
+        assert!(flags.override_scale);
     }
 }
