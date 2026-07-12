@@ -132,8 +132,10 @@ impl TryFrom<&Anim> for AnimData {
             minor_version,
             final_frame_index: match &anim {
                 Anim::V12 {
-                    final_frame_index, ..
-                } => *final_frame_index,
+                    final_frame_index,
+                    unk2,
+                    ..
+                } => v12_effective_final_frame_index(*final_frame_index, *unk2),
                 Anim::V20 {
                     final_frame_index, ..
                 } => *final_frame_index,
@@ -144,6 +146,27 @@ impl TryFrom<&Anim> for AnimData {
             groups: read_anim_groups(anim)?,
         })
     }
+}
+
+/// Resolve the high-level last-frame index for Anim v1.2.
+///
+/// Two on-disk conventions are observed:
+/// - Smash Ultimate style: `final_frame_index` is the last frame index (`frame_count - 1`).
+/// - EXVS2 style: `final_frame_index` is a timebase (commonly `60.0`) and `unk2` holds
+///   the effective end frame (`frame_count - 1`). Prefer EXVS2 when it matches so reads
+///   do not inflate the timeline to 61 frames.
+fn v12_effective_final_frame_index(final_frame_index: f32, unk2: f32) -> f32 {
+    if (final_frame_index - 60.0).abs() <= 1.0e-3 && unk2 >= 0.0 {
+        unk2
+    } else {
+        final_frame_index
+    }
+}
+
+/// Frame count used when decoding Anim v1.2 track buffers.
+fn v12_frame_count(final_frame_index: f32, unk2: f32) -> usize {
+    let end = v12_effective_final_frame_index(final_frame_index, unk2);
+    end.round().max(0.0) as usize + 1
 }
 
 impl TryFrom<AnimData> for Anim {
@@ -371,10 +394,11 @@ fn read_anim_groups(anim: &Anim) -> Result<Vec<GroupData>, error::Error> {
             tracks,
             buffers,
             final_frame_index,
+            unk2,
             ..
         } => {
-            // For version 1.2, use the animation's final_frame_index to determine frame count
-            let frame_count = (*final_frame_index as usize).saturating_add(1);
+            // Prefer EXVS2 dual-header convention when present (timebase 60 + unk2 end).
+            let frame_count = v12_frame_count(*final_frame_index, *unk2);
             v1::read_groups_v12(&tracks.elements, &buffers.elements, frame_count)
         }
         ssbh_lib::formats::anim::Anim::V20 { groups, buffer, .. } => {
@@ -403,12 +427,19 @@ mod tests {
         .to_anim()
         .unwrap();
 
+        // EXVS2 dual-header: timebase 60, end frame in unk2, duration in unk1.
         assert!(matches!(
             anim,
             Anim::V12 {
+                unk1,
                 final_frame_index,
+                unk2,
+                unk3,
                 ..
-            } if final_frame_index == 1.5
+            } if (unk1 - 1.5 / 60.0).abs() < 1e-6
+                && final_frame_index == 60.0
+                && unk2 == 1.5
+                && unk3 == 0.0
         ));
     }
 
@@ -426,9 +457,15 @@ mod tests {
         assert!(matches!(
             anim,
             Anim::V12 {
+                unk1,
                 final_frame_index,
+                unk2,
+                unk3,
                 ..
-            } if final_frame_index == 1.5
+            } if (unk1 - 1.5 / 60.0).abs() < 1e-6
+                && final_frame_index == 60.0
+                && unk2 == 1.5
+                && unk3 == 0.0
         ));
     }
 
@@ -616,6 +653,130 @@ mod tests {
         let decoded = AnimData::try_from(&anim).expect("decode uncompressed v1.2");
         match &decoded.groups[0].nodes[0].tracks[0].values {
             TrackValues::Boolean(values) => assert_eq!(vec![false, true], *values),
+            other => panic!("expected boolean track, got {other:?}"),
+        }
+    }
+
+    /// EXVS2 V12 on-disk header: timebase 60 in `final_frame_index`, end frame in `unk2`.
+    /// High-level `AnimData.final_frame_index` must remain the effective end frame.
+    #[test]
+    fn nuanmb_v12_exvs2_header_write_via_to_anim() {
+        let data = AnimData {
+            major_version: 1,
+            minor_version: 2,
+            final_frame_index: 39.0, // end frame (frame_count - 1)
+            groups: Vec::new(),
+        };
+
+        let anim = data.to_anim().expect("to_anim v1.2");
+        match anim {
+            Anim::V12 {
+                unk1,
+                final_frame_index,
+                unk2,
+                unk3,
+                ..
+            } => {
+                assert!(
+                    (unk1 - 39.0 / 60.0).abs() < 1e-6,
+                    "unk1 should be duration seconds (end/60), got {unk1}"
+                );
+                assert_eq!(60.0, final_frame_index, "file final_frame_index is timebase");
+                assert_eq!(39.0, unk2, "unk2 holds effective end frame");
+                assert_eq!(0.0, unk3);
+            }
+            other => panic!("expected Anim::V12, got {other:?}"),
+        }
+    }
+
+    /// Reading an EXVS2-style V12 must map unk2 → AnimData.final_frame_index and
+    /// must not treat the 60.0 timebase as a 61-frame timeline.
+    #[test]
+    fn nuanmb_v12_exvs2_header_read_via_try_from() {
+        let anim = Anim::V12 {
+            name: "".into(),
+            unk1: 0.65, // 39/60
+            final_frame_index: 60.0,
+            unk2: 39.0,
+            unk3: 0.0,
+            tracks: ssbh_lib::SsbhArray::new(),
+            buffers: ssbh_lib::SsbhArray::new(),
+        };
+
+        let data = AnimData::try_from(&anim).expect("try_from EXVS2 V12");
+        assert_eq!(1, data.major_version);
+        assert_eq!(2, data.minor_version);
+        assert_eq!(
+            39.0, data.final_frame_index,
+            "EXVS2: high-level end frame comes from unk2, not the 60.0 timebase"
+        );
+        assert!(data.groups.is_empty());
+    }
+
+    /// Smash Ultimate-style V12 (final_frame_index is the end frame, not ~60) still works.
+    #[test]
+    fn nuanmb_v12_smash_style_header_read_via_try_from() {
+        let anim = Anim::V12 {
+            name: "".into(),
+            unk1: 1.0,
+            final_frame_index: 12.0,
+            unk2: 0.0,
+            unk3: 0.0,
+            tracks: ssbh_lib::SsbhArray::new(),
+            buffers: ssbh_lib::SsbhArray::new(),
+        };
+
+        let data = AnimData::try_from(&anim).expect("try_from Smash-style V12");
+        assert_eq!(12.0, data.final_frame_index);
+    }
+
+    /// Full public round-trip: high-level end frame → EXVS2 headers → back to end frame,
+    /// with track lengths driven by the EXVS2 frame_count (unk2+1), not 61.
+    #[test]
+    fn nuanmb_v12_exvs2_header_and_visibility_round_trip() {
+        let end_frame = 2.0;
+        let original = AnimData {
+            major_version: 1,
+            minor_version: 2,
+            final_frame_index: end_frame,
+            groups: vec![GroupData {
+                group_type: GroupType::Visibility,
+                nodes: vec![NodeData {
+                    name: "Mesh".into(),
+                    tracks: vec![TrackData {
+                        name: "Visibility".into(),
+                        values: TrackValues::Boolean(vec![true, false, true]),
+                        compensate_scale: false,
+                        transform_flags: TransformFlags::default(),
+                    }],
+                }],
+            }],
+        };
+
+        let anim = original.to_anim().expect("encode");
+        match &anim {
+            Anim::V12 {
+                final_frame_index,
+                unk2,
+                ..
+            } => {
+                assert_eq!(60.0, *final_frame_index);
+                assert_eq!(end_frame, *unk2);
+            }
+            other => panic!("expected V12, got {other:?}"),
+        }
+
+        let decoded = AnimData::try_from(&anim).expect("decode");
+        assert_eq!(end_frame, decoded.final_frame_index);
+        match &decoded.groups[0].nodes[0].tracks[0].values {
+            TrackValues::Boolean(values) => {
+                assert_eq!(
+                    3,
+                    values.len(),
+                    "frame_count must be unk2+1 (=3), not timebase+1 (=61)"
+                );
+                assert_eq!(vec![true, false, true], *values);
+            }
             other => panic!("expected boolean track, got {other:?}"),
         }
     }

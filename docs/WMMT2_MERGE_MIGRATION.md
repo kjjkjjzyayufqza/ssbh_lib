@@ -14,8 +14,8 @@ descended from `wmmt2`, while preserving VS2/EXVS2 **format semantics**.
 
 ## Current phase / status
 
-**Phase:** 5 — verification complete  
-**Status:** DONE (core crates green; nuanmb on master-style `anim_data/v1`)  
+**Phase:** 5 — verification complete (+ EXVS2 V12 header fix)  
+**Status:** DONE (core crates green; nuanmb on master-style `anim_data/v1` with EXVS2 dual headers)  
 **Last updated:** 2026-07-12
 
 ### Status legend
@@ -58,8 +58,9 @@ descended from `wmmt2`, while preserving VS2/EXVS2 **format semantics**.
 - [x] Adopt master `ssbh_data/src/anim_data/{error,v1,v2}` layout
 - [x] Ensure `AnimData::to_anim` / `from` paths for v1.2 use `v1::` (compressed EXVS2-compatible)
 - [x] Port multi-frame Visibility bool stream (0x1019) encode/decode for public round-trip
+- [x] Restore EXVS2 V12 dual-header read/write (`final_frame_index`≈60 timebase + `unk2` end frame)
 - [x] Delete dual-stack `anim_create_v12.rs`, `nuanmb_v12/`, `nuanmb_v12_encode.rs` (folded into v1)
-- [x] TDD: unit tests call real `AnimData` read/write entry points (v1.2 + v2)
+- [x] TDD: unit tests call real `AnimData` read/write entry points (v1.2 + v2 + EXVS2 headers)
 
 ### Mesh EXVS2 format retention
 
@@ -160,12 +161,17 @@ ssbh_data/src/anim_data/bitutils.rs
 - `AnimData::to_anim_uncompressed()` for `(1,2)` → `v1::create_anim_v12_uncompressed`
 - `AnimData::try_from(&Anim)` reads v1.2 via `v1::read_groups_v12`
 - Multi-frame Visibility uses **0x1019** stream (u32 count + u16 samples); constant uses **0x1013**
+- **EXVS2 V12 headers** (on write): `unk1 = end/60`, file `final_frame_index = 60.0`, `unk2 = end`, `unk3 = 0`
+- **EXVS2 V12 headers** (on read): if file `final_frame_index ≈ 60` and `unk2 >= 0`, high-level end frame = `unk2` and `frame_count = unk2+1`; else Smash-style (`final_frame_index` is end frame)
 
 ### TDD additions
 
 - `nuanmb_v12_visibility_round_trip_public_api` — encode/decode via public APIs
 - `nuanmb_v12_uncompressed_public_api` — uncompressed path
+- `nuanmb_v12_exvs2_header_write_via_to_anim` / `_read_via_try_from` / `_and_visibility_round_trip`
+- `nuanmb_v12_smash_style_header_read_via_try_from` — non-EXVS2 path still works
 - Fixed encode/decode gap for 0x1019 bool streams discovered by those tests
+- Restored EXVS2 dual-header after skeptic review (master merge had dropped wmmt2 convention)
 
 ---
 
@@ -187,6 +193,7 @@ ssbh_data/src/anim_data/bitutils.rs
 | 2026-07-12 | This file is the single operational board for the merge rewrite. |
 | 2026-07-12 | V8 `from_vectors(Vector4)` stays Float4 (VS2 precision), not master HalfFloat4. |
 | 2026-07-12 | Visibility multi-frame uses shared 0x1019 layout for compressed and uncompressed writers. |
+| 2026-07-12 | Anim V12 write always EXVS2 dual-header; read auto-detects EXVS2 vs Smash style. |
 
 ## Deviations from goal plan
 

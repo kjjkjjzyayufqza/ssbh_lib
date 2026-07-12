@@ -367,20 +367,34 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
         })
     }?;
 
-    Ok(Anim::V12 {
-        name: "".into(), // Default empty name
-        // NOTE (empirically observed in-game):
-        // `unk1` behaves like a playback range multiplier for Anim v1.2.
-        // For an animation with N frames (0..N-1), setting `unk1 = 0.5` results in only the first
-        // half of the timeline being played (approximately 0..(N/2 - 1)).
-        // Setting `unk1 = 0.0` causes the animation to appear non-advancing (only the first frame).
-        unk1: 1.0,
+    Ok(exvs2_anim_v12(
         final_frame_index,
-        unk2: 0.0, // Default unknown value
-        unk3: 0.0, // Default unknown value
-        tracks: tracks.into(),
-        buffers: buffers.into(),
-    })
+        tracks.into(),
+        buffers.into(),
+    ))
+}
+
+/// Build an Anim v1.2 header using the EXVS2 dual-field convention.
+///
+/// Empirically (EXVS2 / Front.bin style):
+/// - `unk1`: duration in seconds (`end_frame / 60.0`)
+/// - `final_frame_index`: timebase FPS (commonly `60.0`)
+/// - `unk2`: effective end frame (`frame_count - 1`, same as high-level AnimData)
+/// - `unk3`: start frame / reserved (commonly `0.0`)
+fn exvs2_anim_v12(
+    end_frame: f32,
+    tracks: ssbh_lib::SsbhArray<TrackV1>,
+    buffers: ssbh_lib::SsbhArray<SsbhByteBuffer>,
+) -> Anim {
+    Anim::V12 {
+        name: "".into(),
+        unk1: end_frame / 60.0,
+        final_frame_index: 60.0,
+        unk2: end_frame,
+        unk3: 0.0,
+        tracks,
+        buffers,
+    }
 }
 
 // Create uncompressed v1.2 animation from AnimData
@@ -520,15 +534,11 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
         })
     }?;
 
-    Ok(Anim::V12 {
-        name: "".into(), // Default empty name
-        unk1: 1.0,
+    Ok(exvs2_anim_v12(
         final_frame_index,
-        unk2: 0.0, // Default unknown value
-        unk3: 0.0, // Default unknown value
-        tracks: tracks.into(),
-        buffers: buffers.into(),
-    })
+        tracks.into(),
+        buffers.into(),
+    ))
 }
 
 // Helper functions for version 1.2 creation
