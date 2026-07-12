@@ -11,6 +11,6 @@ A higher level data access layer for some SSBH formats. ssbh_data provides a mor
 | Matl (`.numatb`) | 1.5, 1.6 | :heavy_check_mark: | :heavy_check_mark: |
 | Hlpb (`.nuhlpb`) | 1.1 | :heavy_check_mark: | :heavy_check_mark: |
 
-**Anim v1.2 (experimental):** Reading and writing Anim v1.2 (`.nuanmb`) via `AnimData` is supported, including uncompressed and compressed (e.g. EXVS2-style) v1.2 writers. Treat save paths and binary round-trips as **experimental**—validate output against known-good files or in-game before relying on it.
+**Anim v1.2 (experimental):** Reading and writing Anim v1.2 (`.nuanmb`) via `AnimData` is supported. The **default** save path (`AnimData::to_anim` / `TryFrom`) uses **uncompressed** constant/raw-stream property buffers (wmmt2 / VS2 style). Residual compression (`0x3409` / `0x4409`) is available via `AnimData::to_anim_v12_compressed`. Treat save paths and binary round-trips as **experimental**—validate output against known-good files or in-game before relying on it.
 
 ssbh_data also has support for Adj (`.adjb`) and MeshEx (`.numshexb`) files.

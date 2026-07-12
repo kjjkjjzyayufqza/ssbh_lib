@@ -157,8 +157,9 @@ ssbh_data/src/anim_data/bitutils.rs
 
 ### Public behavior
 
-- `AnimData::to_anim()` for `(1,2)` → `v1::create_anim_v12`
-- `AnimData::to_anim_uncompressed()` for `(1,2)` → `v1::create_anim_v12_uncompressed`
+- `AnimData::to_anim()` for `(1,2)` → `v1::create_anim_v12_uncompressed` (**default**: no residual)
+- `AnimData::to_anim_uncompressed()` for `(1,2)` → same as default
+- `AnimData::to_anim_v12_compressed()` for `(1,2)` → `v1::create_anim_v12` (opt-in residual `0x3409`/`0x4409`)
 - `AnimData::try_from(&Anim)` reads v1.2 via `v1::read_groups_v12`
 - Multi-frame Visibility uses **0x1019** stream (u32 count + u16 samples); constant uses **0x1013**
 - **EXVS2 V12 headers** (on write): `unk1 = end/60`, file `final_frame_index = 60.0`, `unk2 = end`, `unk3 = 0`
@@ -177,7 +178,7 @@ ssbh_data/src/anim_data/bitutils.rs
 
 ## Known risks (remaining)
 
-1. Transform multi-frame still prefers uncompressed-ish layouts in several write paths rather than full 0x3409/0x4409 bit-identical game buffers.
+1. Default Transform multi-frame write is uncompressed (0x3300/0x4300…); residual 0x3409/0x4409 is opt-in via `to_anim_v12_compressed` only (not bit-identical to all shipped game buffers).
 2. Binary identity of EXVS2 samples not guaranteed.
 3. Peripheral JSON CLIs / fuzz not re-run as gating in this session.
 4. `align_v20` historical assertion (`len % 8 == 2`) outdated vs current writer; test now checks body write 8-alignment with `SsbhWrite::write`.
@@ -195,6 +196,7 @@ ssbh_data/src/anim_data/bitutils.rs
 | 2026-07-12 | Visibility multi-frame uses shared 0x1019 layout for compressed and uncompressed writers. |
 | 2026-07-12 | Anim V12 write always EXVS2 dual-header; read auto-detects EXVS2 vs Smash style. |
 | 2026-07-12 | VS2-variant hardening: no `todo!()` on unknown headers; UV 0x5014/0x5019; multi-frame 0x3409/0x4409 write restored; Smash final=60/unk2=0 preserved; ExvsColor→ColorSet. |
+| 2026-07-12 | Default nuanmb v1.2 write = uncompressed (wmmt2); residual via `to_anim_v12_compressed` only. |
 
 ## Deviations from goal plan
 

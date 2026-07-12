@@ -32,10 +32,13 @@ for group in anim.groups {
 //!
 //! # File Differences
 //! Unmodified files are not guaranteed to be binary identical after saving.
-//! Compressed animations use lossy compression for all data types except [TrackValues::Boolean].
-//! When converting to [Anim], compression is enabled for a track if compression would save space.
-//! This may produce differences with the original due to compression differences.
-//! These errors are small in practice but may cause gameplay differences such as online desyncs.
+//! - For Anim v1.2, the default conversion path writes **uncompressed** buffers (constant /
+//!   raw stream headers such as `0x3003`, `0x3300`, `0x4003`, `0x4300`) for VS2/wmmt2-style
+//!   compatibility. Residual compression (`0x3409` / `0x4409`) is opt-in via
+//!   [`AnimData::to_anim_v12_compressed`].
+//! - For Anim v2.0+, compression may be enabled for a track if it would save space. This may
+//!   produce differences with the original due to compression differences. These errors are small
+//!   in practice but may cause gameplay differences such as online desyncs.
 use binrw::BinRead;
 use glam::{Quat, Vec3, Vec4};
 use ssbh_lib::{Vector3, Vector4};
@@ -80,14 +83,18 @@ pub struct AnimData {
 }
 
 impl AnimData {
-    // TODO: Test this for small example anims
-    /// Encode all animation data to the specified version
-    /// with compression chosen by the encoder.
+    /// Encode all animation data to the specified version.
+    ///
+    /// For Anim **v1.2**, this uses the **uncompressed** writer (wmmt2 / VS2 default):
+    /// constant and raw-stream property buffers only — no residual `0x3409` / `0x4409`.
+    /// Prefer [`AnimData::to_anim_v12_compressed`] when you explicitly need residual
+    /// compression for EXVS2-style multi-frame tracks.
+    ///
+    /// For Anim **v2.0+**, compression is chosen by the encoder when it saves space.
     pub fn to_anim(&self) -> Result<Anim, error::Error> {
         match (self.major_version, self.minor_version) {
-            // Use compressed format for v1.2 (EXVS2 compatibility)
-            // TODO: select uncompressed for 1.2 if it saves space?
-            (1, 2) => Ok(v1::create_anim_v12(self)?),
+            // Default v1.2: uncompressed (wmmt2 policy). Residual is opt-in.
+            (1, 2) => Ok(v1::create_anim_v12_uncompressed(self)?),
             (2, 0) => v2::create_anim_v20(self),
             (2, 1) => v2::create_anim_v21(self),
             (major_version, minor_version) => Err(error::Error::UnsupportedVersion {
@@ -97,12 +104,27 @@ impl AnimData {
         }
     }
 
-    // TODO: Test this for small example anims
-    /// Encode all animation data to the specified version without any compression.
+    /// Encode Anim v1.2 using only constant / raw-stream property formats
+    /// (no residual `0x3409` / `0x4409`).
+    ///
+    /// For `(1, 2)` this matches [`AnimData::to_anim`]. Other versions are not supported.
     pub fn to_anim_uncompressed(&self) -> Result<Anim, error::Error> {
         match (self.major_version, self.minor_version) {
             (1, 2) => Ok(v1::create_anim_v12_uncompressed(self)?),
-            // Uncompressed-only export is currently defined for VS2/EXVS2 Anim v1.2.
+            (major_version, minor_version) => Err(error::Error::UnsupportedVersion {
+                major_version,
+                minor_version,
+            }),
+        }
+    }
+
+    /// Encode Anim v1.2 with EXVS2-style residual compression for multi-frame
+    /// Transform tracks (`0x3409` Vector3, `0x4409` quaternion).
+    ///
+    /// Opt-in only: the default [`AnimData::to_anim`] path is uncompressed.
+    pub fn to_anim_v12_compressed(&self) -> Result<Anim, error::Error> {
+        match (self.major_version, self.minor_version) {
+            (1, 2) => Ok(v1::create_anim_v12(self)?),
             (major_version, minor_version) => Err(error::Error::UnsupportedVersion {
                 major_version,
                 minor_version,
@@ -604,7 +626,7 @@ mod tests {
         ));
     }
 
-    /// Public nuanmb path: build v1.2 AnimData, encode via master-style `to_anim`,
+    /// Public nuanmb path: build v1.2 AnimData, encode via default `to_anim` (uncompressed),
     /// then decode back through `AnimData::try_from` (shipped entry points only).
     #[test]
     fn nuanmb_v12_visibility_round_trip_public_api() {
@@ -669,6 +691,126 @@ mod tests {
             TrackValues::Boolean(values) => assert_eq!(vec![false, true], *values),
             other => panic!("expected boolean track, got {other:?}"),
         }
+    }
+
+    /// Default `to_anim` for v1.2 must use uncompressed property headers
+    /// (no residual 0x3409 / 0x4409), matching wmmt2 policy.
+    #[test]
+    fn nuanmb_v12_default_to_anim_uses_uncompressed_headers() {
+        let frames: Vec<Transform> = (0..4)
+            .map(|i| {
+                let t = i as f32;
+                Transform {
+                    scale: Vec3::new(1.0 + t * 0.01, 1.0, 1.0),
+                    rotation: Quat::from_xyzw(0.0, 0.0, (t * 0.05).sin(), (t * 0.05).cos())
+                        .normalize(),
+                    translation: Vec3::new(t, 0.0, t * 2.0),
+                }
+            })
+            .collect();
+
+        let original = AnimData {
+            major_version: 1,
+            minor_version: 2,
+            final_frame_index: 3.0,
+            groups: vec![GroupData {
+                group_type: GroupType::Transform,
+                nodes: vec![NodeData {
+                    name: "Bone".into(),
+                    tracks: vec![TrackData {
+                        name: "Transform".into(),
+                        values: TrackValues::Transform(frames),
+                        compensate_scale: false,
+                        transform_flags: TransformFlags::default(),
+                    }],
+                }],
+            }],
+        };
+
+        let anim = original.to_anim().expect("default to_anim v1.2");
+        let Anim::V12 { ref buffers, .. } = anim else {
+            panic!("expected Anim::V12");
+        };
+
+        let headers: Vec<u32> = buffers
+            .elements
+            .iter()
+            .map(|b| {
+                assert!(b.elements.len() >= 4, "buffer too small");
+                u32::from_le_bytes(b.elements[0..4].try_into().unwrap())
+            })
+            .collect();
+
+        // Residual compression must not appear on the default path.
+        assert!(
+            !headers.contains(&0x3409) && !headers.contains(&0x4409),
+            "default write must not use residual 0x3409/0x4409, got {headers:?}"
+        );
+        // Multi-frame varying scale/translate → 0x3300; rotate → 0x4300.
+        assert!(
+            headers.iter().any(|h| matches!(h, 0x3003 | 0x3300 | 0x3400)),
+            "expected uncompressed Vector3 headers, got {headers:?}"
+        );
+        assert!(
+            headers.iter().any(|h| matches!(h, 0x4003 | 0x4300)),
+            "expected uncompressed rotation headers, got {headers:?}"
+        );
+
+        let decoded = AnimData::try_from(&anim).expect("decode default uncompressed v1.2");
+        match &decoded.groups[0].nodes[0].tracks[0].values {
+            TrackValues::Transform(values) => assert_eq!(4, values.len()),
+            other => panic!("expected transform track, got {other:?}"),
+        }
+    }
+
+    /// Explicit residual writer still available via `to_anim_v12_compressed`.
+    #[test]
+    fn nuanmb_v12_compressed_opt_in_uses_residual_headers() {
+        let frames: Vec<Transform> = (0..4)
+            .map(|i| {
+                let t = i as f32;
+                Transform {
+                    scale: Vec3::new(1.0 + t * 0.1, 1.0 + t * 0.05, 1.0),
+                    rotation: Quat::from_xyzw(0.0, t * 0.1, 0.0, 1.0).normalize(),
+                    translation: Vec3::new(t, t * 0.5, t * 2.0),
+                }
+            })
+            .collect();
+
+        let original = AnimData {
+            major_version: 1,
+            minor_version: 2,
+            final_frame_index: 3.0,
+            groups: vec![GroupData {
+                group_type: GroupType::Transform,
+                nodes: vec![NodeData {
+                    name: "Bone".into(),
+                    tracks: vec![TrackData {
+                        name: "Transform".into(),
+                        values: TrackValues::Transform(frames),
+                        compensate_scale: false,
+                        transform_flags: TransformFlags::default(),
+                    }],
+                }],
+            }],
+        };
+
+        let anim = original
+            .to_anim_v12_compressed()
+            .expect("opt-in residual encode");
+        let Anim::V12 { buffers, .. } = anim else {
+            panic!("expected Anim::V12");
+        };
+
+        let headers: Vec<u32> = buffers
+            .elements
+            .iter()
+            .map(|b| u32::from_le_bytes(b.elements[0..4].try_into().unwrap()))
+            .collect();
+        assert!(
+            headers.contains(&0x3409) || headers.contains(&0x4409),
+            "compressed path should emit residual 0x3409 and/or 0x4409, got {headers:?}"
+        );
     }
 
     /// EXVS2 V12 on-disk header: timebase 60 in `final_frame_index`, end frame in `unk2`.
