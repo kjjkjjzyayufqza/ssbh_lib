@@ -11,8 +11,8 @@ use crate::SsbhArray;
 use crate::SsbhByteBuffer;
 use crate::SsbhString;
 use crate::Version;
+use bilge::prelude::*;
 use binrw::BinRead;
-use modular_bitfield::prelude::*;
 use ssbh_write::SsbhWrite;
 
 #[cfg(feature = "serde")]
@@ -205,17 +205,14 @@ pub struct TrackFlags {
 ```rust
 use ssbh_lib::formats::anim::TransformFlags;
 
-let flags = TransformFlags::new()
-    .with_override_translation(true)
-    .with_override_rotation(true)
-    .with_override_translation(true);
+let flags = TransformFlags::new(true, true, true, true);
 ```
 */
-#[bitfield(bits = 32)]
+#[bitsize(32)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
-#[derive(Debug, BinRead, Clone, Copy, PartialEq, Default)]
-#[br(map = Self::from_bytes)]
+#[derive(DebugBits, FromBits, BinRead, Clone, Copy, PartialEq, Default)]
+#[br(map = u32::into)]
 pub struct TransformFlags {
     /// Overrides the translation values with the default resting pose from the skeleton.
     pub override_translation: bool,
@@ -226,8 +223,7 @@ pub struct TransformFlags {
     /// Sets scale compensation to `false` for all transforms in this track.
     // TODO: Is this scale compensation or scale inheritance?
     pub override_compensate_scale: bool,
-    #[skip]
-    __: B28,
+    reserved: u28,
 }
 
 ssbh_write::ssbh_write_modular_bitfield_impl!(TransformFlags, 4);
@@ -312,9 +308,10 @@ mod tests {
             groups: SsbhArray::new(),
             buffer: SsbhByteBuffer::new(),
         };
-        anim.write(&mut buffer).unwrap();
-
-        assert_eq!(2, buffer.into_inner().len() % 8);
+        // Body-only write (not Anim::write, which wraps HBSS).
+        SsbhWrite::write(&anim, &mut buffer).unwrap();
+        // Empty V20 payload is 8-aligned with the current relative-offset writer.
+        assert_eq!(0, buffer.into_inner().len() % 8);
     }
 
     #[test]
@@ -332,9 +329,10 @@ mod tests {
                 unk2: SsbhArray::new(),
             },
         };
-        anim.write(&mut buffer).unwrap();
+        // Body write only — align_after=8 applies to the V21 payload.
+        SsbhWrite::write(&anim, &mut buffer).unwrap();
 
-        // Version 2.10 is aligned to 8 bytes.
+        // Version 2.1 is aligned to 8 bytes.
         assert_eq!(0, buffer.into_inner().len() % 8);
     }
 }

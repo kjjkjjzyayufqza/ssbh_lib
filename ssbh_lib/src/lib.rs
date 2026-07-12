@@ -152,11 +152,11 @@ pub mod prelude {
 
 use self::formats::*;
 use binrw::io::Cursor;
-use binrw::{binread, BinReaderExt};
 use binrw::{
-    io::{Read, Seek, SeekFrom},
     BinRead, BinResult, Endian,
+    io::{Read, Seek, SeekFrom},
 };
+use binrw::{BinReaderExt, binread};
 use thiserror::Error;
 
 use binrw::io::Write;
@@ -180,21 +180,6 @@ impl SsbhFile {
     /// Tries to read one of the SSBH types from `reader`.
     /// For best performance when opening from a file, use `from_file` instead.
     pub fn read<R: Read + Seek>(reader: &mut R) -> Result<Self, ReadSsbhError> {
-        // Log the file position before reading
-        let start_pos = reader.stream_position()?;
-        println!("Starting to read SSBH file at position: {:#x}", start_pos);
-        
-        // Try to read the HBSS magic
-        let mut magic = [0u8; 4];
-        reader.read_exact(&mut magic)?;
-        println!("Read magic at {:#x}: {:?}", start_pos, std::str::from_utf8(&magic).unwrap_or("Invalid UTF-8"));
-        
-        if &magic != b"HBSS" {
-            return Err(ReadSsbhError::InvalidSsbhType);
-        }
-        
-        // Reset position and read the full file
-        reader.seek(SeekFrom::Start(start_pos))?;
         let ssbh = reader.read_le::<SsbhFile>()?;
 
         Ok(ssbh)
@@ -349,29 +334,29 @@ pub(crate) fn absolute_offset_checked(
 #[derive(Debug, PartialEq, Clone)]
 #[repr(transparent)]
 pub struct Ptr<P, T>(
-    Option<T>,
+    pub Option<T>,
     #[cfg_attr(feature = "serde", serde(skip))] PhantomData<P>,
 );
 
 impl<P, T> Ptr<P, T> {
     /// Creates an absolute offset for a value that is not null.
     pub fn new(value: T) -> Self {
-        Self(Some(value), PhantomData::<P>)
+        Self(Some(value), PhantomData)
     }
 
     /// Creates an absolute offset for a null value.
     pub fn null() -> Self {
-        Self(None, PhantomData::<P>)
+        Self(None, PhantomData)
     }
 }
 
-/// A 16 bit file pointer relative to the start of the reader.
+/// A 16-bit file pointer relative to the start of the reader.
 pub type Ptr16<T> = Ptr<u16, T>;
 
-/// A 32 bit file pointer relative to the start of the reader.
+/// A 32-bit file pointer relative to the start of the reader.
 pub type Ptr32<T> = Ptr<u32, T>;
 
-/// A 64 bit file pointer relative to the start of the reader.
+/// A 64-bit file pointer relative to the start of the reader.
 pub type Ptr64<T> = Ptr<u64, T>;
 
 impl<P, T> BinRead for Ptr<P, T>
@@ -404,71 +389,36 @@ where
     }
 }
 
-impl<P, T> core::ops::Deref for Ptr<P, T> {
-    type Target = Option<T>;
+/// A 16-bit file pointer relative to the start of the pointer type.
+pub type RelPtr16<T> = RelPtr<u16, T>;
 
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
+/// A 32-bit file pointer relative to the start of the pointer type.
+pub type RelPtr32<T> = RelPtr<u32, T>;
 
-impl<P, T> core::ops::DerefMut for Ptr<P, T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
+/// A 64-bit file pointer relative to the start of the pointer type.
+pub type RelPtr64<T> = RelPtr<u64, T>;
 
-/// A 64 bit file pointer relative to the start of the pointer type.
+/// A file pointer relative to the start of the pointer type.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
-#[derive(Debug)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
-pub struct RelPtr64<T>(Option<T>);
+pub struct RelPtr<P, T>(
+    pub Option<T>,
+    #[cfg_attr(feature = "serde", serde(skip))] PhantomData<P>,
+);
 
-impl<T> RelPtr64<T> {
+impl<P, T> RelPtr<P, T> {
     /// Creates a relative offset for `value` that is not null.
     pub fn new(value: T) -> Self {
-        Self(Some(value))
+        Self(Some(value), PhantomData)
     }
 
     /// Creates a relative offset for a null value.
     pub fn null() -> Self {
-        Self(None)
+        Self(None, PhantomData)
     }
 }
-
-/// A 64 bit file pointer relative to the start of the pointer type.
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-#[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
-#[derive(Debug)]
-#[repr(transparent)]
-pub struct RelPtr32<T>(Option<T>);
-
-impl<T> RelPtr32<T> {
-    /// Creates a relative offset for `value` that is not null.
-    pub fn new(value: T) -> Self {
-        Self(Some(value))
-    }
-
-    /// Creates a relative offset for a null value.
-    pub fn null() -> Self {
-        Self(None)
-    }
-}
-
-impl<T: Clone> Clone for RelPtr64<T> {
-    fn clone(&self) -> Self {
-        Self(self.0.clone())
-    }
-}
-
-impl<T: PartialEq> PartialEq for RelPtr64<T> {
-    fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
-    }
-}
-
-impl<T: Eq> Eq for RelPtr64<T> {}
 
 impl<T> From<Option<T>> for RelPtr64<T> {
     fn from(v: Option<T>) -> Self {
@@ -479,9 +429,11 @@ impl<T> From<Option<T>> for RelPtr64<T> {
     }
 }
 
-impl<T> BinRead for RelPtr64<T>
+impl<P, T> BinRead for RelPtr<P, T>
 where
+    P: BinRead + Default + PartialEq + Into<u64>,
     T: BinRead,
+    for<'a> P: BinRead<Args<'a> = ()>,
     for<'a> T::Args<'a>: Clone,
 {
     type Args<'a> = T::Args<'a>;
@@ -493,34 +445,20 @@ where
     ) -> BinResult<Self> {
         let pos_before_read = reader.stream_position()?;
 
-        let relative_offset = u64::read_options(reader, endian, ())?;
-        if relative_offset == 0 {
+        let relative_offset = P::read_options(reader, endian, ())?;
+        if relative_offset == P::default() {
             return Ok(Self::null());
         }
 
         let saved_pos = reader.stream_position()?;
 
-        let seek_pos = absolute_offset_checked(pos_before_read, relative_offset)?;
+        let seek_pos = absolute_offset_checked(pos_before_read, relative_offset.into())?;
         reader.seek(SeekFrom::Start(seek_pos))?;
         let value = T::read_options(reader, endian, args)?;
 
         reader.seek(SeekFrom::Start(saved_pos))?;
 
-        Ok(Self(Some(value)))
-    }
-}
-
-impl<T> core::ops::Deref for RelPtr64<T> {
-    type Target = Option<T>;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> core::ops::DerefMut for RelPtr64<T> {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
+        Ok(Self::new(value))
     }
 }
 
@@ -854,7 +792,7 @@ mod tests {
     fn read_relptr() {
         let mut reader = Cursor::new(hex!("09000000 00000000 05070000"));
         let value = reader.read_le::<RelPtr64<u8>>().unwrap();
-        assert_eq!(7u8, value.unwrap());
+        assert_eq!(7u8, value.0.unwrap());
 
         // Make sure the reader position is restored.
         let value = reader.read_le::<u8>().unwrap();
@@ -897,7 +835,7 @@ mod tests {
     fn read_ptr8() {
         let mut reader = Cursor::new(hex!("04050000 07"));
         let value = reader.read_le::<Ptr<u8, u8>>().unwrap();
-        assert_eq!(7u8, value.unwrap());
+        assert_eq!(7u8, value.0.unwrap());
 
         // Make sure the reader position is restored.
         let value = reader.read_le::<u8>().unwrap();
@@ -908,7 +846,7 @@ mod tests {
     fn read_ptr64() {
         let mut reader = Cursor::new(hex!("09000000 00000000 05070000"));
         let value = reader.read_le::<Ptr64<u8>>().unwrap();
-        assert_eq!(7u8, value.unwrap());
+        assert_eq!(7u8, value.0.unwrap());
 
         // Make sure the reader position is restored.
         let value = reader.read_le::<u8>().unwrap();
@@ -1002,7 +940,7 @@ mod tests {
 
     #[test]
     fn write_null_rel_ptr() {
-        let value = RelPtr64::<u32>(None);
+        let value = RelPtr64::<u32>::null();
 
         let mut writer = Cursor::new(Vec::new());
         let mut data_ptr = 0;

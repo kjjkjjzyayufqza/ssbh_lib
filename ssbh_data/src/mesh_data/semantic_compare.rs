@@ -233,9 +233,27 @@ fn vector_data_difference(expected: &VectorData, actual: &VectorData) -> Option<
 
 fn vector_data_bits(data: &VectorData) -> (usize, Vec<u32>) {
     match data {
-        VectorData::Vector2(v) => (2, v.iter().flatten().map(|f| f.to_bits()).collect()),
-        VectorData::Vector3(v) => (3, v.iter().flatten().map(|f| f.to_bits()).collect()),
-        VectorData::Vector4(v) => (4, v.iter().flatten().map(|f| f.to_bits()).collect()),
+        VectorData::Vector2(v) => (
+            2,
+            v.iter()
+                .flat_map(|vec| vec.to_array())
+                .map(|f| f.to_bits())
+                .collect(),
+        ),
+        VectorData::Vector3(v) => (
+            3,
+            v.iter()
+                .flat_map(|vec| vec.to_array())
+                .map(|f| f.to_bits())
+                .collect(),
+        ),
+        VectorData::Vector4(v) => (
+            4,
+            v.iter()
+                .flat_map(|vec| vec.to_array())
+                .map(|f| f.to_bits())
+                .collect(),
+        ),
     }
 }
 
@@ -294,11 +312,19 @@ mod tests {
             vertex_indices: vec![0, 1, 2],
             positions: vec![AttributeData {
                 name: "Position0".to_string(),
-                data: VectorData::Vector3(vec![[0.0, 1.0, 2.0], [3.0, 4.0, 5.0], [6.0, 7.0, 8.0]]),
+                data: VectorData::Vector3(vec![
+                    glam::vec3(0.0, 1.0, 2.0),
+                    glam::vec3(3.0, 4.0, 5.0),
+                    glam::vec3(6.0, 7.0, 8.0),
+                ]),
             }],
             texture_coordinates: vec![AttributeData {
                 name: "TextureCoordinate0".to_string(),
-                data: VectorData::Vector2(vec![[0.0, 0.5], [0.5, 1.0], [1.0, 0.0]]),
+                data: VectorData::Vector2(vec![
+                    glam::vec2(0.0, 0.5),
+                    glam::vec2(0.5, 1.0),
+                    glam::vec2(1.0, 0.0),
+                ]),
             }],
             bone_influences: vec![BoneInfluence {
                 bone_name: "bone_a".to_string(),
@@ -342,7 +368,7 @@ mod tests {
         let expected = test_mesh_data();
         let mut actual = expected.clone();
         match &mut actual.objects[0].positions[0].data {
-            VectorData::Vector3(values) => values[1][2] = 5.5,
+            VectorData::Vector3(values) => values[1].z = 5.5,
             _ => unreachable!(),
         }
 
@@ -360,7 +386,7 @@ mod tests {
         let expected = test_mesh_data();
         let mut actual = expected.clone();
         match &mut actual.objects[0].positions[0].data {
-            VectorData::Vector3(values) => values[0][0] = -0.0,
+            VectorData::Vector3(values) => values[0].x = -0.0,
             _ => unreachable!(),
         }
 

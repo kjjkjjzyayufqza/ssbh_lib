@@ -4,8 +4,8 @@ use binrw::io::SeekFrom;
 
 use crate::mesh::BoundingSphere;
 use crate::{CString, Ptr64, Vector3};
-use binrw::{binread, BinRead};
-use modular_bitfield::prelude::*;
+use bilge::prelude::*;
+use binrw::{BinRead, binread};
 
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -77,24 +77,22 @@ pub struct MeshObjectGroup {
     pub mesh_object_name: Ptr64<CString<4>>,
 }
 
-#[bitfield(bits = 16)]
+#[bitsize(16)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
-#[derive(Debug, BinRead, Clone, Copy, PartialEq, Eq, Default)]
-#[br(map = Self::from_bytes)]
+#[derive(DebugBits, FromBits, BinRead, Clone, Copy, PartialEq, Eq, Default)]
+#[br(map = u16::into)]
 pub struct EntryFlag {
     pub draw_model: bool,
     pub cast_shadow: bool,
-    #[skip]
-    __: bool,
+    reserved: bool,
     // TODO: Disables reflection of stage model in Fountain of Dreams's water.
     pub unk3: bool,
     // TODO: Only draws stage model in Fountain of Dreams's water reflection.
     pub unk4: bool,
     // TODO: Used for "light_neck_VIS_O_OBJShape" and "light_neck_lowShape" with subindices 1 in fighter/jack/model/doyle/c00/
     pub unk5: bool,
-    #[skip]
-    __: B10,
+    reserved: u10,
 }
 
 ssbh_write::ssbh_write_modular_bitfield_impl!(EntryFlag, 2);
@@ -115,11 +113,13 @@ impl SsbhWrite for MeshEx {
         // Check for invalid lengths before writing any data.
         let entry_count = self
             .entries
+            .0
             .as_ref()
             .map(|e| e.len() as u32)
             .unwrap_or(0u32);
         let entry_flag_count = self
             .entry_flags
+            .0
             .as_ref()
             .map(|e| e.0.len() as u32)
             .unwrap_or(0u32);
@@ -142,6 +142,7 @@ impl SsbhWrite for MeshEx {
         entry_count.ssbh_write(writer, data_ptr)?;
 
         self.mesh_object_groups
+            .0
             .as_ref()
             .map(|g| g.len() as u32)
             .unwrap_or(0u32)

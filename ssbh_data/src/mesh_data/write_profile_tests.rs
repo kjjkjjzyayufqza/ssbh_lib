@@ -22,29 +22,29 @@ fn reparse_mesh_data(bytes: &[u8]) -> MeshData {
     MeshData::read(&mut cursor).unwrap()
 }
 
-fn vector3_values(count: usize, offset: f32) -> Vec<[f32; 3]> {
+fn vector3_values(count: usize, offset: f32) -> Vec<Vec3> {
     (0..count)
         .map(|i| {
             let base = offset + i as f32;
-            [base, base + 0.25, base + 0.5]
+            Vec3::new(base, base + 0.25, base + 0.5)
         })
         .collect()
 }
 
-fn vector2_values(count: usize, offset: f32) -> Vec<[f32; 2]> {
+fn vector2_values(count: usize, offset: f32) -> Vec<glam::Vec2> {
     (0..count)
         .map(|i| {
             let base = offset + i as f32;
-            [base, base + 0.125]
+            glam::Vec2::new(base, base + 0.125)
         })
         .collect()
 }
 
-fn vector4_values(count: usize, offset: f32) -> Vec<[f32; 4]> {
+fn vector4_values(count: usize, offset: f32) -> Vec<Vec4> {
     (0..count)
         .map(|i| {
             let base = offset + i as f32;
-            [base, base + 0.25, base + 0.5, base + 0.75]
+            Vec4::new(base, base + 0.25, base + 0.5, base + 0.75)
         })
         .collect()
 }
@@ -496,7 +496,12 @@ fn canonical_profile_errors_if_attribute_references_buffer2() {
                 (0, VersionedVectorData::V8(Vec::new())),
                 (
                     32,
-                    VersionedVectorData::V8(vec![VectorDataV8::Float3(vector3_values(3, 0.0))]),
+                    VersionedVectorData::V8(vec![VectorDataV8::Float3(
+                        vector3_values(3, 0.0)
+                            .into_iter()
+                            .map(|v| v.to_array())
+                            .collect(),
+                    )]),
                 ),
                 (0, VersionedVectorData::V8(Vec::new())),
             ],
@@ -637,7 +642,7 @@ fn exvs2_attribute_layout_locked() {
 fn zero_valued_attributes_are_preserved() {
     let mut data = exvs2_mesh_data(8, &[12]);
     for color_set in &mut data.objects[0].color_sets {
-        color_set.data = VectorData::Vector2(vec![[0.0, 0.0]; 12]);
+        color_set.data = VectorData::Vector2(vec![glam::Vec2::ZERO; 12]);
     }
 
     let canonical = data
@@ -687,7 +692,7 @@ fn semantic_difference_is_detected_after_round_trip() {
 
     let mut modified = data.clone();
     match &mut modified.objects[0].positions[0].data {
-        VectorData::Vector3(values) => values[3][1] += 1.0,
+        VectorData::Vector3(values) => values[3].y += 1.0,
         _ => unreachable!(),
     }
 

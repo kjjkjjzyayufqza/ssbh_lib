@@ -1,7 +1,7 @@
 //! Types for working with [Shdr] data in .nushdb files.
-use binrw::io::{Cursor, Seek, SeekFrom};
 use binrw::BinReaderExt;
-use binrw::{binread, BinRead, BinResult, VecArgs};
+use binrw::io::{Cursor, Seek, SeekFrom};
+use binrw::{BinRead, BinResult, VecArgs, binread};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use ssbh_lib::formats::shdr::{ShaderStage, Shdr};
@@ -70,6 +70,18 @@ impl Metadata {
                 .collect(),
             constant_buffer: shader.constant_buffer.clone(),
         }
+    }
+
+    // TODO: Shader binary to binary data
+    pub fn from_file<P: AsRef<std::path::Path>>(path: P) -> BinResult<Self> {
+        let mut reader = Cursor::new(std::fs::read(path)?);
+        let shader: ShaderBinary = reader.read_le()?;
+        Ok(Self::new(&mut reader, &shader))
+    }
+
+    pub fn read<R: Read + Seek>(reader: &mut R) -> BinResult<Self> {
+        let shader: ShaderBinary = reader.read_le()?;
+        Ok(Self::new(reader, &shader))
     }
 }
 
@@ -142,22 +154,6 @@ impl Attribute {
             data_type: e.data_type,
             location: e.location,
         }
-    }
-}
-
-// TODO: Shader binary to binary data
-impl Metadata {
-    pub fn from_file<P: AsRef<std::path::Path>>(
-        path: P,
-    ) -> Result<Self, Box<dyn std::error::Error>> {
-        let mut reader = Cursor::new(std::fs::read(path)?);
-        let shader: ShaderBinary = reader.read_le()?;
-        Ok(Self::new(&mut reader, &shader))
-    }
-
-    pub fn read<R: Read + Seek>(reader: &mut R) -> Result<Self, Box<dyn std::error::Error>> {
-        let shader: ShaderBinary = reader.read_le()?;
-        Ok(Self::new(reader, &shader))
     }
 }
 

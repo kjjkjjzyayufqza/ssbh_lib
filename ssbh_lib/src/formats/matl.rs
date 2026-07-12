@@ -749,10 +749,11 @@ pub struct Sampler {
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "strum", derive(FromRepr, Display, EnumIter, EnumString))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
-#[derive(Debug, BinRead, SsbhWrite, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, BinRead, SsbhWrite, Clone, Copy, PartialEq, Eq, Default)]
 #[br(repr(u32))]
 #[ssbhwrite(repr(u32))]
 pub enum MaxAnisotropy {
+    #[default]
     One = 1,
     Two = 2,
     Four = 4,
@@ -790,7 +791,10 @@ pub enum BlendFactor {
     OneMinusSourceColor = 8,
     OneMinusDestinationColor = 9,
     SourceAlphaSaturate = 10,
-    // TODO: 11, 12, 13, 14
+    Source1Alpha = 11,
+    Source1Color = 12,
+    OneMinusSource1Alpha = 13,
+    OneMinusSource1Color = 14,
 }
 
 /// Available blending operations for alpha blending.
@@ -844,55 +848,3 @@ pub struct BlendStateV16 {
     pub unk10: u32,
 }
 
-impl Default for MaxAnisotropy {
-    fn default() -> Self {
-        Self::One
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    use std::{error::Error, path::PathBuf};
-
-    const TEST_ROOT_NUMATB_REPRO_217: &str = "217.numatb";
-
-    fn error_chain_string(err: &(dyn Error + 'static)) -> String {
-        let mut s = String::new();
-        s.push_str(&format!("{err}"));
-        let mut current: &dyn Error = err;
-        while let Some(source) = current.source() {
-            s.push_str(&format!("\nCaused by: {source}"));
-            current = source;
-        }
-        s
-    }
-
-    #[test]
-    #[ignore]
-    fn read_root_numatb_217_is_version_15() {
-        let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join("..")
-            .join(TEST_ROOT_NUMATB_REPRO_217);
-        assert!(
-            path.exists(),
-            "expected repro file at {}",
-            path.display()
-        );
-
-        let matl = Matl::from_file(&path).unwrap_or_else(|e| {
-            panic!(
-                "failed to read repro {}:\n{}",
-                path.display(),
-                error_chain_string(&e)
-            )
-        });
-
-        assert_eq!(
-            (1, 5),
-            matl.major_minor_version(),
-            "expected repro Matl version 1.5 (V15)"
-        );
-    }
-}

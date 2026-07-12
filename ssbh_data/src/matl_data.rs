@@ -25,6 +25,7 @@ for entry in matl.entries {
 ```
  */
 
+use glam::Vec4;
 use itertools::Itertools;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -33,19 +34,19 @@ pub use ssbh_lib::formats::matl::{
     UvTransform, WrapMode,
 };
 use ssbh_lib::{
+    Color4f, Matrix4x4, RelPtr64, SsbhEnum64, Version,
     formats::matl::{
         AttributeV15, AttributeV16, BlendStateV15, BlendStateV16, FilteringType, Matl,
         MatlEntryV15, MatlEntryV16, ParamV15, ParamV15Type4, ParamV16, ParamV16Type4,
         RasterizerStateV15, RasterizerStateV16, Sampler,
     },
-    Color4f, Matrix4x4, RelPtr64, SsbhEnum64, Vector4, Version,
 };
-use std::{convert::TryFrom, ops::Deref};
+use std::convert::TryFrom;
 
 pub type BlendStateParam = ParamData<BlendStateData>;
 pub type FloatParam = ParamData<f32>;
 pub type BooleanParam = ParamData<bool>;
-pub type Vector4Param = ParamData<Vector4>;
+pub type Vector4Param = ParamData<Vec4>;
 pub type RasterizerStateParam = ParamData<RasterizerStateData>;
 pub type SamplerParam = ParamData<SamplerData>;
 pub type TextureParam = ParamData<String>;
@@ -503,7 +504,7 @@ macro_rules! get_attributes {
     ($attributes:expr, $ty_in:path) => {
         $attributes
             .iter()
-            .filter_map(|a| match a.param.data.deref() {
+            .filter_map(|a| match &a.param.data.0 {
                 Some($ty_in(data)) => Some(ParamData::new(a.param_id, data.clone().into())),
                 _ => None,
             })
@@ -571,7 +572,7 @@ impl From<&MatlEntryV16> for MatlEntryData {
                 .attributes
                 .elements
                 .iter()
-                .filter_map(|a| match a.param.data.deref() {
+                .filter_map(|a| match &a.param.data.0 {
                     Some(ParamV16::Boolean(b)) => Some(ParamData::new(a.param_id, *b != 0)),
                     _ => None,
                 })
@@ -580,7 +581,7 @@ impl From<&MatlEntryV16> for MatlEntryData {
                 .attributes
                 .elements
                 .iter()
-                .filter_map(|a| match a.param.data.deref() {
+                .filter_map(|a| match &a.param.data.0 {
                     Some(ParamV16::String(s)) => {
                         Some(ParamData::new(a.param_id, s.to_string_lossy()))
                     }
@@ -592,7 +593,7 @@ impl From<&MatlEntryV16> for MatlEntryData {
                 .attributes
                 .elements
                 .iter()
-                .filter_map(|a| match a.param.data.deref() {
+                .filter_map(|a| match &a.param.data.0 {
                     Some(ParamV16::Type4(v)) => Some(ParamData::new(a.param_id, v.0)),
                     _ => None,
                 })
@@ -683,7 +684,7 @@ impl From<&MatlEntryV15> for MatlEntryData {
                 .attributes
                 .elements
                 .iter()
-                .filter_map(|a| match a.param.data.deref() {
+                .filter_map(|a| match &a.param.data.0 {
                     Some(ParamV15::Boolean(b)) => Some(ParamData::new(a.param_id, *b != 0)),
                     _ => None,
                 })
@@ -692,7 +693,7 @@ impl From<&MatlEntryV15> for MatlEntryData {
                 .attributes
                 .elements
                 .iter()
-                .filter_map(|a| match a.param.data.deref() {
+                .filter_map(|a| match &a.param.data.0 {
                     Some(ParamV15::String(s)) => {
                         Some(ParamData::new(a.param_id, s.to_string_lossy()))
                     }
@@ -703,7 +704,7 @@ impl From<&MatlEntryV15> for MatlEntryData {
                 .attributes
                 .elements
                 .iter()
-                .filter_map(|a| match a.param.data.deref() {
+                .filter_map(|a| match &a.param.data.0 {
                     Some(ParamV15::String2(s)) => {
                         Some(ParamData::new(a.param_id, s.to_string_lossy()))
                     }
@@ -715,8 +716,10 @@ impl From<&MatlEntryV15> for MatlEntryData {
                 .attributes
                 .elements
                 .iter()
-                .filter_map(|a| match a.param.data.deref() {
-                    Some(ParamV15::Type4(v)) => Some(ParamData::new(a.param_id, v.into())),
+                .filter_map(|a| match &a.param.data.0 {
+                    Some(ParamV15::Type4(v)) => {
+                        Some(ParamData::new(a.param_id, ParamV15Type4Data::from(v)))
+                    }
                     _ => None,
                 })
                 .collect(),
@@ -804,10 +807,10 @@ trait ToParamV16 {
     fn to_param(&self) -> SsbhEnum64<ParamV16>;
 }
 
-impl ToParamV16 for Vector4 {
+impl ToParamV16 for Vec4 {
     fn to_param(&self) -> SsbhEnum64<ParamV16> {
         SsbhEnum64 {
-            data: RelPtr64::new(ParamV16::Vector4(*self)),
+            data: RelPtr64::new(ParamV16::Vector4((*self).into())),
         }
     }
 }
@@ -897,10 +900,10 @@ trait ToParamV15 {
     fn to_param_v15(&self) -> SsbhEnum64<ParamV15>;
 }
 
-impl ToParamV15 for Vector4 {
+impl ToParamV15 for Vec4 {
     fn to_param_v15(&self) -> SsbhEnum64<ParamV15> {
         SsbhEnum64 {
-            data: RelPtr64::new(ParamV15::Vector4(*self)),
+            data: RelPtr64::new(ParamV15::Vector4((*self).into())),
         }
     }
 }
@@ -990,9 +993,10 @@ impl ToParamV15 for RasterizerStateData {
 mod tests {
     use super::*;
 
+    use glam::vec4;
     use ssbh_lib::{
-        formats::matl::{AttributeV15, AttributeV16, MatlEntryV15, MatlEntryV16, UvTransform},
         Color4f, SsbhArray,
+        formats::matl::{AttributeV15, AttributeV16, MatlEntryV15, MatlEntryV16, UvTransform},
     };
 
     #[test]
@@ -1027,7 +1031,7 @@ mod tests {
                 attributes: vec![
                     AttributeV16 {
                         param_id: ParamId::CustomVector13,
-                        param: Vector4::new(1.0, 2.0, 3.0, 4.0).to_param(),
+                        param: vec4(1.0, 2.0, 3.0, 4.0).to_param(),
                     },
                     AttributeV16 {
                         param_id: ParamId::CustomFloat5,
@@ -1111,7 +1115,7 @@ mod tests {
                 shader_label: "b".into(),
                 vectors: vec![ParamData {
                     param_id: ParamId::CustomVector13,
-                    data: Vector4::new(1.0, 2.0, 3.0, 4.0,)
+                    data: vec4(1.0, 2.0, 3.0, 4.0)
                 }],
                 floats: vec![ParamData {
                     param_id: ParamId::CustomFloat5,
@@ -1220,19 +1224,19 @@ mod tests {
                 },
                 AttributeV16 {
                     param_id: ParamId::CustomVector0,
-                    param: Vector4::new(1.0, 0.0, 0.0, 0.0).to_param(),
+                    param: vec4(1.0, 0.0, 0.0, 0.0).to_param(),
                 },
                 AttributeV16 {
                     param_id: ParamId::CustomVector13,
-                    param: Vector4::new(1.0, 1.0, 1.0, 1.0).to_param(),
+                    param: vec4(1.0, 1.0, 1.0, 1.0).to_param(),
                 },
                 AttributeV16 {
                     param_id: ParamId::CustomVector14,
-                    param: Vector4::new(1.0, 1.0, 1.0, 1.0).to_param(),
+                    param: vec4(1.0, 1.0, 1.0, 1.0).to_param(),
                 },
                 AttributeV16 {
                     param_id: ParamId::CustomVector8,
-                    param: Vector4::new(1.0, 1.0, 1.0, 1.0).to_param(),
+                    param: vec4(1.0, 1.0, 1.0, 1.0).to_param(),
                 },
                 AttributeV16 {
                     param_id: ParamId::RasterizerState0,
@@ -1392,19 +1396,19 @@ mod tests {
             vectors: vec![
                 ParamData {
                     param_id: ParamId::CustomVector0,
-                    data: Vector4::new(1.0, 0.0, 0.0, 0.0),
+                    data: vec4(1.0, 0.0, 0.0, 0.0),
                 },
                 ParamData {
                     param_id: ParamId::CustomVector13,
-                    data: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                    data: vec4(1.0, 1.0, 1.0, 1.0),
                 },
                 ParamData {
                     param_id: ParamId::CustomVector14,
-                    data: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                    data: vec4(1.0, 1.0, 1.0, 1.0),
                 },
                 ParamData {
                     param_id: ParamId::CustomVector8,
-                    data: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                    data: vec4(1.0, 1.0, 1.0, 1.0),
                 },
             ],
             colors: vec![],
@@ -1534,8 +1538,8 @@ mod tests {
         {
             assert_eq!(expected.param_id, actual.param_id);
             assert_eq!(
-                std::mem::discriminant(expected.param.data.as_ref().unwrap()),
-                std::mem::discriminant(actual.param.data.as_ref().unwrap())
+                std::mem::discriminant(expected.param.data.0.as_ref().unwrap()),
+                std::mem::discriminant(actual.param.data.0.as_ref().unwrap())
             );
         }
     }
@@ -1575,7 +1579,7 @@ mod tests {
                 },
                 AttributeV15 {
                     param_id: ParamId::Diffuse,
-                    param: Vector4::new(1.0, 1.0, 1.0, 1.0).to_param_v15(),
+                    param: vec4(1.0, 1.0, 1.0, 1.0).to_param_v15(),
                 },
                 AttributeV15 {
                     param_id: ParamId::DiffuseSampler,
@@ -1642,7 +1646,7 @@ mod tests {
             }],
             vectors: vec![ParamData {
                 param_id: ParamId::Diffuse,
-                data: Vector4::new(1.0, 1.0, 1.0, 1.0),
+                data: vec4(1.0, 1.0, 1.0, 1.0),
             }],
             colors: vec![],
             rasterizer_states: vec![ParamData {
@@ -1710,8 +1714,8 @@ mod tests {
         {
             assert_eq!(expected.param_id, actual.param_id);
             assert_eq!(
-                std::mem::discriminant(expected.param.data.as_ref().unwrap()),
-                std::mem::discriminant(actual.param.data.as_ref().unwrap())
+                std::mem::discriminant(expected.param.data.0.as_ref().unwrap()),
+                std::mem::discriminant(actual.param.data.0.as_ref().unwrap())
             );
         }
     }

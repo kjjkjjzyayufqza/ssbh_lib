@@ -54,12 +54,12 @@ pub mod shdr_data;
 pub mod skel_data;
 
 use binrw::io::{Read, Seek, Write};
+use binrw::{BinRead, BinResult, Endian};
+use glam::Vec3;
 use ssbh_lib::prelude::*;
 use std::convert::TryFrom;
 use std::error::Error;
 use std::path::Path;
-
-pub use ssbh_lib::{CString, Color4f, Vector3, Vector4};
 
 /// Functions for reading and writing supported formats.
 pub trait SsbhData: Sized {
@@ -85,6 +85,7 @@ pub trait SsbhData: Sized {
 
 /// Common imports for supported types and important traits.
 pub mod prelude {
+    pub use crate::SsbhData;
     pub use crate::adj_data::AdjData;
     pub use crate::anim_data::AnimData;
     pub use crate::hlpb_data::HlpbData;
@@ -94,7 +95,6 @@ pub mod prelude {
     pub use crate::modl_data::ModlData;
     pub use crate::shdr_data::ShdrData;
     pub use crate::skel_data::SkelData;
-    pub use crate::SsbhData;
 }
 
 macro_rules! ssbh_data_impl {
@@ -266,3 +266,7 @@ macro_rules! assert_hex_eq {
 
 #[cfg(test)]
 pub(crate) use assert_hex_eq;
+
+fn read_vec3<R: Read + Seek>(r: &mut R, endian: Endian, args: ()) -> BinResult<Vec3> {
+    <[f32; 3]>::read_options(r, endian, args).map(Into::into)
+}

@@ -8,12 +8,13 @@ use crate::mesh_data::MeshObjectData;
 use geometry_tools::bounding::{
     calculate_bounding_sphere_from_points, calculate_bounding_sphere_from_spheres,
 };
+use glam::Vec4Swizzles;
 use itertools::Itertools;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 pub use ssbh_lib::formats::mesh::BoundingSphere;
 use ssbh_lib::formats::meshex::AllData;
-use ssbh_lib::{formats::meshex::MeshEx, Ptr64, Vector3};
+use ssbh_lib::{Ptr64, Vector3, formats::meshex::MeshEx};
 
 /// The data associated with a [MeshEx] file.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -66,7 +67,7 @@ impl MeshExData {
                         .iter()
                         .filter_map(|m| m.positions.first().map(|p| p.data.to_vec4_with_w(1.0)))
                         .flatten()
-                        .map(|v| geometry_tools::glam::Vec3A::from_slice(&v))
+                        .map(|v| v.xyz())
                         .collect_vec();
                     let sphere = calculate_bounding_sphere_from_points(&points);
 
@@ -137,6 +138,7 @@ impl From<&MeshEx> for MeshExData {
         Self {
             mesh_object_groups: m
                 .mesh_object_groups
+                .0
                 .as_ref()
                 .unwrap_or(&Vec::new())
                 .iter()
@@ -146,23 +148,26 @@ impl From<&MeshEx> for MeshExData {
                     // Use empty strings for null pointers.
                     mesh_object_full_name: g
                         .mesh_object_full_name
+                        .0
                         .as_ref()
                         .map(|s| s.to_string_lossy())
                         .unwrap_or_default(),
                     mesh_object_name: g
                         .mesh_object_name
+                        .0
                         .as_ref()
                         .map(|s| s.to_string_lossy())
                         .unwrap_or_default(),
                     entry_flags: m
                         .entries
+                        .0
                         .as_ref()
                         .unwrap_or(&Vec::new())
                         .iter()
                         .positions(|e| e.mesh_object_group_index as usize == i)
                         .filter_map(|entry_index| {
                             // TODO: Return an error for invalid indices?
-                            let entry_flags = m.entry_flags.as_ref()?.0.get(entry_index)?;
+                            let entry_flags = m.entry_flags.0.as_ref()?.0.get(entry_index)?;
                             Some(EntryFlags {
                                 draw_model: entry_flags.draw_model(),
                                 cast_shadow: entry_flags.cast_shadow(),
@@ -233,9 +238,13 @@ impl From<&MeshExData> for MeshEx {
                     .iter()
                     .flat_map(|g| {
                         g.entry_flags.iter().map(|e| {
-                            ssbh_lib::formats::meshex::EntryFlag::new()
-                                .with_draw_model(e.draw_model)
-                                .with_cast_shadow(e.cast_shadow)
+                            ssbh_lib::formats::meshex::EntryFlag::new(
+                                e.draw_model,
+                                e.cast_shadow,
+                                false,
+                                false,
+                                false,
+                            )
                         })
                     })
                     .collect(),
@@ -250,9 +259,10 @@ mod tests {
     use super::*;
 
     use crate::mesh_data::{AttributeData, VectorData};
+    use glam::vec3;
     use ssbh_lib::{
-        formats::meshex::{AllData, MeshEntry, MeshEx, MeshObjectGroup},
         Ptr64, Vector3,
+        formats::meshex::{AllData, MeshEntry, MeshEx, MeshObjectGroup},
     };
 
     #[test]
@@ -298,15 +308,9 @@ mod tests {
                 },
             ]),
             entry_flags: Ptr64::new(ssbh_lib::formats::meshex::EntryFlags(vec![
-                ssbh_lib::formats::meshex::EntryFlag::new()
-                    .with_draw_model(false)
-                    .with_cast_shadow(true),
-                ssbh_lib::formats::meshex::EntryFlag::new()
-                    .with_draw_model(true)
-                    .with_cast_shadow(false),
-                ssbh_lib::formats::meshex::EntryFlag::new()
-                    .with_draw_model(true)
-                    .with_cast_shadow(true),
+                ssbh_lib::formats::meshex::EntryFlag::new(false, true, false, false, false),
+                ssbh_lib::formats::meshex::EntryFlag::new(true, false, false, false, false),
+                ssbh_lib::formats::meshex::EntryFlag::new(true, true, false, false, false),
             ])),
             unk1: 0,
         };
@@ -354,24 +358,36 @@ mod tests {
             "All",
             new_meshex
                 .all_data
+                .0
                 .as_ref()
                 .unwrap()
                 .name
+                .0
                 .as_ref()
                 .unwrap()
                 .to_string_lossy()
         );
-        assert!(new_meshex.all_data.as_ref().unwrap().bounding_sphere.radius > 1.0);
+        assert!(
+            new_meshex
+                .all_data
+                .0
+                .as_ref()
+                .unwrap()
+                .bounding_sphere
+                .radius
+                > 1.0
+        );
 
-        let group = &new_meshex.mesh_object_groups.as_ref().unwrap()[0];
+        let group = &new_meshex.mesh_object_groups.0.as_ref().unwrap()[0];
         assert_eq!(
             "a",
-            group.mesh_object_name.as_ref().unwrap().to_string_lossy()
+            group.mesh_object_name.0.as_ref().unwrap().to_string_lossy()
         );
         assert_eq!(
             "a_VIS",
             group
                 .mesh_object_full_name
+                .0
                 .as_ref()
                 .unwrap()
                 .to_string_lossy()
@@ -384,15 +400,16 @@ mod tests {
             group.bounding_sphere
         );
 
-        let group = &new_meshex.mesh_object_groups.as_ref().unwrap()[1];
+        let group = &new_meshex.mesh_object_groups.0.as_ref().unwrap()[1];
         assert_eq!(
             "b",
-            group.mesh_object_name.as_ref().unwrap().to_string_lossy()
+            group.mesh_object_name.0.as_ref().unwrap().to_string_lossy()
         );
         assert_eq!(
             "b_VIS",
             group
                 .mesh_object_full_name
+                .0
                 .as_ref()
                 .unwrap()
                 .to_string_lossy()
@@ -407,48 +424,42 @@ mod tests {
 
         assert_eq!(
             0,
-            new_meshex.entries.as_ref().unwrap()[0].mesh_object_group_index
+            new_meshex.entries.0.as_ref().unwrap()[0].mesh_object_group_index
         );
         assert_eq!(
             Vector3::new(0.0, 1.0, 0.0),
-            new_meshex.entries.as_ref().unwrap()[0].unk1
+            new_meshex.entries.0.as_ref().unwrap()[0].unk1
         );
 
         assert_eq!(
             0,
-            new_meshex.entries.as_ref().unwrap()[1].mesh_object_group_index
+            new_meshex.entries.0.as_ref().unwrap()[1].mesh_object_group_index
         );
         assert_eq!(
             Vector3::new(0.0, 1.0, 0.0),
-            new_meshex.entries.as_ref().unwrap()[1].unk1
+            new_meshex.entries.0.as_ref().unwrap()[1].unk1
         );
 
         assert_eq!(
             1,
-            new_meshex.entries.as_ref().unwrap()[2].mesh_object_group_index
+            new_meshex.entries.0.as_ref().unwrap()[2].mesh_object_group_index
         );
         assert_eq!(
             Vector3::new(0.0, 1.0, 0.0),
-            new_meshex.entries.as_ref().unwrap()[2].unk1
+            new_meshex.entries.0.as_ref().unwrap()[2].unk1
         );
 
         assert_eq!(
-            ssbh_lib::formats::meshex::EntryFlag::new()
-                .with_draw_model(false)
-                .with_cast_shadow(true),
-            new_meshex.entry_flags.as_ref().unwrap().0[0]
+            ssbh_lib::formats::meshex::EntryFlag::new(false, true, false, false, false),
+            new_meshex.entry_flags.0.as_ref().unwrap().0[0]
         );
         assert_eq!(
-            ssbh_lib::formats::meshex::EntryFlag::new()
-                .with_draw_model(true)
-                .with_cast_shadow(false),
-            new_meshex.entry_flags.as_ref().unwrap().0[1]
+            ssbh_lib::formats::meshex::EntryFlag::new(true, false, false, false, false),
+            new_meshex.entry_flags.0.as_ref().unwrap().0[1]
         );
         assert_eq!(
-            ssbh_lib::formats::meshex::EntryFlag::new()
-                .with_draw_model(true)
-                .with_cast_shadow(true),
-            new_meshex.entry_flags.as_ref().unwrap().0[2]
+            ssbh_lib::formats::meshex::EntryFlag::new(true, true, false, false, false),
+            new_meshex.entry_flags.0.as_ref().unwrap().0[2]
         );
     }
 
@@ -460,7 +471,7 @@ mod tests {
                 subindex: 0,
                 positions: vec![AttributeData {
                     name: String::new(),
-                    data: VectorData::Vector3(vec![[-1.0, -1.0, -1.0]; 3]),
+                    data: VectorData::Vector3(vec![vec3(-1.0, -1.0, -1.0); 3]),
                 }],
                 ..Default::default()
             },
@@ -469,7 +480,7 @@ mod tests {
                 subindex: 1,
                 positions: vec![AttributeData {
                     name: String::new(),
-                    data: VectorData::Vector3(vec![[1.0, 1.0, 1.0]; 3]),
+                    data: VectorData::Vector3(vec![vec3(1.0, 1.0, 1.0); 3]),
                 }],
                 ..Default::default()
             },
@@ -478,7 +489,7 @@ mod tests {
                 subindex: 0,
                 positions: vec![AttributeData {
                     name: String::new(),
-                    data: VectorData::Vector3(vec![[0.0, 0.0, 0.0]; 3]),
+                    data: VectorData::Vector3(vec![vec3(0.0, 0.0, 0.0); 3]),
                 }],
                 ..Default::default()
             },

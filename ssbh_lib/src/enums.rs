@@ -6,7 +6,7 @@ use ssbh_write::SsbhWrite;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-use crate::{absolute_offset_checked, RelPtr64};
+use crate::{RelPtr64, absolute_offset_checked};
 
 /// Reads a struct with a relative offset to a structure of type T with some data type.
 /// Reading will fail if there is no matching variant for `data_type`.
@@ -100,7 +100,7 @@ where
 
         if relative_offset == 0 {
             return Ok(SsbhEnum64 {
-                data: RelPtr64(None),
+                data: RelPtr64::null(),
             });
         }
 
@@ -132,6 +132,7 @@ impl<T: DataType + SsbhWrite> SsbhWrite for SsbhEnum64<T> {
         self.data.ssbh_write(writer, data_ptr)?;
         // TODO: How to handle null?
         self.data
+            .0
             .as_ref()
             .map(DataType::data_type)
             .unwrap_or(0)
@@ -179,8 +180,8 @@ pub(crate) use ssbh_enum;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use binrw::io::Cursor;
     use binrw::BinReaderExt;
+    use binrw::io::Cursor;
     use hexlit::hex;
 
     ssbh_enum!(

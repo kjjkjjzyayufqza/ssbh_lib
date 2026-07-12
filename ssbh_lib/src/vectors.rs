@@ -127,6 +127,18 @@ impl From<Vector3> for [f32; 3] {
     }
 }
 
+impl From<glam::Vec3> for Vector3 {
+    fn from(v: glam::Vec3) -> Self {
+        v.to_array().into()
+    }
+}
+
+impl From<Vector3> for glam::Vec3 {
+    fn from(v: Vector3) -> Self {
+        v.to_array().into()
+    }
+}
+
 /// A column-major 3x3 matrix of contiguous floats.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
@@ -325,6 +337,18 @@ impl From<Vector4> for [f32; 4] {
     }
 }
 
+impl From<glam::Vec4> for Vector4 {
+    fn from(v: glam::Vec4) -> Self {
+        v.to_array().into()
+    }
+}
+
+impl From<Vector4> for glam::Vec4 {
+    fn from(v: Vector4) -> Self {
+        v.to_array().into()
+    }
+}
+
 /// 4 contiguous floats for encoding RGBA data.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
@@ -426,10 +450,22 @@ impl Matrix4x4 {
     }
 }
 
+impl From<glam::Mat4> for Matrix4x4 {
+    fn from(v: glam::Mat4) -> Self {
+        Matrix4x4::from_cols_array(&v.to_cols_array_2d())
+    }
+}
+
+impl From<Matrix4x4> for glam::Mat4 {
+    fn from(v: Matrix4x4) -> Self {
+        glam::Mat4::from_cols_array_2d(&v.to_cols_array())
+    }
+}
+
 #[cfg(test)]
 mod tests {
-    use binrw::io::Cursor;
     use binrw::BinReaderExt;
+    use binrw::io::Cursor;
 
     use hexlit::hex;
 

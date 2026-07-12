@@ -1,15 +1,15 @@
 use super::vector_data::*;
 use super::{
-    AttributeData, AttributeDataTypeV10Ext, AttributeDataTypeV8Ext, MeshObjectData, VectorData,
+    AttributeData, AttributeDataTypeV8Ext, AttributeDataTypeV10Ext, MeshObjectData, VectorData,
 };
 use binrw::io::{Seek, Write};
 use itertools::Itertools;
 use ssbh_lib::{
-    formats::mesh::{
-        AttributeDataTypeV10, AttributeDataTypeV8, AttributeUsageV8, AttributeUsageV9,
-        AttributeV10, AttributeV8, AttributeV9,
-    },
     SsbhArray, SsbhString,
+    formats::mesh::{
+        AttributeDataTypeV8, AttributeDataTypeV10, AttributeUsageV8, AttributeUsageV9, AttributeV8,
+        AttributeV9, AttributeV10,
+    },
 };
 
 pub struct MeshAttributes<A> {
@@ -483,6 +483,7 @@ mod tests {
     use super::*;
     use crate::assert_hex_eq;
     use binrw::io::Cursor;
+    use glam::{vec2, vec3, vec4};
     use half::f16;
     use hexlit::hex;
 
@@ -491,17 +492,17 @@ mod tests {
         // Check that positions use the largest available floating point type.
         assert_eq!(
             VectorDataV10::Float2(vec![[0.0, 1.0]]),
-            VectorDataV10::from_positions(&VectorData::Vector2(vec![[0.0, 1.0]]))
+            VectorDataV10::from_positions(&VectorData::Vector2(vec![vec2(0.0, 1.0)]))
         );
 
         assert_eq!(
             VectorDataV10::Float3(vec![[0.0, 1.0, 2.0]]),
-            VectorDataV10::from_positions(&VectorData::Vector3(vec![[0.0, 1.0, 2.0]]))
+            VectorDataV10::from_positions(&VectorData::Vector3(vec![vec3(0.0, 1.0, 2.0)]))
         );
 
         assert_eq!(
             VectorDataV10::Float4(vec![[0.0, 1.0, 2.0, 3.0]]),
-            VectorDataV10::from_positions(&VectorData::Vector4(vec![[0.0, 1.0, 2.0, 3.0]]))
+            VectorDataV10::from_positions(&VectorData::Vector4(vec![vec4(0.0, 1.0, 2.0, 3.0)]))
         );
     }
 
@@ -510,12 +511,12 @@ mod tests {
         // Check that vectors use the smallest available floating point type.
         assert_eq!(
             VectorDataV10::HalfFloat2(vec![[f16::from_f32(0.0), f16::from_f32(1.0),]]),
-            VectorDataV10::from_vectors(&VectorData::Vector2(vec![[0.0, 1.0]]))
+            VectorDataV10::from_vectors(&VectorData::Vector2(vec![vec2(0.0, 1.0)]))
         );
 
         assert_eq!(
             VectorDataV10::Float3(vec![[0.0, 1.0, 2.0]]),
-            VectorDataV10::from_vectors(&VectorData::Vector3(vec![[0.0, 1.0, 2.0]]))
+            VectorDataV10::from_vectors(&VectorData::Vector3(vec![vec3(0.0, 1.0, 2.0)]))
         );
 
         assert_eq!(
@@ -525,7 +526,7 @@ mod tests {
                 f16::from_f32(2.0),
                 f16::from_f32(3.0)
             ]]),
-            VectorDataV10::from_vectors(&VectorData::Vector4(vec![[0.0, 1.0, 2.0, 3.0]]))
+            VectorDataV10::from_vectors(&VectorData::Vector4(vec![vec4(0.0, 1.0, 2.0, 3.0)]))
         );
     }
 
@@ -534,17 +535,17 @@ mod tests {
         // Check that color sets use the smallest available type.
         assert_eq!(
             VectorDataV10::HalfFloat2(vec![[f16::from_f32(0.0), f16::from_f32(1.0)]]),
-            VectorDataV10::from_colors(&VectorData::Vector2(vec![[0.0, 1.0]]))
+            VectorDataV10::from_colors(&VectorData::Vector2(vec![vec2(0.0, 1.0)]))
         );
 
         assert_eq!(
             VectorDataV10::Float3(vec![[0.0, 1.0, 2.0]]),
-            VectorDataV10::from_colors(&VectorData::Vector3(vec![[0.0, 1.0, 2.0]]))
+            VectorDataV10::from_colors(&VectorData::Vector3(vec![vec3(0.0, 1.0, 2.0)]))
         );
 
         assert_eq!(
             VectorDataV10::Byte4(vec![[0u8, 128u8, 255u8, 255u8]]),
-            VectorDataV10::from_colors(&VectorData::Vector4(vec![[0.0, 0.5, 1.0, 2.0]]))
+            VectorDataV10::from_colors(&VectorData::Vector4(vec![vec4(0.0, 0.5, 1.0, 2.0)]))
         );
     }
 
@@ -553,17 +554,17 @@ mod tests {
         // Check that positions use the largest available floating point type.
         assert_eq!(
             VectorDataV8::Float2(vec![[0.0, 1.0]]),
-            VectorDataV8::from_positions(&VectorData::Vector2(vec![[0.0, 1.0]]))
+            VectorDataV8::from_positions(&VectorData::Vector2(vec![vec2(0.0, 1.0)]))
         );
 
         assert_eq!(
             VectorDataV8::Float3(vec![[0.0, 1.0, 2.0]]),
-            VectorDataV8::from_positions(&VectorData::Vector3(vec![[0.0, 1.0, 2.0]]))
+            VectorDataV8::from_positions(&VectorData::Vector3(vec![vec3(0.0, 1.0, 2.0)]))
         );
 
         assert_eq!(
             VectorDataV8::Float4(vec![[0.0, 1.0, 2.0, 3.0]]),
-            VectorDataV8::from_positions(&VectorData::Vector4(vec![[0.0, 1.0, 2.0, 3.0]]))
+            VectorDataV8::from_positions(&VectorData::Vector4(vec![vec4(0.0, 1.0, 2.0, 3.0)]))
         );
     }
 
@@ -572,18 +573,19 @@ mod tests {
         // Check that vectors use the smallest available floating point type.
         assert_eq!(
             VectorDataV8::Float2(vec![[0.0, 1.0]]),
-            VectorDataV8::from_vectors(&VectorData::Vector2(vec![[0.0, 1.0]]))
+            VectorDataV8::from_vectors(&VectorData::Vector2(vec![vec2(0.0, 1.0)]))
         );
 
         assert_eq!(
             VectorDataV8::Float3(vec![[0.0, 1.0, 2.0]]),
-            VectorDataV8::from_vectors(&VectorData::Vector3(vec![[0.0, 1.0, 2.0]]))
+            VectorDataV8::from_vectors(&VectorData::Vector3(vec![vec3(0.0, 1.0, 2.0)]))
         );
 
         // The VS2 fork keeps Vector4 vectors as Float4 to preserve full precision.
         assert_eq!(
+            // VS2/EXVS2: keep Vector4 vectors as Float4 to preserve full precision.
             VectorDataV8::Float4(vec![[0.0, 1.0, 2.0, 3.0]]),
-            VectorDataV8::from_vectors(&VectorData::Vector4(vec![[0.0, 1.0, 2.0, 3.0]]))
+            VectorDataV8::from_vectors(&VectorData::Vector4(vec![vec4(0.0, 1.0, 2.0, 3.0)]))
         );
     }
 
@@ -592,17 +594,17 @@ mod tests {
         // Check that color sets use the smallest available type.
         assert_eq!(
             VectorDataV8::Float2(vec![[0.0, 1.0]]),
-            VectorDataV8::from_colors(&VectorData::Vector2(vec![[0.0, 1.0]]))
+            VectorDataV8::from_colors(&VectorData::Vector2(vec![vec2(0.0, 1.0)]))
         );
 
         assert_eq!(
             VectorDataV8::Float3(vec![[0.0, 1.0, 2.0]]),
-            VectorDataV8::from_colors(&VectorData::Vector3(vec![[0.0, 1.0, 2.0]]))
+            VectorDataV8::from_colors(&VectorData::Vector3(vec![vec3(0.0, 1.0, 2.0)]))
         );
 
         assert_eq!(
             VectorDataV8::Byte4(vec![[0u8, 128u8, 255u8, 255u8]]),
-            VectorDataV8::from_colors(&VectorData::Vector4(vec![[0.0, 0.5, 1.0, 2.0]]))
+            VectorDataV8::from_colors(&VectorData::Vector4(vec![vec4(0.0, 0.5, 1.0, 2.0)]))
         );
     }
 
