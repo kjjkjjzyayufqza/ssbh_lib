@@ -50,12 +50,43 @@ pub struct BoneData {
     pub name: String,
     /// A matrix in column-major order representing the transform of the bone relative to its parent.
     /// For using existing world transformations, see [calculate_relative_transform].
+    #[cfg_attr(feature = "serde", serde(with = "mat4_serde"))]
     pub transform: Mat4,
     /// The index of the parent bone in the bones collection or [None] if this is a root bone with no parents.
     pub parent_index: Option<usize>,
     // TODO: Make this an Option for clarity?
     pub billboard_type: BillboardType,
     // TODO: Flags?
+}
+
+#[cfg(feature = "serde")]
+mod mat4_serde {
+    use glam::Mat4;
+    use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
+    #[derive(Deserialize)]
+    #[serde(untagged)]
+    enum Mat4Repr {
+        Columns([[f32; 4]; 4]),
+        Flat([f32; 16]),
+    }
+
+    pub fn serialize<S>(value: &Mat4, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: Serializer,
+    {
+        value.to_cols_array_2d().serialize(serializer)
+    }
+
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<Mat4, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        Ok(match Mat4Repr::deserialize(deserializer)? {
+            Mat4Repr::Columns(columns) => Mat4::from_cols_array_2d(&columns),
+            Mat4Repr::Flat(values) => Mat4::from_cols_array(&values),
+        })
+    }
 }
 
 pub mod error {

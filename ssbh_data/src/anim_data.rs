@@ -297,6 +297,26 @@ pub struct TransformFlags {
     pub override_compensate_scale: bool,
 }
 
+impl TransformFlags {
+    /// Returns `true` when the skeleton rest-pose translation should replace
+    /// the translation stored in the animation track.
+    pub const fn uses_skeleton_translation(self) -> bool {
+        self.override_translation
+    }
+
+    /// Returns `true` when the skeleton rest-pose rotation should replace
+    /// the rotation stored in the animation track.
+    pub const fn uses_skeleton_rotation(self) -> bool {
+        self.override_rotation
+    }
+
+    /// Returns `true` when the skeleton rest-pose scale should replace the
+    /// scale stored in the animation track.
+    pub const fn uses_skeleton_scale(self) -> bool {
+        self.override_scale
+    }
+}
+
 impl From<TransformFlags> for AnimTransformFlags {
     fn from(f: TransformFlags) -> Self {
         Self::new(
@@ -451,6 +471,20 @@ mod tests {
     use super::*;
 
     // TODO: Test the conversions more thoroughly.
+
+    #[test]
+    fn transform_flags_expose_skeleton_channel_semantics() {
+        let flags = TransformFlags {
+            override_translation: true,
+            override_rotation: false,
+            override_scale: true,
+            override_compensate_scale: false,
+        };
+
+        assert!(flags.uses_skeleton_translation());
+        assert!(!flags.uses_skeleton_rotation());
+        assert!(flags.uses_skeleton_scale());
+    }
 
     #[test]
     fn create_empty_anim_v_1_2() {
