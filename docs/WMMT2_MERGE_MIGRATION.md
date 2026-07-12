@@ -14,8 +14,8 @@ descended from `wmmt2`, while preserving VS2/EXVS2 **format semantics**.
 
 ## Current phase / status
 
-**Phase:** 5 — verification complete (+ EXVS2 V12 header fix)  
-**Status:** DONE (core crates green; nuanmb on master-style `anim_data/v1` with EXVS2 dual headers)  
+**Phase:** 6 — VS2-variant hardening after merge review  
+**Status:** DONE (analysis-safe v1.2 path; EXVS2/VS2 focus restored)  
 **Last updated:** 2026-07-12
 
 ### Status legend
@@ -194,6 +194,7 @@ ssbh_data/src/anim_data/bitutils.rs
 | 2026-07-12 | V8 `from_vectors(Vector4)` stays Float4 (VS2 precision), not master HalfFloat4. |
 | 2026-07-12 | Visibility multi-frame uses shared 0x1019 layout for compressed and uncompressed writers. |
 | 2026-07-12 | Anim V12 write always EXVS2 dual-header; read auto-detects EXVS2 vs Smash style. |
+| 2026-07-12 | VS2-variant hardening: no `todo!()` on unknown headers; UV 0x5014/0x5019; multi-frame 0x3409/0x4409 write restored; Smash final=60/unk2=0 preserved; ExvsColor→ColorSet. |
 
 ## Deviations from goal plan
 

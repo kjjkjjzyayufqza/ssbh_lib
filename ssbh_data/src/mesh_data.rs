@@ -320,8 +320,9 @@ impl Attribute for AttributeV8 {
             AttributeUsageV8::Unk7 => AttributeUsage::TextureCoordinate, // Map unknown usage 7 to TextureCoordinate as fallback
             AttributeUsageV8::HalfFloat2 => AttributeUsage::TextureCoordinate, // Map HalfFloat2 to TextureCoordinate as it's typically used for UVs
             AttributeUsageV8::Unk9 => AttributeUsage::TextureCoordinate, // Map unknown usage 9 to TextureCoordinate as fallback
-            AttributeUsageV8::ExvsColor5 => AttributeUsage::TextureCoordinate,
-            AttributeUsageV8::ExvsColor4 => AttributeUsage::TextureCoordinate,
+            // VS2/EXVS2 extra color channels — keep as ColorSet for high-level analysis.
+            AttributeUsageV8::ExvsColor5 => AttributeUsage::ColorSet,
+            AttributeUsageV8::ExvsColor4 => AttributeUsage::ColorSet,
             // Observed on EXVS2 weapon meshes as Float4 with subindex >= 1.
             AttributeUsageV8::ExvsColor12 => AttributeUsage::ColorSet,
         }
@@ -604,7 +605,7 @@ impl TryFrom<&Mesh> for MeshData {
             major_version,
             minor_version,
             objects: read_mesh_objects(mesh)?,
-            is_vs2: true, // Default to legacy format for compatibility
+            is_vs2: true, // VS2/EXVS2 variant defaults
         })
     }
 }

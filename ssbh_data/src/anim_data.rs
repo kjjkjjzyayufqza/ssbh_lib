@@ -102,9 +102,7 @@ impl AnimData {
     pub fn to_anim_uncompressed(&self) -> Result<Anim, error::Error> {
         match (self.major_version, self.minor_version) {
             (1, 2) => Ok(v1::create_anim_v12_uncompressed(self)?),
-            // TODO: force uncompressed for 2.0 and 2.1
-            (2, 0) => todo!(),
-            (2, 1) => todo!(),
+            // Uncompressed-only export is currently defined for VS2/EXVS2 Anim v1.2.
             (major_version, minor_version) => Err(error::Error::UnsupportedVersion {
                 major_version,
                 minor_version,
@@ -133,9 +131,10 @@ impl TryFrom<&Anim> for AnimData {
             final_frame_index: match &anim {
                 Anim::V12 {
                     final_frame_index,
+                    unk1,
                     unk2,
                     ..
-                } => v12_effective_final_frame_index(*final_frame_index, *unk2),
+                } => v12_effective_final_frame_index(*final_frame_index, *unk1, *unk2),
                 Anim::V20 {
                     final_frame_index, ..
                 } => *final_frame_index,
@@ -148,24 +147,38 @@ impl TryFrom<&Anim> for AnimData {
     }
 }
 
-/// Resolve the high-level last-frame index for Anim v1.2.
+/// Resolve the high-level last-frame index for Anim v1.2 (VS2/EXVS2-focused).
 ///
 /// Two on-disk conventions are observed:
 /// - Smash Ultimate style: `final_frame_index` is the last frame index (`frame_count - 1`).
-/// - EXVS2 style: `final_frame_index` is a timebase (commonly `60.0`) and `unk2` holds
-///   the effective end frame (`frame_count - 1`). Prefer EXVS2 when it matches so reads
-///   do not inflate the timeline to 61 frames.
-fn v12_effective_final_frame_index(final_frame_index: f32, unk2: f32) -> f32 {
-    if (final_frame_index - 60.0).abs() <= 1.0e-3 && unk2 >= 0.0 {
-        unk2
+/// - EXVS2 / VS2 style: `final_frame_index` is a timebase (commonly `60.0`) and `unk2` holds
+///   the effective end frame (`frame_count - 1`).
+///
+/// Detection is deliberately stricter than `final≈60 && unk2>=0` so a Smash-style
+/// 61-frame clip (`final=60`, `unk2=0`, `unk1=1`) is not truncated to one frame.
+fn v12_effective_final_frame_index(final_frame_index: f32, unk1: f32, unk2: f32) -> f32 {
+    if (final_frame_index - 60.0).abs() > 1.0e-3 {
+        return final_frame_index;
+    }
+
+    // Timebase field is ~60. Prefer EXVS2 when unk2 is a positive end frame.
+    if unk2 > 0.0 {
+        return unk2;
+    }
+
+    // unk2 == 0 with timebase 60:
+    // - EXVS2 single-frame / zero end often has duration unk1 ≈ 0
+    // - Smash-style end-at-60 commonly keeps unk1 as a non-zero multiplier (often 1.0)
+    if unk1.abs() <= 1.0e-3 {
+        0.0
     } else {
         final_frame_index
     }
 }
 
 /// Frame count used when decoding Anim v1.2 track buffers.
-fn v12_frame_count(final_frame_index: f32, unk2: f32) -> usize {
-    let end = v12_effective_final_frame_index(final_frame_index, unk2);
+fn v12_frame_count(final_frame_index: f32, unk1: f32, unk2: f32) -> usize {
+    let end = v12_effective_final_frame_index(final_frame_index, unk1, unk2);
     end.round().max(0.0) as usize + 1
 }
 
@@ -394,11 +407,12 @@ fn read_anim_groups(anim: &Anim) -> Result<Vec<GroupData>, error::Error> {
             tracks,
             buffers,
             final_frame_index,
+            unk1,
             unk2,
             ..
         } => {
             // Prefer EXVS2 dual-header convention when present (timebase 60 + unk2 end).
-            let frame_count = v12_frame_count(*final_frame_index, *unk2);
+            let frame_count = v12_frame_count(*final_frame_index, *unk1, *unk2);
             v1::read_groups_v12(&tracks.elements, &buffers.elements, frame_count)
         }
         ssbh_lib::formats::anim::Anim::V20 { groups, buffer, .. } => {
@@ -728,6 +742,104 @@ mod tests {
 
         let data = AnimData::try_from(&anim).expect("try_from Smash-style V12");
         assert_eq!(12.0, data.final_frame_index);
+    }
+
+    /// Smash-style end-at-60 must not be truncated by the EXVS2 dual-header heuristic.
+    #[test]
+    fn nuanmb_v12_smash_style_final_60_unk2_zero_keeps_end_frame() {
+        let anim = Anim::V12 {
+            name: "".into(),
+            unk1: 1.0,
+            final_frame_index: 60.0,
+            unk2: 0.0,
+            unk3: 0.0,
+            tracks: ssbh_lib::SsbhArray::new(),
+            buffers: ssbh_lib::SsbhArray::new(),
+        };
+        let data = AnimData::try_from(&anim).expect("try_from Smash final=60");
+        assert_eq!(60.0, data.final_frame_index);
+    }
+
+    #[test]
+    fn nuanmb_v12_uv_transform_round_trip_public_api() {
+        let original = AnimData {
+            major_version: 1,
+            minor_version: 2,
+            final_frame_index: 1.0,
+            groups: vec![GroupData {
+                group_type: GroupType::Material,
+                nodes: vec![NodeData {
+                    name: "Mat".into(),
+                    tracks: vec![TrackData {
+                        name: "UvTransform".into(),
+                        values: TrackValues::UvTransform(vec![
+                            UvTransform {
+                                scale_u: 1.0,
+                                scale_v: 1.0,
+                                rotation: 0.0,
+                                translate_u: 0.0,
+                                translate_v: 0.0,
+                            },
+                            UvTransform {
+                                scale_u: 2.0,
+                                scale_v: 0.5,
+                                rotation: 0.25,
+                                translate_u: 0.1,
+                                translate_v: -0.2,
+                            },
+                        ]),
+                        compensate_scale: false,
+                        transform_flags: TransformFlags::default(),
+                    }],
+                }],
+            }],
+        };
+
+        let anim = original.to_anim().expect("encode UV v1.2");
+        let decoded = AnimData::try_from(&anim).expect("decode UV v1.2");
+        match &decoded.groups[0].nodes[0].tracks[0].values {
+            TrackValues::UvTransform(values) => {
+                assert_eq!(2, values.len());
+                assert!((values[1].scale_u - 2.0).abs() < 1e-5);
+                assert!((values[1].translate_v - -0.2).abs() < 1e-5);
+            }
+            other => panic!("expected UV track, got {other:?}"),
+        }
+    }
+
+    #[test]
+    fn nuanmb_v12_unknown_property_header_returns_error_not_panic() {
+        use ssbh_lib::formats::anim::{Property, TrackTypeV1, TrackV1};
+        use ssbh_lib::SsbhByteBuffer;
+
+        let mut bad = Vec::new();
+        bad.extend_from_slice(&0xDEADu32.to_le_bytes());
+        let anim = Anim::V12 {
+            name: "".into(),
+            unk1: 0.0,
+            final_frame_index: 60.0,
+            unk2: 0.0,
+            unk3: 0.0,
+            tracks: vec![TrackV1 {
+                name: "x".into(),
+                track_type: TrackTypeV1::Visibility,
+                properties: vec![Property {
+                    name: "Visibility".into(),
+                    buffer_index: 0,
+                }]
+                .into(),
+            }]
+            .into(),
+            buffers: vec![SsbhByteBuffer { elements: bad }].into(),
+        };
+
+        let result = AnimData::try_from(&anim);
+        assert!(result.is_err(), "unknown header must fail closed: {result:?}");
+        let err = result.err().unwrap().to_string();
+        assert!(
+            err.to_lowercase().contains("unsupported") || err.contains("DEAD"),
+            "error should mention unsupported header, got: {err}"
+        );
     }
 
     /// Full public round-trip: high-level end frame → EXVS2 headers → back to end frame,

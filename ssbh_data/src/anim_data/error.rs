@@ -72,4 +72,36 @@ pub enum Error {
     /// An error occurred while reading the compressed header for version 2.0 or later.
     #[error("the track data compression header is malformed and cannot be read")]
     MalformedCompressionHeader,
+
+    /// An Anim v1.2 property buffer used an unknown or unsupported header magic.
+    /// Prefer this over panicking so VS2/EXVS2 analysis can fail closed.
+    #[error(
+        "unsupported anim v1.2 property buffer header 0x{header:08X} for property '{property_name}'"
+    )]
+    UnsupportedV12PropertyHeader {
+        header: u32,
+        property_name: String,
+    },
+
+    /// A property value shape did not match the expected VS2/EXVS2 layout.
+    #[error(
+        "anim v1.2 property '{property_name}' has an unexpected value type for VS2/EXVS2 decoding"
+    )]
+    UnexpectedV12PropertyValue { property_name: String },
+
+    /// Track type / value combination is not supported for Anim v1.2 write.
+    #[error(
+        "unsupported anim v1.2 track write combination for track '{track_name}' (group may not match values)"
+    )]
+    UnsupportedV12TrackWrite { track_name: String },
+
+    /// Multi-frame property sample count disagrees with the animation timeline.
+    #[error(
+        "anim v1.2 property '{property_name}' sample count {sample_count} is incompatible with frame count {frame_count}"
+    )]
+    V12SampleCountMismatch {
+        property_name: String,
+        sample_count: usize,
+        frame_count: usize,
+    },
 }

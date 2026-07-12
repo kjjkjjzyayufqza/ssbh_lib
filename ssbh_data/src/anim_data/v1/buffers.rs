@@ -360,6 +360,35 @@ enum V12Values {
     Vec2((f32, f32)),
     Vec3(Vec<Vec3>),
     Quat(Vec<Quat>),
+    /// Constant (0x5014) or multi-frame (0x5019) UV transform stream.
+    Uv(Vec<UvTransform>),
+}
+
+/// Expand or shrink sample lists to match the VS2/EXVS2 animation frame count.
+fn reconcile_samples<T: Clone>(
+    samples: Vec<T>,
+    frame_count: usize,
+    default: T,
+) -> Vec<T> {
+    let frame_count = frame_count.max(1);
+    if samples.is_empty() {
+        return vec![default; frame_count];
+    }
+    if samples.len() == 1 {
+        return vec![samples[0].clone(); frame_count];
+    }
+    if samples.len() < frame_count {
+        let last = samples.last().cloned().unwrap_or(default);
+        let mut out = samples;
+        out.resize(frame_count, last);
+        return out;
+    }
+    if samples.len() > frame_count {
+        let mut out = samples;
+        out.truncate(frame_count);
+        return out;
+    }
+    samples
 }
 
 struct PropertyData {
@@ -403,78 +432,41 @@ pub fn read_track_values_v12(
 
     let values = match track.track_type {
         TrackTypeV1::Transform => {
-            let mut transforms = Vec::new();
+            let scales = reconcile_samples(property_data.scales, animation_frame_count, Vec3::ONE);
+            let rotations =
+                reconcile_samples(property_data.rotations, animation_frame_count, Quat::IDENTITY);
+            let translations =
+                reconcile_samples(property_data.translations, animation_frame_count, Vec3::ZERO);
 
-            for frame_idx in 0..animation_frame_count {
-                let scale = property_data
-                    .scales
-                    .get(frame_idx)
-                    .copied()
-                    .unwrap_or_else(|| property_data.scales.last().copied().unwrap_or(Vec3::ONE));
-
-                let rotation = property_data
-                    .rotations
-                    .get(frame_idx)
-                    .copied()
-                    .unwrap_or_else(|| {
-                        property_data
-                            .rotations
-                            .last()
-                            .copied()
-                            .unwrap_or(Quat::IDENTITY)
-                    });
-
-                let translation = property_data
-                    .translations
-                    .get(frame_idx)
-                    .copied()
-                    .unwrap_or_else(|| {
-                        property_data
-                            .translations
-                            .last()
-                            .copied()
-                            .unwrap_or(Vec3::ZERO)
-                    });
-
+            let mut transforms = Vec::with_capacity(animation_frame_count.max(1));
+            for frame_idx in 0..animation_frame_count.max(1) {
                 transforms.push(Transform {
-                    scale: scale.to_array().into(),
-                    rotation: Quat::from_array(rotation.to_array()),
-                    translation: translation.to_array().into(),
+                    scale: scales[frame_idx].to_array().into(),
+                    rotation: Quat::from_array(rotations[frame_idx].to_array()),
+                    translation: translations[frame_idx].to_array().into(),
                 });
-            }
-
-            // If no frames were generated, create a default identity transform
-            if transforms.is_empty() {
-                transforms.push(Transform::IDENTITY);
             }
 
             TrackValues::Transform(transforms)
         }
-        TrackTypeV1::Visibility => {
-            if property_data.visibilities.is_empty() {
-                TrackValues::Boolean(vec![true; animation_frame_count.max(1)])
-            } else if property_data.visibilities.len() == 1 && animation_frame_count > 1 {
-                // Constant visibility sample expanded across the animation range.
-                TrackValues::Boolean(vec![
-                    property_data.visibilities[0];
-                    animation_frame_count
-                ])
-            } else {
-                TrackValues::Boolean(property_data.visibilities)
-            }
-        }
+        TrackTypeV1::Visibility => TrackValues::Boolean(reconcile_samples(
+            property_data.visibilities,
+            animation_frame_count,
+            true,
+        )),
         TrackTypeV1::UvTransform => {
-            if property_data.uv_transforms.is_empty() {
-                TrackValues::UvTransform(vec![UvTransform {
-                    scale_u: 1.0,
-                    scale_v: 1.0,
-                    rotation: 0.0,
-                    translate_u: 0.0,
-                    translate_v: 0.0,
-                }])
-            } else {
-                TrackValues::UvTransform(property_data.uv_transforms)
-            }
+            let default_uv = UvTransform {
+                scale_u: 1.0,
+                scale_v: 1.0,
+                rotation: 0.0,
+                translate_u: 0.0,
+                translate_v: 0.0,
+            };
+            TrackValues::UvTransform(reconcile_samples(
+                property_data.uv_transforms,
+                animation_frame_count,
+                default_uv,
+            ))
         }
     };
     Ok((values, compensate_scale))
@@ -486,7 +478,7 @@ fn add_property(
     property_name: String,
     data: &ssbh_lib::SsbhByteBuffer,
 ) -> Result<(), Error> {
-    let value = read_property_value_v12(&data.elements)?;
+    let value = read_property_value_v12(&data.elements, &property_name)?;
     match property_name.as_str() {
         "CompensateScale" => match value {
             V12Values::Uint(v) => {
@@ -495,47 +487,48 @@ fn add_property(
             V12Values::Float(f) => {
                 *compensate_scale = f != 0.0;
             }
-            _ => {}
+            _ => {
+                return Err(Error::UnexpectedV12PropertyValue {
+                    property_name,
+                });
+            }
         },
-        "Scale" => {
-            match value {
-                V12Values::Vec3(values) => {
-                    property_data.scales.extend(values);
-                }
-                _ => {
-                    // For complex scale formats, use default
-                    property_data.scales.push(Vec3::ONE);
-                }
+        "Scale" => match value {
+            V12Values::Vec3(values) => {
+                property_data.scales.extend(values);
             }
-        }
-        "Rotate" => {
-            match value {
-                V12Values::Vec3(values) => {
-                    // Single Vector3 (euler angles, convert to quaternion) - uncompressed
-                    property_data
-                        .rotations
-                        .extend(values.into_iter().map(|v| euler_to_quaternion(v.into())));
-                }
-                V12Values::Quat(values) => {
-                    property_data.rotations.extend(values);
-                }
-                _ => {
-                    // Unknown format, use default identity rotation
-                    property_data.rotations.push(Quat::IDENTITY);
-                }
+            _ => {
+                return Err(Error::UnexpectedV12PropertyValue {
+                    property_name,
+                });
             }
-        }
-        "Translate" => {
-            match value {
-                V12Values::Vec3(values) => {
-                    property_data.translations.extend(values);
-                }
-                _ => {
-                    // Unknown format
-                    property_data.translations.push(Vec3::ZERO);
-                }
+        },
+        "Rotate" => match value {
+            V12Values::Vec3(values) => {
+                // Euler angles (degrees/radians as stored) → quaternion.
+                property_data
+                    .rotations
+                    .extend(values.into_iter().map(|v| euler_to_quaternion(v.into())));
             }
-        }
+            V12Values::Quat(values) => {
+                property_data.rotations.extend(values);
+            }
+            _ => {
+                return Err(Error::UnexpectedV12PropertyValue {
+                    property_name,
+                });
+            }
+        },
+        "Translate" => match value {
+            V12Values::Vec3(values) => {
+                property_data.translations.extend(values);
+            }
+            _ => {
+                return Err(Error::UnexpectedV12PropertyValue {
+                    property_name,
+                });
+            }
+        },
         "Visibility" => match value {
             V12Values::Uint(v) => {
                 property_data.visibilities.push(v != 0);
@@ -546,23 +539,31 @@ fn add_property(
                     .extend(values.into_iter().map(|v| v != 0));
             }
             _ => {
-                property_data.visibilities.push(true);
+                return Err(Error::UnexpectedV12PropertyValue {
+                    property_name,
+                });
             }
         },
-        _ => {
-            // Handle other unknown properties
-        }
+        "UvTransform" => match value {
+            V12Values::Uv(values) => {
+                property_data.uv_transforms.extend(values);
+            }
+            _ => {
+                return Err(Error::UnexpectedV12PropertyValue {
+                    property_name,
+                });
+            }
+        },
+        // Unknown property names are ignored for forward compatibility with VS2 variants.
+        _ => {}
     }
     Ok(())
 }
 
-fn read_property_value_v12(bytes: &[u8]) -> Result<V12Values, Error> {
+fn read_property_value_v12(bytes: &[u8], property_name: &str) -> Result<V12Values, Error> {
     let mut reader = Cursor::new(bytes);
     let header: u32 = reader.read_le()?;
 
-    // reader.rewind()?;
-    // let buffer_data: V12BufferData = reader.read_le()?;
-    // TODO: use V12BufferData data
     let value = match header {
         0x1013 => {
             let value: u16 = reader.read_le()?;
@@ -611,9 +612,41 @@ fn read_property_value_v12(bytes: &[u8]) -> Result<V12Values, Error> {
         0x4400 => V12Values::Quat(decode_rotate_4400(bytes)?),
         0x4408 => V12Values::Quat(decode_rotate_4408(bytes)?),
         0x4409 => V12Values::Quat(decode_rotate_4409(bytes)?),
+        // Constant UV transform (VS2/EXVS2 material tracks).
+        0x5014 => {
+            let scale_u: f32 = reader.read_le()?;
+            let scale_v: f32 = reader.read_le()?;
+            let rotation: f32 = reader.read_le()?;
+            let translate_u: f32 = reader.read_le()?;
+            let translate_v: f32 = reader.read_le()?;
+            V12Values::Uv(vec![UvTransform {
+                scale_u,
+                scale_v,
+                rotation,
+                translate_u,
+                translate_v,
+            }])
+        }
+        // Multi-frame UV stream: header + frame_count + N * 5 f32.
+        0x5019 => {
+            let frame_count: u32 = reader.read_le()?;
+            let mut values = Vec::with_capacity(frame_count as usize);
+            for _ in 0..frame_count {
+                values.push(UvTransform {
+                    scale_u: reader.read_le()?,
+                    scale_v: reader.read_le()?,
+                    rotation: reader.read_le()?,
+                    translate_u: reader.read_le()?,
+                    translate_v: reader.read_le()?,
+                });
+            }
+            V12Values::Uv(values)
+        }
         _ => {
-            // Handle other unknown properties
-            todo!()
+            return Err(Error::UnsupportedV12PropertyHeader {
+                header,
+                property_name: property_name.to_string(),
+            });
         }
     };
     Ok(value)
@@ -649,7 +682,7 @@ mod tests {
         let data = hex!(03300000 0000803f 0000803f 0000803f);
         assert_eq!(
             V12Values::Vec3(vec![vec3(1.0, 1.0, 1.0)]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -680,7 +713,7 @@ mod tests {
                 vec3(-0.666325, 0.18637206, 0.0),
                 vec3(-0.666325, 0.186372, 0.0),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -775,7 +808,7 @@ mod tests {
                 vec3(0.173582, 1.4589531, -0.372248),
                 vec3(0.173582, 1.46034, -0.372248),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -872,7 +905,7 @@ mod tests {
                 vec3(0.0, 1.4988009, 0.0),
                 vec3(0.0, 1.5, 0.0),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -903,7 +936,7 @@ mod tests {
                 vec3(0.029589549, 0.0, 1.662),
                 vec3(0.0, 0.0, 1.5),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -970,7 +1003,7 @@ mod tests {
                 vec3(0.0, 0.0, 58.567272),
                 vec3(0.0, 0.0, 60.1596),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -983,7 +1016,7 @@ mod tests {
         );
         assert_eq!(
             V12Values::Quat(vec![quat(0.0, 0.0, -0.707107, 0.707107)]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -1067,7 +1100,7 @@ mod tests {
                 quat(0.6123721, 0.3535541, 0.12278803, 0.69636416),
                 quat(0.6123721, 0.3535541, 0.12278803, 0.69636416),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -1100,7 +1133,7 @@ mod tests {
                 quat(0.78298694, -0.15716107, -0.04652815, 0.60005593),
                 quat(0.7968891, -0.14653802, -0.062667005, 0.58272403)
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -1200,7 +1233,7 @@ mod tests {
                 quat(0.46877572, 0.0, 0.07553856, 0.8800814),
                 quat(0.488817, 0.0, 0.0, 0.87238634),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -1247,7 +1280,7 @@ mod tests {
                 quat(0.05829708, -0.00809982, 0.0004964837, 0.9982663),
                 quat(0.056671984, -0.008712358, 0.0004945599, 0.99835473),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 
@@ -1352,7 +1385,7 @@ mod tests {
                 quat(-0.0136099225, -0.008809579, -0.17853504, 0.9838),
                 quat(-0.0134818, -0.00868816, -0.178595, 0.983792),
             ]),
-            read_property_value_v12(&data).unwrap()
+            read_property_value_v12(&data, "test").unwrap()
         );
     }
 }

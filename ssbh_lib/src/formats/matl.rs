@@ -124,6 +124,25 @@ impl BinRead for ParamV15Type4 {
     ) -> BinResult<Self> {
         let start_pos = reader.stream_position()?;
 
+        // Prefer size-aware selection when the stream has a known end (e.g. unit tests
+        // or truncated pointed buffers). Full-file RelPtr reads still fall through to
+        // the matrix-first heuristic used by wmmt2.
+        let end_pos = {
+            let cur = reader.stream_position()?;
+            reader.seek(SeekFrom::End(0))?;
+            let end = reader.stream_position()?;
+            reader.seek(SeekFrom::Start(cur))?;
+            end
+        };
+        let remaining = end_pos.saturating_sub(start_pos);
+
+        if remaining > 0 && remaining < 64 {
+            let mut reserved = [0u8; 12];
+            let to_read = (remaining as usize).min(12);
+            reader.read_exact(&mut reserved[..to_read])?;
+            return Ok(Self::Reserved(reserved));
+        }
+
         match Matrix4x4::read_options(reader, endian, ()) {
             Ok(m) => Ok(Self::Matrix4x4(m)),
             Err(_) => {

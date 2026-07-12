@@ -16,3 +16,10 @@ ssbh_lib.code-workspace
 
 # Local agent / MCP tool dumps (never commit)
 /mcps/
+
+# Local research scratch (not library surface)
+/__pycache__/
+*.pyc
+/*.numatb
+/*.from_tool.json
+/*.from_tauri_tool.after_copy.json

@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use glam::{Quat, Vec3};
 
-use encode::encode_vector3_3409;
+use encode::{encode_rotate_4409, encode_vector3_3409};
 
 use super::{AnimData, GroupType, TrackValues, error};
 use ssbh_lib::SsbhByteBuffer;
@@ -45,7 +45,7 @@ pub fn read_groups_v12(
     // TODO: separate visibility from transform tracks
     for track in tracks {
         let group_type = group_type_v12(track.track_type);
-        let track_data = create_track_data_v12(track, buffers, animation_frame_count).unwrap();
+        let track_data = create_track_data_v12(track, buffers, animation_frame_count)?;
         tracks_by_type
             .entry(group_type)
             .or_insert(Vec::new())
@@ -107,7 +107,11 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
                     GroupType::Transform => TrackTypeV1::Transform,
                     GroupType::Visibility => TrackTypeV1::Visibility,
                     GroupType::Material => TrackTypeV1::UvTransform,
-                    _ => TrackTypeV1::Transform, // Default fallback
+                    _ => {
+                        return Err(Error::UnsupportedV12TrackWrite {
+                            track_name: track.name.clone(),
+                        });
+                    }
                 };
 
                 // Create properties based on track type and values
@@ -149,10 +153,8 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
                                         buffer_index: (buffers.len() - 1) as u64,
                                     });
                                 } else {
-                                    // Multi-frame scale data - use an uncompressed indexed format.
-                                    // This avoids generating malformed 0x3409 buffers until the encoder is fully validated.
-                                    let scale_data =
-                                        create_v12_uncompressed_vector3_data(&scales, "Scale")?;
+                                    // Multi-frame scale: EXVS2 residual compression (0x3409).
+                                    let scale_data = encode_vector3_3409(&scales)?;
                                     buffers.push(SsbhByteBuffer {
                                         elements: scale_data,
                                     });
@@ -188,10 +190,8 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
                                         buffer_index: (buffers.len() - 1) as u64,
                                     });
                                 } else {
-                                    // Multi-frame rotation data - write an uncompressed format.
-                                    // This avoids generating a malformed 0x4409 buffer.
-                                    let rotation_data =
-                                        create_v12_uncompressed_vector4_data(&rotations)?;
+                                    // Multi-frame rotation: EXVS2 residual compression (0x4409).
+                                    let rotation_data = encode_rotate_4409(&rotations)?;
                                     buffers.push(SsbhByteBuffer {
                                         elements: rotation_data,
                                     });
@@ -226,12 +226,14 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
                                         buffer_index: (buffers.len() - 1) as u64,
                                     });
                                 } else {
-                                    // Multi-frame translation data - use an uncompressed indexed format.
-                                    // This avoids generating malformed 0x3409 buffers until the encoder is fully validated.
-                                    let translation_data = create_v12_uncompressed_vector3_data(
-                                        &translations,
-                                        "Translate",
-                                    )?;
+                                    // 1D motion is uncommon and can hit strict 0x3409 mask rules
+                                    // in-game; fall back to raw stream 0x3400 (wmmt2 / VS2 policy).
+                                    let translation_data =
+                                        if translation_varying_axis_count(&translations) == 1 {
+                                            create_v12_raw_stream_vector3_3400(&translations)?
+                                        } else {
+                                            encode_vector3_3409(&translations)?
+                                        };
                                     buffers.push(SsbhByteBuffer {
                                         elements: translation_data,
                                     });
@@ -313,36 +315,20 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
                     }
                     (TrackValues::UvTransform(uv_transforms), TrackTypeV1::UvTransform) => {
                         if !uv_transforms.is_empty() {
-                            if uv_transforms.len() == 1 {
-                                // Single frame UV transform
-                                let uv = &uv_transforms[0];
-                                let mut uv_data = Vec::new();
-                                uv_data.extend_from_slice(&0x5014u32.to_le_bytes());
-                                uv_data.extend_from_slice(&uv.scale_u.to_le_bytes());
-                                uv_data.extend_from_slice(&uv.scale_v.to_le_bytes());
-                                uv_data.extend_from_slice(&uv.rotation.to_le_bytes());
-                                uv_data.extend_from_slice(&uv.translate_u.to_le_bytes());
-                                uv_data.extend_from_slice(&uv.translate_v.to_le_bytes());
-
-                                buffers.push(SsbhByteBuffer { elements: uv_data });
-                                properties.push(Property {
-                                    name: "UvTransform".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
-                            } else {
-                                // Multi-frame UV transform data - create appropriate compressed format
-                                let uv_data = create_v12_compressed_uv_data(uv_transforms)?;
-                                buffers.push(SsbhByteBuffer { elements: uv_data });
-                                properties.push(Property {
-                                    name: "UvTransform".into(),
-                                    buffer_index: (buffers.len() - 1) as u64,
-                                });
-                            }
+                            let uv_data = create_v12_compressed_uv_data(uv_transforms)?;
+                            buffers.push(SsbhByteBuffer { elements: uv_data });
+                            properties.push(Property {
+                                name: "UvTransform".into(),
+                                buffer_index: (buffers.len() - 1) as u64,
+                            });
                         }
                     }
                     _ => {
-                        // Unsupported combinations should not generate invalid placeholder buffers.
-                        // Writing an unknown property with a 0x0000 header can crash consumers.
+                        // Unsupported combinations must not emit 0x0000 placeholders (crashes
+                        // VS2/EXVS2 consumers and panics older readers). Fail closed.
+                        return Err(Error::UnsupportedV12TrackWrite {
+                            track_name: track.name.clone(),
+                        });
                     }
                 }
 
@@ -414,7 +400,11 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
                     GroupType::Transform => TrackTypeV1::Transform,
                     GroupType::Visibility => TrackTypeV1::Visibility,
                     GroupType::Material => TrackTypeV1::UvTransform,
-                    _ => TrackTypeV1::Transform, // Default fallback
+                    _ => {
+                        return Err(Error::UnsupportedV12TrackWrite {
+                            track_name: track.name.clone(),
+                        });
+                    }
                 };
 
                 // Create properties based on track type and values
@@ -501,26 +491,20 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
                         }
                     }
                     _ => {
-                        // Create a default empty property for unsupported combinations
-                        let mut default_data = Vec::new();
-                        default_data.extend_from_slice(&0x0000u32.to_le_bytes());
-
-                        buffers.push(SsbhByteBuffer {
-                            elements: default_data,
-                        });
-                        properties.push(Property {
-                            name: track.name.as_str().into(),
-                            buffer_index: (buffers.len() - 1) as u64,
+                        return Err(Error::UnsupportedV12TrackWrite {
+                            track_name: track.name.clone(),
                         });
                     }
                 }
 
-                // Create the track
-                tracks.push(TrackV1 {
-                    name: node.name.as_str().into(),
-                    track_type,
-                    properties: properties.into(),
-                });
+                // Only emit tracks that have real properties (no empty / 0x0000 junk).
+                if !properties.is_empty() {
+                    tracks.push(TrackV1 {
+                        name: node.name.as_str().into(),
+                        track_type,
+                        properties: properties.into(),
+                    });
+                }
             }
         }
     }
@@ -542,6 +526,41 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
 }
 
 // Helper functions for version 1.2 creation
+
+/// Count how many axes vary across a translation curve (VS2 1D-motion policy).
+fn translation_varying_axis_count(values: &[Vec3]) -> usize {
+    if values.is_empty() {
+        return 0;
+    }
+    let mut mins = [f32::INFINITY; 3];
+    let mut maxs = [f32::NEG_INFINITY; 3];
+    for v in values {
+        mins[0] = mins[0].min(v.x);
+        mins[1] = mins[1].min(v.y);
+        mins[2] = mins[2].min(v.z);
+        maxs[0] = maxs[0].max(v.x);
+        maxs[1] = maxs[1].max(v.y);
+        maxs[2] = maxs[2].max(v.z);
+    }
+    (0..3)
+        .filter(|&i| (maxs[i] - mins[i]).abs() > 1e-6)
+        .count()
+}
+
+/// Raw multi-frame Vector3 stream (0x3400) used for 1D Translate on VS2/EXVS2.
+fn create_v12_raw_stream_vector3_3400(values: &[Vec3]) -> Result<Vec<u8>, Error> {
+    let mut data = Vec::new();
+    data.extend_from_slice(&0x3400u32.to_le_bytes());
+    data.extend_from_slice(&(values.len() as u32).to_le_bytes());
+    // Decoder expects key data starting at offset 12 (4 bytes after count).
+    data.extend_from_slice(&1.0f32.to_le_bytes());
+    for v in values {
+        data.extend_from_slice(&v.x.to_le_bytes());
+        data.extend_from_slice(&v.y.to_le_bytes());
+        data.extend_from_slice(&v.z.to_le_bytes());
+    }
+    Ok(data)
+}
 
 /// Create compressed Vector3 data for version 1.2 using format 0x3409
 /// Uses the proper EXVS2-compatible encoder with 33-key blocks and residual encoding.
@@ -941,46 +960,9 @@ pub fn create_v12_uncompressed_uv_data(values: &[UvTransform]) -> Result<Vec<u8>
     Ok(data)
 }
 
-/// Create UV transform data for version 1.2
-/// Uses format 0x5014 for UV transformations
+/// Create UV transform data for version 1.2 (VS2/EXVS2).
+/// Constant → 0x5014; multi-frame → 0x5019 + frame_count (same as uncompressed path).
 pub fn create_v12_compressed_uv_data(values: &[UvTransform]) -> Result<Vec<u8>, Error> {
-    let mut data = Vec::new();
-
-    if values.is_empty() {
-        return Ok(data);
-    }
-
-    // Check if all values are the same
-    let all_same = values.iter().all(|v| {
-        v.scale_u == values[0].scale_u
-            && v.scale_v == values[0].scale_v
-            && v.rotation == values[0].rotation
-            && v.translate_u == values[0].translate_u
-            && v.translate_v == values[0].translate_v
-    });
-
-    if all_same || values.len() == 1 {
-        // Use simple format 0x5014 for constant UV transform
-        data.extend_from_slice(&0x5014u32.to_le_bytes());
-        let uv = &values[0];
-        data.extend_from_slice(&uv.scale_u.to_le_bytes());
-        data.extend_from_slice(&uv.scale_v.to_le_bytes());
-        data.extend_from_slice(&uv.rotation.to_le_bytes());
-        data.extend_from_slice(&uv.translate_u.to_le_bytes());
-        data.extend_from_slice(&uv.translate_v.to_le_bytes());
-    } else {
-        // For varying UV transforms, write each frame
-        // Could potentially use a compressed format similar to Vector3/Vector4
-        // For now, write as raw data (format 0x5014 followed by all frames)
-        data.extend_from_slice(&0x5014u32.to_le_bytes());
-        for uv in values {
-            data.extend_from_slice(&uv.scale_u.to_le_bytes());
-            data.extend_from_slice(&uv.scale_v.to_le_bytes());
-            data.extend_from_slice(&uv.rotation.to_le_bytes());
-            data.extend_from_slice(&uv.translate_u.to_le_bytes());
-            data.extend_from_slice(&uv.translate_v.to_le_bytes());
-        }
-    }
-
-    Ok(data)
+    // UV has no residual compressor yet; keep a single well-defined layout.
+    create_v12_uncompressed_uv_data(values)
 }
