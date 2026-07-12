@@ -69,6 +69,15 @@ pub enum Error {
     #[error("the provided animation data is malformed or incomplete")]
     InvalidData,
 
+    /// Property residual/layout decode failed for a known header magic.
+    #[error(
+        "anim v1.2 property '{property_name}' header 0x{header:04X} failed residual/layout decode"
+    )]
+    V12PropertyDecodeFailed {
+        header: u32,
+        property_name: String,
+    },
+
     /// An error occurred while reading the compressed header for version 2.0 or later.
     #[error("the track data compression header is malformed and cannot be read")]
     MalformedCompressionHeader,

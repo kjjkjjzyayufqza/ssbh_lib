@@ -89,6 +89,13 @@ impl KernelCache {
     pub(super) fn row(&self, v18: usize, row_idx: usize) -> &[f32] {
         let dim = v18 * 4;
         let base = self.offsets[v18 - 1];
+        // Kernel matrix is dim×dim. Locals beyond dim get a zero basis row
+        // (matches Python/lib_3409 and avoids panics on long single residual streams).
+        if row_idx >= dim {
+            // Static zero rows for dim = 4,8,...,32 (v18 = 1..=8).
+            static ZEROS: [f32; 32] = [0.0; 32];
+            return &ZEROS[..dim];
+        }
         let start = base + row_idx * dim;
         let end = start + dim;
         &self.data[start..end]
@@ -286,7 +293,8 @@ pub(super) fn compute_block_len(key_count: usize, block_idx: usize) -> usize {
     if key_count <= 1 {
         return 1;
     }
-    let last_block = (key_count - 1) / 33;
+    // Must match `compute_block_count` (not the old off-by-one last_block index).
+    let last_block = compute_block_count(key_count) - 1;
     if block_idx == last_block {
         key_count - 33 * block_idx - 1
     } else {
@@ -294,12 +302,29 @@ pub(super) fn compute_block_len(key_count: usize, block_idx: usize) -> usize {
     }
 }
 
+/// Number of 33-key residual blocks for curve-level `0x3409` / `0x4409`.
+///
+/// IDA (`sub_1400561E0` / type-9 family) and VS2 samples use:
+/// `block_count = ceil((key_count - 1) / 33)`.
+///
+/// Integer form: `(key_count - 2) / 33 + 1` for `key_count >= 2`.
+/// This is critical when `key_count = 33*n + 1` (e.g. 100): the old
+/// `(key_count - 1) / 33 + 1` over-counted by one and broke residual layout
+/// inference for flags/type=3 buffers.
 pub(super) fn compute_block_count(key_count: usize) -> usize {
     if key_count <= 1 {
         1
     } else {
-        (key_count - 1) / 33 + 1
+        (key_count - 2) / 33 + 1
     }
+}
+
+/// Map a key index into a residual block index.
+///
+/// When the final block holds more than 33 keys (`key_count = 33*n + 1`),
+/// `key_idx / 33` would land past the last block; clamp to `block_count - 1`.
+pub(super) fn block_index_for_key(key_idx: usize, block_count: usize) -> usize {
+    (key_idx / 33).min(block_count.saturating_sub(1))
 }
 
 pub(super) fn compute_block_qcounts(
@@ -456,23 +481,12 @@ pub(super) fn compute_block_len_type9(key_count: usize, block_idx: usize) -> usi
 }
 
 pub(super) fn compute_block_count_4309(key_count: usize) -> usize {
-    if key_count <= 1 {
-        1
-    } else {
-        (key_count - 1) / 33 + 1
-    }
+    // Same 33-key segmentation as curve-level 0x3409/0x4409.
+    compute_block_count(key_count)
 }
 
 pub(super) fn compute_block_len_4309(key_count: usize, block_idx: usize) -> usize {
-    if key_count <= 1 {
-        return 1;
-    }
-    let last_block = (key_count - 1) / 33;
-    if block_idx == last_block {
-        key_count - 33 * block_idx - 1
-    } else {
-        33
-    }
+    compute_block_len(key_count, block_idx)
 }
 
 pub(super) fn compute_block_qcounts_4309(
@@ -486,8 +500,7 @@ pub(super) fn compute_block_qcounts_4309(
         return Ok(vec![0]);
     }
 
-    let last_block = (key_count - 1) / 33;
-    let blocks = last_block + 1;
+    let blocks = compute_block_count_4309(key_count);
 
     let mut q_counts = Vec::with_capacity(blocks);
     let mut cursor = residual_start0;
@@ -669,5 +682,24 @@ mod tests {
         assert_eq!(next, 16);
         assert!(value.abs() > 0.0);
         assert!(value.abs() < 1.0);
+    }
+
+    /// VS2 residual segmentation: ceil((key_count-1)/33), not (key_count-1)/33+1.
+    /// Regression: key_count=100 (33*3+1) must be 3 blocks, not 4.
+    #[test]
+    fn compute_block_count_matches_ida_ceil_rule() {
+        assert_eq!(1, compute_block_count(1));
+        assert_eq!(1, compute_block_count(2));
+        assert_eq!(1, compute_block_count(34));
+        assert_eq!(2, compute_block_count(35));
+        assert_eq!(2, compute_block_count(40));
+        assert_eq!(2, compute_block_count(67));
+        assert_eq!(3, compute_block_count(100));
+        assert_eq!(3, compute_block_count_type9(100));
+        assert_eq!(3, compute_block_count_4309(100));
+        // Last block for 100 keys spans keys 66..99 → block_len 33.
+        assert_eq!(33, compute_block_len(100, 0));
+        assert_eq!(33, compute_block_len(100, 1));
+        assert_eq!(33, compute_block_len(100, 2));
     }
 }

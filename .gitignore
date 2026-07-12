@@ -17,6 +17,9 @@ ssbh_lib.code-workspace
 # Local agent / MCP tool dumps (never commit)
 /mcps/
 
+# Sample fixtures / decode scratch (never commit; copy-only from game trees)
+/temp/
+
 # Local research scratch (not library surface)
 /__pycache__/
 *.pyc

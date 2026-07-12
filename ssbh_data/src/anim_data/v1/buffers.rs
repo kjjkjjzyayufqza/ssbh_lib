@@ -560,6 +560,16 @@ fn add_property(
     Ok(())
 }
 
+fn map_v12_decode_err(err: Error, header: u32, property_name: &str) -> Error {
+    match err {
+        Error::InvalidData => Error::V12PropertyDecodeFailed {
+            header,
+            property_name: property_name.to_string(),
+        },
+        other => other,
+    }
+}
+
 fn read_property_value_v12(bytes: &[u8], property_name: &str) -> Result<V12Values, Error> {
     let mut reader = Cursor::new(bytes);
     let header: u32 = reader.read_le()?;
@@ -589,29 +599,65 @@ fn read_property_value_v12(bytes: &[u8], property_name: &str) -> Result<V12Value
             let scale = reader.read_le::<Vector3>()?;
             V12Values::Vec3(vec![scale.into()])
         }
-        0x3200 => V12Values::Vec3(decode_translate_3200(bytes)?),
-        0x3208 => V12Values::Vec3(decode_translate_3208(bytes)?),
-        0x3209 => V12Values::Vec3(decode_translate_3209(bytes)?),
-        0x3300 => V12Values::Vec3(decode_translate_3300(bytes)?),
-        0x3308 => V12Values::Vec3(decode_translate_3308(bytes)?),
-        0x3309 => V12Values::Vec3(decode_translate_3309(bytes)?),
-        0x3400 => V12Values::Vec3(decode_translate_3400(bytes)?),
-        0x3408 => V12Values::Vec3(decode_translate_3408(bytes)?),
-        0x3409 => V12Values::Vec3(decode_vector3_3409(bytes)?),
+        0x3200 => V12Values::Vec3(
+            decode_translate_3200(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3208 => V12Values::Vec3(
+            decode_translate_3208(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3209 => V12Values::Vec3(
+            decode_translate_3209(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3300 => V12Values::Vec3(
+            decode_translate_3300(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3308 => V12Values::Vec3(
+            decode_translate_3308(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3309 => V12Values::Vec3(
+            decode_translate_3309(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3400 => V12Values::Vec3(
+            decode_translate_3400(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3408 => V12Values::Vec3(
+            decode_translate_3408(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x3409 => V12Values::Vec3(
+            decode_vector3_3409(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
         0x4003 => {
             // Single Vector4 (quaternion rotation) - uncompressed
             let rotation = reader.read_le::<[f32; 4]>()?;
             V12Values::Quat(vec![Quat::from_array(rotation)])
         }
-        0x4200 => V12Values::Quat(decode_rotate_4200(bytes)?),
-        0x4208 => V12Values::Quat(decode_rotate_4208(bytes)?),
-        0x4209 => V12Values::Quat(decode_rotate_4209(bytes)?),
-        0x4300 => V12Values::Quat(decode_rotate_4300(bytes)?),
-        0x4308 => V12Values::Quat(decode_rotate_4308(bytes)?),
-        0x4309 => V12Values::Quat(decode_rotate_4309(bytes)?),
-        0x4400 => V12Values::Quat(decode_rotate_4400(bytes)?),
-        0x4408 => V12Values::Quat(decode_rotate_4408(bytes)?),
-        0x4409 => V12Values::Quat(decode_rotate_4409(bytes)?),
+        0x4200 => V12Values::Quat(
+            decode_rotate_4200(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4208 => V12Values::Quat(
+            decode_rotate_4208(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4209 => V12Values::Quat(
+            decode_rotate_4209(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4300 => V12Values::Quat(
+            decode_rotate_4300(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4308 => V12Values::Quat(
+            decode_rotate_4308(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4309 => V12Values::Quat(
+            decode_rotate_4309(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4400 => V12Values::Quat(
+            decode_rotate_4400(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4408 => V12Values::Quat(
+            decode_rotate_4408(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
+        0x4409 => V12Values::Quat(
+            decode_rotate_4409(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+        ),
         // Constant UV transform (VS2/EXVS2 material tracks).
         0x5014 => {
             let scale_u: f32 = reader.read_le()?;

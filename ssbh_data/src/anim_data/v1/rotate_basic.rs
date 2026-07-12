@@ -1,7 +1,8 @@
 use glam::{Quat, quat};
 
 use super::common::{
-    align_up, compute_block_count_type9, compute_block_len_type9, decode_residual_vector,
+    align_up, block_index_for_key, compute_block_count_type9, compute_block_len_type9,
+    decode_residual_vector,
     expand_sparse_quat, read_f32_le, read_u16_le, read_u32_le, read_vec3_f32_le, read_vec4_f32_le,
 };
 use crate::anim_data::{Vector4, bitutils::BitReader, error::Error};
@@ -162,9 +163,8 @@ pub fn decode_rotate_4208(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     if key_count == 0 {
         return Ok(vec![Quat::IDENTITY]);
     }
-    if key_count > 33 {
-        return Err(Error::InvalidData);
-    }
+    // Single residual block with two quaternion endpoints. VS2 uses key_count=34
+    // (33+1); residual block_len = key_count - 1 (same pattern as 0x3308).
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
@@ -192,10 +192,10 @@ pub fn decode_rotate_4208(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
         let (r_vec, _) =
             decode_residual_vector(bytes, residual_off, base_scale, local, 4, block_len)?;
         let mut q = Vector4 {
-            x: k.x + r_vec[0],
-            y: k.y + r_vec[1],
-            z: k.z + r_vec[2],
-            w: k.w + r_vec[3],
+            x: k.x + r_vec.first().copied().unwrap_or(0.0),
+            y: k.y + r_vec.get(1).copied().unwrap_or(0.0),
+            z: k.z + r_vec.get(2).copied().unwrap_or(0.0),
+            w: k.w + r_vec.get(3).copied().unwrap_or(0.0),
         };
         let len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
         if len2 > 0.0 {
@@ -209,6 +209,21 @@ pub fn decode_rotate_4208(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     }
     let total_frames = frame_indices.iter().copied().max().unwrap_or(0) + 1;
     Ok(expand_sparse_quat(&frame_indices, &key_quats, total_frames))
+}
+
+#[cfg(test)]
+mod tests_4208 {
+    use super::*;
+
+    #[test]
+    fn decode_vs2_4208_key_count_34() {
+        let bytes = include_bytes!("fixtures/glshot_spread_4208_b191.bin");
+        let frames = decode_rotate_4208(bytes).expect("0x4208 k=34");
+        assert!(frames.len() >= 34);
+        for q in &frames {
+            assert!(q.x.is_finite() && q.y.is_finite() && q.z.is_finite() && q.w.is_finite());
+        }
+    }
 }
 
 pub fn decode_rotate_4209(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
@@ -266,7 +281,7 @@ pub fn decode_rotate_4209(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     }
     let mut key_quats = Vec::with_capacity(key_count);
     for key_idx in 0..key_count {
-        let block_idx = key_idx / 33;
+        let block_idx = block_index_for_key(key_idx, block_count);
         let local = key_idx - 33 * block_idx;
         let mut block_len = compute_block_len_type9(key_count, block_idx);
         if block_len == 0 {

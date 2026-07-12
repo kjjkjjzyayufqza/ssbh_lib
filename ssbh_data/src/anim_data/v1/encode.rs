@@ -17,10 +17,11 @@ fn align_up(x: usize, align: usize) -> usize {
 
 #[allow(dead_code)]
 fn compute_block_count(key_count: usize) -> usize {
+    // Keep encoder aligned with decoder: ceil((key_count - 1) / 33).
     if key_count <= 1 {
         1
     } else {
-        (key_count - 1) / 33 + 1
+        (key_count - 2) / 33 + 1
     }
 }
 
@@ -29,7 +30,7 @@ fn compute_block_len(key_count: usize, block_idx: usize) -> usize {
     if key_count <= 1 {
         return 1;
     }
-    let last_block = (key_count - 1) / 33;
+    let last_block = compute_block_count(key_count) - 1;
     if block_idx == last_block {
         key_count - 33 * block_idx - 1
     } else {
@@ -87,7 +88,7 @@ pub fn encode_vector3_3409(values: &[Vec3]) -> Result<Vec<u8>, error::Error> {
     let mut max_residual = 0.0f32;
 
     for key_idx in 0..key_count {
-        let block_idx = key_idx / 33;
+        let block_idx = (key_idx / 33).min(blocks.saturating_sub(1));
         let local = key_idx - 33 * block_idx;
         let block_len = compute_block_len(key_count, block_idx).max(1);
         let t = local as f32 / block_len as f32;
@@ -342,7 +343,7 @@ pub fn encode_rotate_4409(values: &[Quat]) -> Result<Vec<u8>, error::Error> {
     let mut residuals = Vec::with_capacity(key_count);
     let mut max_residual = 0.0f32;
     for key_idx in 0..key_count {
-        let block_idx = key_idx / 33;
+        let block_idx = (key_idx / 33).min(blocks.saturating_sub(1));
         let local = key_idx - 33 * block_idx;
         let block_len = compute_block_len(key_count, block_idx).max(1);
         let t = local as f32 / block_len as f32;

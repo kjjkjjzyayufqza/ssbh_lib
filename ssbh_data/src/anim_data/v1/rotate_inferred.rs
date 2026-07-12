@@ -1,7 +1,8 @@
 use glam::Quat;
 
 use super::common::{
-    align_up, compute_block_count_4309, compute_block_len_4309, decode_residual_vector, quat_nlerp,
+    align_up, block_index_for_key, compute_block_count_4309, compute_block_len_4309,
+    decode_residual_vector, quat_nlerp,
     quat_normalize, read_f32_le, read_u32_le, try_parse_endpoints_4309, try_pick_comp_bits_4309,
 };
 use crate::anim_data::{Vector4, error};
@@ -44,9 +45,10 @@ pub fn decode_rotate_4309(bytes: &[u8]) -> Result<Vec<Quat>, error::Error> {
         prefix_words.push(prefix_words.last().unwrap() + q);
     }
 
+    let blocks = compute_block_count_4309(key_count);
     let mut key_quats = Vec::with_capacity(key_count);
     for key_idx in 0..key_count {
-        let block_idx = key_idx / 33;
+        let block_idx = block_index_for_key(key_idx, blocks);
         let local = key_idx - 33 * block_idx;
         let block_len = compute_block_len_4309(key_count, block_idx).max(1);
 
@@ -69,10 +71,11 @@ pub fn decode_rotate_4309(bytes: &[u8]) -> Result<Vec<Quat>, error::Error> {
             comp_bits,
             block_len,
         )?;
-        let qx = k.x + r_vec[0];
-        let qy = k.y + r_vec[1];
-        let qz = k.z + r_vec[2];
-        let qw = k.w + r_vec[3];
+        // Residual may use 1..=4 components (layout inference). Missing lanes are 0.
+        let qx = k.x + r_vec.first().copied().unwrap_or(0.0);
+        let qy = k.y + r_vec.get(1).copied().unwrap_or(0.0);
+        let qz = k.z + r_vec.get(2).copied().unwrap_or(0.0);
+        let qw = k.w + r_vec.get(3).copied().unwrap_or(0.0);
         key_quats.push(quat_normalize(qx, qy, qz, qw));
     }
 
