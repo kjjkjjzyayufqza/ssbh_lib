@@ -146,6 +146,8 @@ pub enum VectorDataV8 {
     Float2(Vec<[f32; 2]>),
     Float3(Vec<[f32; 3]>),
     Float4(Vec<[f32; 4]>),
+    /// Present for EXVS2 mesh attribute parity; construction paths may be added later.
+    #[allow(dead_code)]
     HalfFloat4(Vec<[f16; 4]>),
     Byte4(Vec<[u8; 4]>),
 }

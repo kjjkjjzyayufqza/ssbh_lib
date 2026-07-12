@@ -400,6 +400,7 @@ pub type RelPtr64<T> = RelPtr<u64, T>;
 
 /// A file pointer relative to the start of the pointer type.
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", serde(transparent))]
 #[cfg_attr(feature = "arbitrary", derive(arbitrary::Arbitrary))]
 #[derive(Debug, Clone, PartialEq, Eq)]
 #[repr(transparent)]
