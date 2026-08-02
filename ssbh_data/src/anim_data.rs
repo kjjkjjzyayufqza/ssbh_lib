@@ -71,6 +71,20 @@ pub struct AnimData {
     pub major_version: u16,
     pub minor_version: u16,
 
+    /// Optional animation name stored in the Anim header (`Anim::V12.name`, etc.).
+    ///
+    /// On disk this is the string near the start of the MINA payload (commonly around
+    /// file offset `0x50` for EXVS2 v1.2 assets).
+    ///
+    /// - [`None`] or blank → encode an empty `SsbhString` (legacy default)
+    /// - [`Some`] → write that string; callers should pass the **disk file name**
+    ///   (e.g. `001hito_....nuanmb` or `主射CSA.nuanmb`), matching game assets
+    ///
+    /// Use [`AnimData::with_disk_file_name`] / [`disk_anim_name_from_path`] to fill
+    /// this from an output path.
+    #[cfg_attr(feature = "serde", serde(default))]
+    pub name: Option<String>,
+
     /// The index of the last frame in the animation,
     /// which is calculated as `(frame_count - 1) as f32`.
     ///
@@ -82,7 +96,35 @@ pub struct AnimData {
     pub groups: Vec<GroupData>,
 }
 
+/// Derive the optional Anim header name from a disk path.
+///
+/// Returns the path's file name (including extension when present), matching
+/// EXVS2 originals such as `001hito_...._stk_air_fr.nuanmb`.
+pub fn disk_anim_name_from_path(path: &std::path::Path) -> Option<String> {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .map(str::trim)
+        .filter(|name| !name.is_empty())
+        .map(String::from)
+}
+
+/// Normalize an optional Anim header name for encoding.
+///
+/// Blank / whitespace-only values become an empty string on disk.
+pub fn resolved_anim_name(name: Option<&str>) -> String {
+    name.map(str::trim)
+        .filter(|name| !name.is_empty())
+        .unwrap_or("")
+        .to_string()
+}
+
 impl AnimData {
+    /// Set [`AnimData::name`] from a disk path's file name (optional header string).
+    pub fn with_disk_file_name(mut self, path: impl AsRef<std::path::Path>) -> Self {
+        self.name = disk_anim_name_from_path(path.as_ref());
+        self
+    }
+
     /// Encode all animation data to the specified version.
     ///
     /// For Anim **v1.2**, this uses the **uncompressed** writer (wmmt2 / VS2 default):
@@ -147,9 +189,21 @@ impl TryFrom<&Anim> for AnimData {
 
     fn try_from(anim: &Anim) -> Result<Self, Self::Error> {
         let (major_version, minor_version) = anim.major_minor_version();
+        let name = match &anim {
+            Anim::V12 { name, .. } | Anim::V20 { name, .. } | Anim::V21 { name, .. } => {
+                let s = name.to_string_lossy();
+                let trimmed = s.trim();
+                if trimmed.is_empty() {
+                    None
+                } else {
+                    Some(trimmed.to_string())
+                }
+            }
+        };
         Ok(Self {
             major_version,
             minor_version,
+            name,
             final_frame_index: match &anim {
                 Anim::V12 {
                     final_frame_index,
@@ -491,6 +545,7 @@ mod tests {
         let anim = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 1.5,
             groups: Vec::new(),
         }
@@ -511,6 +566,59 @@ mod tests {
                 && unk2 == 1.5
                 && unk3 == 0.0
         ));
+        if let Anim::V12 { name, .. } = anim {
+            assert_eq!(name.to_string_lossy(), "");
+        }
+    }
+
+    #[test]
+    fn disk_anim_name_from_path_uses_file_name() {
+        let path = std::path::Path::new(
+            r"e:\XB\mod\003motion\001hito_015gndmuc_004deltpl_001_45kakb21a_stk_air_fr.nuanmb",
+        );
+        assert_eq!(
+            disk_anim_name_from_path(path).as_deref(),
+            Some("001hito_015gndmuc_004deltpl_001_45kakb21a_stk_air_fr.nuanmb")
+        );
+        assert_eq!(resolved_anim_name(None), "");
+        assert_eq!(resolved_anim_name(Some("  ")), "");
+        assert_eq!(resolved_anim_name(Some("  clip.nuanmb  ")), "clip.nuanmb");
+    }
+
+    #[test]
+    fn optional_name_writes_disk_file_name_into_v12_header() {
+        let disk_name = "主射CSA.nuanmb";
+        let anim = AnimData {
+            major_version: 1,
+            minor_version: 2,
+            name: Some(disk_name.to_string()),
+            final_frame_index: 10.0,
+            groups: Vec::new(),
+        }
+        .to_anim_uncompressed()
+        .unwrap();
+
+        match anim {
+            Anim::V12 { name, .. } => {
+                assert_eq!(name.to_string_lossy(), disk_name);
+            }
+            other => panic!("expected Anim::V12, got {other:?}"),
+        }
+
+        // Round-trip through public TryFrom preserves optional name.
+        let path = std::path::Path::new(r"d:\output\exvs2\Gundam Delta Kai\motion\主射CSA.nuanmb");
+        let data = AnimData {
+            major_version: 1,
+            minor_version: 2,
+            name: None,
+            final_frame_index: 5.0,
+            groups: Vec::new(),
+        }
+        .with_disk_file_name(path);
+        assert_eq!(data.name.as_deref(), Some("主射CSA.nuanmb"));
+        let encoded = data.to_anim().unwrap();
+        let decoded = AnimData::try_from(&encoded).unwrap();
+        assert_eq!(decoded.name.as_deref(), Some("主射CSA.nuanmb"));
     }
 
     #[test]
@@ -518,6 +626,7 @@ mod tests {
         let anim = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 1.5,
             groups: Vec::new(),
         }
@@ -544,6 +653,7 @@ mod tests {
         let anim = AnimData {
             major_version: 2,
             minor_version: 0,
+            name: None,
             final_frame_index: 1.5,
             groups: Vec::new(),
         }
@@ -564,6 +674,7 @@ mod tests {
         let anim = AnimData {
             major_version: 2,
             minor_version: 1,
+            name: None,
             final_frame_index: 2.5,
             groups: Vec::new(),
         }
@@ -581,6 +692,7 @@ mod tests {
         let result = AnimData {
             major_version: 2,
             minor_version: 1,
+            name: None,
             final_frame_index: -1.0,
             groups: Vec::new(),
         }
@@ -599,6 +711,7 @@ mod tests {
         let result = AnimData {
             major_version: 2,
             minor_version: 1,
+            name: None,
             final_frame_index: 2.0,
             groups: vec![GroupData {
                 group_type: GroupType::Visibility,
@@ -629,6 +742,7 @@ mod tests {
         let anim = AnimData {
             major_version: 2,
             minor_version: 1,
+            name: None,
             final_frame_index: 0.0,
             groups: Vec::new(),
         }
@@ -646,6 +760,7 @@ mod tests {
         let result = AnimData {
             major_version: 1,
             minor_version: 1,
+            name: None,
             final_frame_index: 0.0,
             groups: Vec::new(),
         }
@@ -667,6 +782,7 @@ mod tests {
         let original = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 2.0,
             groups: vec![GroupData {
                 group_type: GroupType::Visibility,
@@ -702,6 +818,7 @@ mod tests {
         let original = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 1.0,
             groups: vec![GroupData {
                 group_type: GroupType::Visibility,
@@ -746,6 +863,7 @@ mod tests {
         let original = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 3.0,
             groups: vec![GroupData {
                 group_type: GroupType::Transform,
@@ -814,6 +932,7 @@ mod tests {
         let original = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 3.0,
             groups: vec![GroupData {
                 group_type: GroupType::Transform,
@@ -854,6 +973,7 @@ mod tests {
         let data = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 39.0, // end frame (frame_count - 1)
             groups: Vec::new(),
         };
@@ -941,6 +1061,7 @@ mod tests {
         let original = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: 1.0,
             groups: vec![GroupData {
                 group_type: GroupType::Material,
@@ -1026,6 +1147,7 @@ mod tests {
         let original = AnimData {
             major_version: 1,
             minor_version: 2,
+            name: None,
             final_frame_index: end_frame,
             groups: vec![GroupData {
                 group_type: GroupType::Visibility,

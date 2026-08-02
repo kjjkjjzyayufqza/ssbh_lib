@@ -353,6 +353,7 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
     }?;
 
     Ok(exvs2_anim_v12(
+        &crate::anim_data::resolved_anim_name(data.name.as_deref()),
         final_frame_index,
         tracks.into(),
         buffers.into(),
@@ -367,12 +368,14 @@ pub(super) fn create_anim_v12(data: &AnimData) -> Result<Anim, error::Error> {
 /// - `unk2`: effective end frame (`frame_count - 1`, same as high-level AnimData)
 /// - `unk3`: start frame / reserved (commonly `0.0`)
 fn exvs2_anim_v12(
+    name: &str,
     end_frame: f32,
     tracks: ssbh_lib::SsbhArray<TrackV1>,
     buffers: ssbh_lib::SsbhArray<SsbhByteBuffer>,
 ) -> Anim {
     Anim::V12 {
-        name: "".into(),
+        // Optional header name (disk file name when provided by the caller).
+        name: name.into(),
         unk1: end_frame / 60.0,
         final_frame_index: 60.0,
         unk2: end_frame,
@@ -518,6 +521,7 @@ pub(super) fn create_anim_v12_uncompressed(data: &AnimData) -> Result<Anim, erro
     }?;
 
     Ok(exvs2_anim_v12(
+        &crate::anim_data::resolved_anim_name(data.name.as_deref()),
         final_frame_index,
         tracks.into(),
         buffers.into(),

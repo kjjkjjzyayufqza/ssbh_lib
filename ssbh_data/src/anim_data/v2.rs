@@ -18,11 +18,12 @@ pub fn create_anim_v20(data: &AnimData) -> Result<Anim, Error> {
     let max_frame_count = max_frame_count(&animations);
     let final_frame_index = final_frame_index(data, max_frame_count)?;
 
+    let name = crate::anim_data::resolved_anim_name(data.name.as_deref());
     Ok(Anim::V20 {
         final_frame_index,
         unk1: 1,
         unk2: 3,
-        name: "".into(), // TODO: this is usually based on file name?
+        name: name.as_str().into(),
         groups: animations.into(),
         buffer: buffer.into_inner().into(),
     })
@@ -35,11 +36,12 @@ pub fn create_anim_v21(data: &AnimData) -> Result<Anim, Error> {
     let max_frame_count = max_frame_count(&animations);
     let final_frame_index = final_frame_index(data, max_frame_count)?;
 
+    let name = crate::anim_data::resolved_anim_name(data.name.as_deref());
     Ok(Anim::V21 {
         final_frame_index,
         unk1: 1,
         unk2: 3,
-        name: "".into(), // TODO: this is usually based on file name?
+        name: name.as_str().into(),
         groups: animations.into(),
         buffer: buffer.into_inner().into(),
         // TODO: Research how to rebuild the extra header data.
