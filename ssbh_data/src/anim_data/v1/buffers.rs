@@ -75,7 +75,7 @@ pub enum V12BufferData {
 #[br(magic(0x3300u32))]
 pub struct Unk3300 {
     pub frame_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
 
     #[br(count = frame_count, align_after = 4)] // align to float boundary
     pub frame_indices: Vec<u8>,
@@ -92,7 +92,7 @@ pub struct Unk3300 {
 #[derive(Debug, BinRead)]
 pub struct Unk3308 {
     pub key_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
 
     #[br(count = key_count, align_after = 4)]
     pub frame_indices: Vec<u8>,
@@ -108,7 +108,7 @@ pub struct Unk3308 {
 #[derive(Debug, BinRead)]
 pub struct Unk4308 {
     pub key_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
 
     #[br(count = key_count, align_after = 4)]
     pub frame_indices: Vec<u8>,
@@ -124,7 +124,7 @@ pub struct Unk4308 {
 #[derive(Debug, BinRead)]
 pub struct Unk3408 {
     pub frame_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
     pub base_scale: f32,
     pub endpoints: [Vector3; 2],
 
@@ -136,7 +136,7 @@ pub struct Unk3408 {
 #[derive(Debug, BinRead)]
 pub struct Unk4408 {
     pub frame_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
     pub base_scale: f32,
     pub endpoints: [Vector4; 2],
 
@@ -154,7 +154,7 @@ pub struct Unk4408 {
 #[derive(Debug, BinRead)]
 pub struct Unk3309 {
     pub key_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
 
     #[br(count = key_count, align_after = 4)]
     pub frame_indices: Vec<u8>,
@@ -176,7 +176,7 @@ pub struct Unk3309 {
 #[derive(Debug, BinRead)]
 pub struct Unk4309 {
     pub key_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
 
     #[br(count = key_count, align_after = 4)]
     pub frame_indices: Vec<u8>,
@@ -198,7 +198,7 @@ pub struct Unk4309 {
 #[derive(Debug, BinRead)]
 pub struct Unk3409 {
     pub key_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
     pub base_scale: f32,
     pub block_count: u16,
 
@@ -216,7 +216,7 @@ pub struct Unk3409 {
 #[derive(Debug, BinRead)]
 pub struct Unk4409 {
     pub key_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
     pub base_scale: f32,
     pub block_count: u16,
 
@@ -234,7 +234,7 @@ pub struct Unk4409 {
 #[derive(Debug, BinRead)]
 pub struct Unk4300 {
     pub frame_count: u32,
-    pub unk1: f32,
+    pub frames_per_key: f32,
 
     #[br(count = frame_count, align_after = 4)]
     pub frame_indices: Vec<u8>,

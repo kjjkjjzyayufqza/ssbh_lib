@@ -153,7 +153,7 @@ fn blocked_header(magic: u32, key_count: usize, base_scale: f32, block_words: &[
     let mut data = Vec::new();
     data.extend_from_slice(&magic.to_le_bytes());
     data.extend_from_slice(&(key_count as u32).to_le_bytes());
-    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
+    data.extend_from_slice(&1.0f32.to_le_bytes()); // frames_per_key
     data.extend_from_slice(&base_scale.to_le_bytes());
     data.extend_from_slice(&(block_count as u16).to_le_bytes());
     for word in block_words {

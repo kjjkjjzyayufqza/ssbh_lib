@@ -332,10 +332,10 @@ pub(super) fn block_index_for_key(key_idx: usize, block_count: usize) -> usize {
 /// The layout is fully deterministic — no offset inference is required:
 ///
 /// ```text
-/// magic        u32
-/// key_count    u32
-/// unk1         f32
-/// [0x_309]     frame_indices u8[key_count], align 4
+/// magic          u32
+/// key_count      u32
+/// frames_per_key f32
+/// [0x_309]       frame_indices u8[key_count], align 4
 /// base_scale   f32
 /// block_count  u16
 /// block_words  u16[block_count - 1]  // u32-word offset of block b's residual
@@ -376,6 +376,15 @@ pub(super) fn read_blocked_header(
         return Err(error::Error::InvalidData);
     }
 
+    // `nu::DecompressCurve::Decompress` locates a key as `time / frames_per_key`
+    // for dense curves, and reads a stored index back as `index * frames_per_key`
+    // for the keyed ones. It lets a slow curve sample on a coarser grid without
+    // widening the u8 index. Every VS2/EXVS2 buffer observed so far stores 1.0.
+    let frames_per_key = read_f32_le(bytes, 8)?;
+    if !(frames_per_key.is_finite() && frames_per_key > 0.0) {
+        return Err(error::Error::InvalidData);
+    }
+
     let mut frame_indices = Vec::new();
     let mut pos = 12;
     if keyed {
@@ -384,9 +393,14 @@ pub(super) fn read_blocked_header(
         }
         frame_indices = bytes[pos..pos + key_count]
             .iter()
-            .map(|index| *index as usize)
+            .map(|index| (*index as f32 * frames_per_key).round() as usize)
             .collect();
         pos = align_up(pos + key_count, 4);
+    } else if (frames_per_key - 1.0).abs() > 1e-6 {
+        // A dense curve stores one key per `frames_per_key` frames. Decoding it
+        // as one key per frame would silently retime the clip, and nothing in
+        // the corpus exercises the resampling, so refuse rather than guess.
+        return Err(error::Error::InvalidData);
     }
 
     if pos + 6 > bytes.len() {

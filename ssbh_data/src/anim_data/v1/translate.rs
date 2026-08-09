@@ -18,14 +18,14 @@ pub fn decode_translate_3200(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
         return Err(error::Error::InvalidData);
     }
     let key_count = read_u32_le(bytes, 4)? as usize;
-    let unk1 = read_f32_le(bytes, 8)?;
+    let frames_per_key = read_f32_le(bytes, 8)?;
     if key_count == 0 {
         return Ok(vec![Vec3::ZERO]);
     }
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((read_u16_le(bytes, pos)? as f32 * unk1).round() as usize);
+        frame_indices.push((read_u16_le(bytes, pos)? as f32 * frames_per_key).round() as usize);
         pos += 2;
     }
     pos = align_up(pos, 4);
@@ -46,7 +46,7 @@ pub fn decode_translate_3208(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
         return Err(error::Error::InvalidData);
     }
     let key_count = read_u32_le(bytes, 4)? as usize;
-    let unk1 = read_f32_le(bytes, 8)?;
+    let frames_per_key = read_f32_le(bytes, 8)?;
     if key_count == 0 {
         return Ok(vec![Vec3::ZERO]);
     }
@@ -56,7 +56,7 @@ pub fn decode_translate_3208(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((read_u16_le(bytes, pos)? as f32 * unk1).round() as usize);
+        frame_indices.push((read_u16_le(bytes, pos)? as f32 * frames_per_key).round() as usize);
         pos += 2;
     }
     pos = align_up(pos, 4);
@@ -97,7 +97,7 @@ pub fn decode_translate_3300(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
     let frame_indices: Vec<_> = header
         .frame_indices
         .into_iter()
-        .map(|i| (i as f32 * header.unk1).round() as usize)
+        .map(|i| (i as f32 * header.frames_per_key).round() as usize)
         .collect();
 
     let frames = expand_sparse_vec3(
@@ -116,7 +116,7 @@ pub fn decode_translate_3308(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
         return Err(error::Error::InvalidData);
     }
     let key_count = read_u32_le(bytes, 4)? as usize;
-    let unk1 = read_f32_le(bytes, 8)?;
+    let frames_per_key = read_f32_le(bytes, 8)?;
     if key_count == 0 {
         return Ok(vec![Vec3::ZERO]);
     }
@@ -127,8 +127,8 @@ pub fn decode_translate_3308(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
     let mut pos = 12;
     for _ in 0..key_count {
         frame_indices.push(
-            (bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round()
-                as usize,
+            (bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * frames_per_key)
+                .round() as usize,
         );
         pos += 1;
     }
@@ -171,14 +171,14 @@ pub fn decode_translate_3209(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
         return Err(error::Error::InvalidData);
     }
     let key_count = read_u32_le(bytes, 4)? as usize;
-    let unk1 = read_f32_le(bytes, 8)?;
+    let frames_per_key = read_f32_le(bytes, 8)?;
     if key_count == 0 {
         return Ok(vec![Vec3::ZERO]);
     }
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((read_u16_le(bytes, pos)? as f32 * unk1).round() as usize);
+        frame_indices.push((read_u16_le(bytes, pos)? as f32 * frames_per_key).round() as usize);
         pos += 2;
     }
     pos = align_up(pos, 4);
@@ -300,7 +300,7 @@ pub fn decode_translate_3400(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
 /// Decode a `0x3408` vector curve: one Vector3 per frame over a single
 /// residual block.
 ///
-/// Layout: `magic | frame_count | unk1 | base_scale | endpoint0 | endpoint1 | residual`.
+/// Layout: `magic | frame_count | frames_per_key | base_scale | endpoint0 | endpoint1 | residual`.
 /// The 0x_408 family is always single-block, so the frame count never exceeds 34.
 pub fn decode_translate_3408(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
     let (base_scale, endpoints, residual_off, key_count) = read_single_block_header(bytes, 0x3408)?;

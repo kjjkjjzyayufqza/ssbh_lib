@@ -20,8 +20,8 @@ pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
         return Ok(vec![Quat::IDENTITY]);
     }
 
-    // Variant A: 16-byte header (unk1 + unk2) + frame_count * vec4<f32>.
-    // Variant B: 12-byte header (unk1 only) + frame_count * vec4<f32>.
+    // Variant A: 16-byte header (frames_per_key + one more f32) + frame_count * vec4<f32>.
+    // Variant B: 12-byte header (frames_per_key only) + frame_count * vec4<f32>.
     // Variant C (observed in game data): 12-byte header + u8 frame_indices[frame_count] + align4 + frame_count * vec4<f32>.
     //
     // The same magic (0x4300) is used for these variants, so we must infer the layout from length.
@@ -29,9 +29,10 @@ pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     // Prefer the indexed-key variant if it matches exactly.
     let indexed_payload_off = align_up(12 + frame_count, 4);
     if indexed_payload_off <= bytes.len() && indexed_payload_off + frame_count * 16 == bytes.len() {
+        let frames_per_key = read_f32_le(bytes, 8)?;
         let frame_indices: Vec<usize> = bytes[12..12 + frame_count]
             .iter()
-            .map(|v| *v as usize)
+            .map(|index| (*index as f32 * frames_per_key).round() as usize)
             .collect();
         let mut key_vals = Vec::with_capacity(frame_count);
         let mut pos = indexed_payload_off;
@@ -160,7 +161,7 @@ pub fn decode_rotate_4208(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
         return Err(Error::InvalidData);
     }
     let key_count = read_u32_le(bytes, 4)? as usize;
-    let unk1 = read_f32_le(bytes, 8)?;
+    let frames_per_key = read_f32_le(bytes, 8)?;
     if key_count == 0 {
         return Ok(vec![Quat::IDENTITY]);
     }
@@ -169,7 +170,7 @@ pub fn decode_rotate_4208(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((read_u16_le(bytes, pos)? as f32 * unk1).round() as usize);
+        frame_indices.push((read_u16_le(bytes, pos)? as f32 * frames_per_key).round() as usize);
         pos += 2;
     }
     pos = align_up(pos, 4);
@@ -235,14 +236,14 @@ pub fn decode_rotate_4209(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
         return Err(Error::InvalidData);
     }
     let key_count = read_u32_le(bytes, 4)? as usize;
-    let unk1 = read_f32_le(bytes, 8)?;
+    let frames_per_key = read_f32_le(bytes, 8)?;
     if key_count == 0 {
         return Ok(vec![Quat::IDENTITY]);
     }
     let mut frame_indices = Vec::with_capacity(key_count);
     let mut pos = 12;
     for _ in 0..key_count {
-        frame_indices.push((read_u16_le(bytes, pos)? as f32 * unk1).round() as usize);
+        frame_indices.push((read_u16_le(bytes, pos)? as f32 * frames_per_key).round() as usize);
         pos += 2;
     }
     pos = align_up(pos, 4);
@@ -327,7 +328,8 @@ pub fn decode_rotate_4308(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
         return Err(Error::InvalidData);
     }
     let key_count = read_u32_le(bytes, 4)? as usize;
-    let _unk1 = read_f32_le(bytes, 8)?;
+    // Frames per stored key; see `common::read_blocked_header`.
+    let frames_per_key = read_f32_le(bytes, 8)?;
     if key_count == 0 {
         return Ok(vec![Quat::IDENTITY]);
     }
@@ -337,7 +339,7 @@ pub fn decode_rotate_4308(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     }
     let frame_indices: Vec<usize> = bytes[pos..pos + key_count]
         .iter()
-        .map(|v| *v as usize)
+        .map(|index| (*index as f32 * frames_per_key).round() as usize)
         .collect();
     pos = align_up(pos + key_count, 4);
     if pos + 36 > bytes.len() {
@@ -382,7 +384,7 @@ pub fn decode_rotate_4308(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
 /// Decode a `0x4408` rotation curve: one quaternion per frame over a single
 /// residual block.
 ///
-/// Layout: `magic | frame_count | unk1 | base_scale | endpoint0 | endpoint1 | residual`,
+/// Layout: `magic | frame_count | frames_per_key | base_scale | endpoint0 | endpoint1 | residual`,
 /// matching `0x3408` with 4-component endpoints. `base_scale` is the f32 at
 /// offset 12, exactly as in the multi-block `0x4409` sibling.
 pub fn decode_rotate_4408(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
