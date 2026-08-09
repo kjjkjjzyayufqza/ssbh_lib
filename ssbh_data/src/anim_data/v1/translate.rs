@@ -4,10 +4,9 @@ use binrw::BinReaderExt;
 use glam::{Vec3, vec3};
 
 use super::common::{
-    G_CURVE_SHORT4_SCALE, align_up, block_index_for_key, compute_block_count,
-    compute_block_count_type9,
-    compute_block_len, compute_block_len_type9, compute_block_qcounts, decode_residual_vector,
-    expand_sparse_vec3, read_f32_le, read_u16_le, read_u32_le, read_vec3_f32_le,
+    BlockedHeader, align_up, block_index_for_key, compute_block_count_type9,
+    compute_block_len_type9, decode_residual_vector, expand_sparse_vec3, read_blocked_header,
+    read_f32_le, read_u16_le, read_u32_le, read_vec3_f32_le,
 };
 use crate::anim_data::{error, v1::buffers::Unk3300};
 
@@ -244,87 +243,42 @@ pub fn decode_translate_3209(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
     Ok(frames)
 }
 
+/// Decode a `0x3309` vector curve: keyframed Vector3 values with a blocked
+/// residual stream. The keyframed counterpart of `0x3409`.
 pub fn decode_translate_3309(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
-    if bytes.len() < 16 {
-        return Err(error::Error::InvalidData);
-    }
-    if read_u32_le(bytes, 0)? != 0x3309 {
-        return Err(error::Error::InvalidData);
-    }
-    let key_count = read_u32_le(bytes, 4)? as usize;
-    let unk1 = read_f32_le(bytes, 8)?;
-    if key_count == 0 {
-        return Ok(vec![Vec3::ZERO]);
-    }
-    let mut frame_indices = Vec::with_capacity(key_count);
-    let mut pos = 12;
-    for _ in 0..key_count {
-        frame_indices.push(
-            (bytes.get(pos).copied().ok_or(error::Error::InvalidData)? as f32 * unk1).round()
-                as usize,
-        );
-        pos += 1;
-    }
-    pos = align_up(pos, 4);
-    if pos + 8 > bytes.len() {
-        return Err(error::Error::InvalidData);
-    }
-    let base_scale = read_f32_le(bytes, pos)?;
-    let block_count = read_u16_le(bytes, pos + 4)? as usize;
-    let expected_blocks = compute_block_count_type9(key_count);
-    if block_count != expected_blocks || block_count == 0 {
-        return Err(error::Error::InvalidData);
-    }
-    let mut block_words = Vec::with_capacity(block_count.saturating_sub(1));
-    let mut bw_off = pos + 6;
-    for _ in 0..block_count.saturating_sub(1) {
-        block_words.push(read_u16_le(bytes, bw_off)? as usize);
-        bw_off += 2;
-    }
-    let endpoint_base = align_up(pos + 2 * block_count + 4, 4);
-    let endpoint_count = block_count + 1;
-    let endpoints_size = endpoint_count * 12;
-    if endpoint_base + endpoints_size > bytes.len() {
-        return Err(error::Error::InvalidData);
-    }
-    let mut endpoints = Vec::with_capacity(endpoint_count);
-    for i in 0..endpoint_count {
-        endpoints.push(read_vec3_f32_le(bytes, endpoint_base + i * 12)?);
-    }
-    let residual_off = endpoint_base + endpoints_size;
-    if residual_off > bytes.len() || !residual_off.is_multiple_of(4) {
-        return Err(error::Error::InvalidData);
-    }
-    let mut residual_starts = Vec::with_capacity(block_count);
-    residual_starts.push(residual_off);
-    for w in &block_words {
-        residual_starts.push(residual_off + 4 * *w);
-    }
+    let header = read_blocked_header(bytes, 0x3309, true, 3)?;
+    let key_values = decode_blocked_vec3_keys(bytes, &header)?;
+    let total_frames = header.frame_indices.iter().copied().max().unwrap_or(0) + 1;
+    Ok(expand_sparse_vec3(
+        &header.frame_indices,
+        &key_values,
+        total_frames,
+    ))
+}
 
-    let mut key_values = Vec::with_capacity(key_count);
-    for key_idx in 0..key_count {
-        let block_idx = block_index_for_key(key_idx, block_count);
-        let local = key_idx - 33 * block_idx;
-        let mut block_len = compute_block_len_type9(key_count, block_idx);
-        if block_len == 0 {
-            block_len = 1;
-        }
-        let t_block = local as f32 / block_len as f32;
+/// Sample every key of a blocked Vector3 curve (`0x3309` / `0x3409`).
+fn decode_blocked_vec3_keys(
+    bytes: &[u8],
+    header: &BlockedHeader,
+) -> Result<Vec<Vec3>, error::Error> {
+    let endpoints: Vec<Vec3> = (0..=header.block_count)
+        .map(|i| read_vec3_f32_le(bytes, header.endpoints_offset + i * 12).map(Vec3::from))
+        .collect::<Result<_, _>>()?;
+
+    let mut key_values = Vec::with_capacity(header.key_count);
+    for key_idx in 0..header.key_count {
+        let (block_idx, local, block_len) = header.key_span(key_idx);
+        let t = local as f32 / block_len as f32;
         let e0 = endpoints[block_idx];
         let e1 = endpoints[block_idx + 1];
-        let kx = e0.x + (e1.x - e0.x) * t_block;
-        let ky = e0.y + (e1.y - e0.y) * t_block;
-        let kz = e0.z + (e1.z - e0.z) * t_block;
-        let rs = residual_starts[block_idx];
-        let (r_vec, _) = decode_residual_vector(bytes, rs, base_scale, local, 3, block_len)?;
-        key_values.push(vec3(kx + r_vec[0], ky + r_vec[1], kz + r_vec[2]));
+        let residual = header.key_residual(bytes, 3, block_idx, local, block_len)?;
+        key_values.push(vec3(
+            e0.x + (e1.x - e0.x) * t + residual[0],
+            e0.y + (e1.y - e0.y) * t + residual[1],
+            e0.z + (e1.z - e0.z) * t + residual[2],
+        ));
     }
-    let frames = expand_sparse_vec3(
-        &frame_indices,
-        &key_values,
-        frame_indices.iter().copied().max().unwrap_or(0) + 1,
-    );
-    Ok(frames)
+    Ok(key_values)
 }
 
 pub fn decode_translate_3400(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
@@ -343,426 +297,62 @@ pub fn decode_translate_3400(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
     Ok(frames)
 }
 
+/// Decode a `0x3408` vector curve: one Vector3 per frame over a single
+/// residual block.
+///
+/// Layout: `magic | frame_count | unk1 | base_scale | endpoint0 | endpoint1 | residual`.
+/// The 0x_408 family is always single-block, so the frame count never exceeds 34.
 pub fn decode_translate_3408(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
-    if bytes.len() < 12 {
-        return Err(error::Error::InvalidData);
-    }
-    if read_u32_le(bytes, 0)? != 0x3408 {
-        return Err(error::Error::InvalidData);
-    }
-    let key_count = read_u32_le(bytes, 4)? as usize;
-    let _unk1 = read_f32_le(bytes, 8)?;
-    if key_count == 0 {
-        return Ok(vec![Vec3::ZERO]);
-    }
-    let blocks = compute_block_count(key_count);
-    let endpoint_count = blocks + 1;
-    let endpoints_size = endpoint_count * 12;
-    let scan_start = 12;
-    let scan_end = (scan_start + endpoints_size + 0x40).min(bytes.len());
+    let (base_scale, endpoints, residual_off, key_count) = read_single_block_header(bytes, 0x3408)?;
+    let e0 = read_vec3_f32_le(bytes, endpoints)?;
+    let e1 = read_vec3_f32_le(bytes, endpoints + 12)?;
 
-    let mut best: Option<(Vec<Vec3>, f32, usize, usize, Vec<usize>)> = None;
-    let mut best_key: Option<(usize, isize, usize)> = None;
-
-    for endpoint_base in (scan_start..=scan_end).step_by(4) {
-        if endpoint_base + endpoints_size > bytes.len() {
-            continue;
-        }
-        let mut endpoints = Vec::with_capacity(endpoint_count);
-        for i in 0..endpoint_count {
-            endpoints.push(read_vec3_f32_le(bytes, endpoint_base + i * 12)?.into());
-        }
-        let end_ep = endpoint_base + endpoints_size;
-        for base_scale_off in
-            (end_ep..=(end_ep + 0x10).min(bytes.len().saturating_sub(4))).step_by(4)
-        {
-            let base_scale = read_f32_le(bytes, base_scale_off)?;
-            for residual_off in
-                (base_scale_off + 4..=(base_scale_off + 0x80).min(bytes.len())).step_by(4)
-            {
-                if residual_off >= bytes.len() {
-                    continue;
-                }
-                for comp_bits in [3usize, 2, 1, 4] {
-                    let q_counts = match compute_block_qcounts(
-                        bytes,
-                        residual_off,
-                        base_scale,
-                        comp_bits,
-                        key_count,
-                    ) {
-                        Ok(q) => q,
-                        Err(_) => continue,
-                    };
-                    let end_off = residual_off + 4 * q_counts.iter().sum::<usize>();
-                    if end_off > bytes.len() {
-                        continue;
-                    }
-                    let slack = bytes.len() - end_off;
-                    let cand_key = (slack, -(comp_bits as isize), residual_off);
-                    if best.is_none() || cand_key < best_key.unwrap() {
-                        best = Some((
-                            endpoints.clone(),
-                            base_scale,
-                            comp_bits,
-                            residual_off,
-                            q_counts,
-                        ));
-                        best_key = Some(cand_key);
-                    }
-                    break;
-                }
-            }
-        }
-    }
-
-    let (endpoints, base_scale, comp_bits, residual_off, q_counts) =
-        best.ok_or(error::Error::InvalidData)?;
-    let mut prefix_words = Vec::with_capacity(q_counts.len() + 1);
-    prefix_words.push(0usize);
-    for q in &q_counts {
-        prefix_words.push(prefix_words.last().copied().unwrap_or(0) + *q);
-    }
-
-    let blocks = q_counts.len().max(compute_block_count(key_count));
-    let mut out = Vec::with_capacity(key_count);
-    for key_idx in 0..key_count {
-        let block_idx = block_index_for_key(key_idx, blocks);
-        let local = key_idx - 33 * block_idx;
-        let mut block_len = compute_block_len(key_count, block_idx);
-        if block_len == 0 {
-            block_len = 1;
-        }
-        let t_block = local as f32 / block_len as f32;
-        let e0 = endpoints[block_idx];
-        let e1 = endpoints[block_idx + 1];
-        let kx = e0.x + (e1.x - e0.x) * t_block;
-        let ky = e0.y + (e1.y - e0.y) * t_block;
-        let kz = e0.z + (e1.z - e0.z) * t_block;
-        let rs = residual_off + 4 * prefix_words[block_idx];
-        let (r_vec, _) =
-            decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
-        out.push(Vec3 {
-            x: kx + r_vec.first().copied().unwrap_or(0.0),
-            y: ky + r_vec.get(1).copied().unwrap_or(0.0),
-            z: kz + r_vec.get(2).copied().unwrap_or(0.0),
-        });
-    }
-    Ok(out)
-}
-
-pub fn decode_vector3_3409(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
-    if bytes.len() < 20 {
-        return Err(error::Error::InvalidData);
-    }
-    if read_u32_le(bytes, 0)? != 0x3409 {
-        return Err(error::Error::InvalidData);
-    }
-    let key_count = read_u32_le(bytes, 4)? as usize;
-    let _unk1 = read_f32_le(bytes, 8)?;
-    let base_scale = read_f32_le(bytes, 12)?;
-    let flags = read_u16_le(bytes, 16)?;
-    let _bits = read_u16_le(bytes, 18)?;
-
-    if key_count == 0 {
-        return Ok(vec![Vec3::ZERO]);
-    }
-
-    let blocks = compute_block_count(key_count);
-    let endpoint_count = blocks + 1;
-
-    // flags/type == 4: multi-block endpoint table + one residual stream (whole clip).
-    if flags == 4 {
-        let (endpoints, residual_off, comp_bits) =
-            infer_3409_single_residual(bytes, 0x18, endpoint_count, base_scale, key_count)
-                .or_else(|_| {
-                    infer_3409_single_residual(bytes, 0x14, endpoint_count, base_scale, key_count)
-                })?;
-        let global_block_len = key_count.saturating_sub(1).max(1);
-        let mut out = Vec::with_capacity(key_count);
-        for key_idx in 0..key_count {
-            let block_idx = block_index_for_key(key_idx, blocks);
-            let local = key_idx - 33 * block_idx;
-            let mut block_len = compute_block_len(key_count, block_idx);
-            if block_len == 0 {
-                block_len = 1;
-            }
-            let t_block = local as f32 / block_len as f32;
-            let e0 = endpoints[block_idx.min(endpoints.len().saturating_sub(2))];
-            let e1 = endpoints[(block_idx + 1).min(endpoints.len() - 1)];
-            let kx = e0.x + (e1.x - e0.x) * t_block;
-            let ky = e0.y + (e1.y - e0.y) * t_block;
-            let kz = e0.z + (e1.z - e0.z) * t_block;
-            let (r_vec, _) = decode_residual_vector(
-                bytes,
-                residual_off,
-                base_scale,
-                key_idx,
-                comp_bits,
-                global_block_len,
-            )?;
-            out.push(Vec3 {
-                x: kx + r_vec.first().copied().unwrap_or(0.0),
-                y: ky + r_vec.get(1).copied().unwrap_or(0.0),
-                z: kz + r_vec.get(2).copied().unwrap_or(0.0),
-            });
-        }
-        return Ok(out);
-    }
-
-    // flags/type == 3 inserts an extra u32 after the 0x14 header, so endpoints
-    // start at 0x18. Preferring 0x14 via slack ranking misaligns the whole curve.
-    let scan_starts: &[usize] = if flags == 3 || (flags & 1) != 0 {
-        &[0x18]
-    } else {
-        &[0x14, 0x18]
-    };
-
-    let mut best: Option<(Vec<Vec3>, usize, usize, Vec<usize>)> = None;
-    let mut best_key: Option<(usize, i32, usize)> = None;
-
-    for &scan_start in scan_starts {
-        if scan_start > bytes.len() {
-            continue;
-        }
-        let (endpoints, comp_bits, residual_off, q_counts) =
-            match infer_3409_layout(bytes, scan_start, endpoint_count, base_scale, key_count) {
-                Ok(v) => v,
-                Err(_) => continue,
-            };
-
-        let end_off = residual_off + 4 * q_counts.iter().sum::<usize>();
-        if end_off > bytes.len() {
-            continue;
-        }
-        let slack = bytes.len() - end_off;
-        let cand_key = (slack, -(comp_bits as i32), residual_off);
-        if best_key.is_none() || cand_key < best_key.unwrap() {
-            best = Some((endpoints, comp_bits, residual_off, q_counts));
-            best_key = Some(cand_key);
-        }
-    }
-
-    // Fallback single residual stream if multi-block residual walk fails.
-    if best.is_none() {
-        if let Ok((endpoints, residual_off, comp_bits)) =
-            infer_3409_single_residual(bytes, 0x18, endpoint_count, base_scale, key_count)
-                .or_else(|_| {
-                    infer_3409_single_residual(bytes, 0x14, endpoint_count, base_scale, key_count)
-                })
-        {
-            let global_block_len = key_count.saturating_sub(1).max(1);
-            let mut out = Vec::with_capacity(key_count);
-            for key_idx in 0..key_count {
-                let block_idx = block_index_for_key(key_idx, blocks);
-                let local = key_idx - 33 * block_idx;
-                let mut block_len = compute_block_len(key_count, block_idx);
-                if block_len == 0 {
-                    block_len = 1;
-                }
-                let t_block = local as f32 / block_len as f32;
-                let e0 = endpoints[block_idx.min(endpoints.len().saturating_sub(2))];
-                let e1 = endpoints[(block_idx + 1).min(endpoints.len() - 1)];
-                let (r_vec, _) = decode_residual_vector(
-                    bytes,
-                    residual_off,
-                    base_scale,
-                    key_idx,
-                    comp_bits,
-                    global_block_len,
-                )?;
-                out.push(Vec3 {
-                    x: e0.x + (e1.x - e0.x) * t_block + r_vec.first().copied().unwrap_or(0.0),
-                    y: e0.y + (e1.y - e0.y) * t_block + r_vec.get(1).copied().unwrap_or(0.0),
-                    z: e0.z + (e1.z - e0.z) * t_block + r_vec.get(2).copied().unwrap_or(0.0),
-                });
-            }
-            return Ok(out);
-        }
-    }
-
-    let (endpoints, comp_bits, residual_off, q_counts) = best.ok_or(error::Error::InvalidData)?;
-
-    let mut prefix_words = vec![0usize];
-    for q in &q_counts {
-        prefix_words.push(prefix_words.last().copied().unwrap_or(0) + *q);
-    }
-
-    let mut out = Vec::with_capacity(key_count);
-    for key_idx in 0..key_count {
-        let block_idx = block_index_for_key(key_idx, blocks);
-        let local = key_idx - 33 * block_idx;
-        let mut block_len = compute_block_len(key_count, block_idx);
-        if block_len == 0 {
-            block_len = 1;
-        }
-        let t_block = local as f32 / block_len as f32;
-        let e0 = endpoints[block_idx];
-        let e1 = endpoints[block_idx + 1];
-        let kx = e0.x + (e1.x - e0.x) * t_block;
-        let ky = e0.y + (e1.y - e0.y) * t_block;
-        let kz = e0.z + (e1.z - e0.z) * t_block;
-        let rs = residual_off + 4 * prefix_words[block_idx];
-        let (r_vec, _) =
-            decode_residual_vector(bytes, rs, base_scale, local, comp_bits, block_len)?;
-        out.push(Vec3 {
-            x: kx + r_vec.first().copied().unwrap_or(0.0),
-            y: ky + r_vec.get(1).copied().unwrap_or(0.0),
-            z: kz + r_vec.get(2).copied().unwrap_or(0.0),
-        });
-    }
-    Ok(out)
-}
-
-/// Multi-block endpoints + one residual stream spanning all keys (flags/type=4).
-fn infer_3409_single_residual(
-    bytes: &[u8],
-    scan_start: usize,
-    endpoint_count: usize,
-    base_scale: f32,
-    key_count: usize,
-) -> Result<(Vec<Vec3>, usize, usize), error::Error> {
-    let mut best: Option<(Vec<Vec3>, usize, usize)> = None;
-    let mut best_key: Option<(usize, i32, usize)> = None;
     let block_len = key_count.saturating_sub(1).max(1);
-
-    for elem_size in [12usize, 8, 16] {
-        let endpoint_base = scan_start;
-        let endpoints_end = endpoint_base + endpoint_count * elem_size;
-        if endpoints_end > bytes.len() {
-            continue;
-        }
-        let endpoints =
-            match try_parse_endpoints_3409(bytes, endpoint_base, endpoint_count, elem_size) {
-                Ok(e) => e,
-                Err(_) => continue,
-            };
-        for pad in (0..=0x40).step_by(4) {
-            let residual_off = endpoints_end + pad;
-            if residual_off >= bytes.len() || residual_off % 4 != 0 {
-                continue;
-            }
-            for comp_bits in [3usize, 2, 1, 4] {
-                match decode_residual_vector(
-                    bytes,
-                    residual_off,
-                    base_scale,
-                    1,
-                    comp_bits,
-                    block_len,
-                ) {
-                    Ok((_, end_off)) if end_off <= bytes.len() => {
-                        let slack = bytes.len() - end_off;
-                        let cand = (slack, -(comp_bits as i32), residual_off);
-                        if best_key.is_none() || cand < best_key.unwrap() {
-                            best = Some((endpoints.clone(), residual_off, comp_bits));
-                            best_key = Some(cand);
-                        }
-                    }
-                    _ => continue,
-                }
-            }
-        }
+    let mut out = Vec::with_capacity(key_count);
+    for local in 0..key_count {
+        let t = local as f32 / block_len as f32;
+        let (residual, _) =
+            decode_residual_vector(bytes, residual_off, base_scale, local, 3, block_len)?;
+        out.push(vec3(
+            e0.x + (e1.x - e0.x) * t + residual[0],
+            e0.y + (e1.y - e0.y) * t + residual[1],
+            e0.z + (e1.z - e0.z) * t + residual[2],
+        ));
     }
-    best.ok_or(error::Error::InvalidData)
-}
-
-fn infer_3409_layout(
-    bytes: &[u8],
-    scan_start: usize,
-    endpoint_count: usize,
-    base_scale: f32,
-    key_count: usize,
-) -> Result<(Vec<Vec3>, usize, usize, Vec<usize>), error::Error> {
-    let mut best: Option<(Vec<Vec3>, usize, usize, Vec<usize>)> = None;
-    let mut best_key: Option<(usize, i32, usize)> = None;
-
-    for elem_size in [12, 8] {
-        let endpoint_base = scan_start;
-        let endpoints_end = endpoint_base + endpoint_count * elem_size;
-        if endpoints_end > bytes.len() {
-            continue;
-        }
-
-        let endpoints =
-            match try_parse_endpoints_3409(bytes, endpoint_base, endpoint_count, elem_size) {
-                Ok(e) => e,
-                Err(_) => continue,
-            };
-
-        for pad in (0..=32).step_by(4) {
-            let residual_off = endpoints_end + pad;
-            if residual_off >= bytes.len() {
-                continue;
-            }
-
-            for comp_bits in [3, 2, 1, 4] {
-                let q_counts = match compute_block_qcounts(
-                    bytes,
-                    residual_off,
-                    base_scale,
-                    comp_bits,
-                    key_count,
-                ) {
-                    Ok(q) => q,
-                    Err(_) => continue,
-                };
-                let end_off = residual_off + 4 * q_counts.iter().sum::<usize>();
-                if end_off > bytes.len() {
-                    continue;
-                }
-                let slack = bytes.len() - end_off;
-                let cand_key = (slack, -(comp_bits as i32), residual_off);
-                if best.is_none() || cand_key < best_key.unwrap() {
-                    best = Some((endpoints.clone(), comp_bits, residual_off, q_counts));
-                    best_key = Some(cand_key);
-                }
-                break;
-            }
-        }
-    }
-
-    best.ok_or(error::Error::InvalidData)
-}
-
-fn try_parse_endpoints_3409(
-    bytes: &[u8],
-    endpoint_base: usize,
-    endpoint_count: usize,
-    elem_size: usize,
-) -> Result<Vec<Vec3>, error::Error> {
-    let end = endpoint_base + endpoint_count * elem_size;
-    if end > bytes.len() {
-        return Err(error::Error::InvalidData);
-    }
-
-    let mut out = Vec::with_capacity(endpoint_count);
-    let mut max_abs = 0.0f32;
-
-    if elem_size == 12 {
-        for i in 0..endpoint_count {
-            let v: Vec3 = read_vec3_f32_le(bytes, endpoint_base + i * 12)?.into();
-            max_abs = max_abs.max(v.x.abs()).max(v.y.abs()).max(v.z.abs());
-            out.push(v);
-        }
-    } else if elem_size == 8 {
-        for i in 0..endpoint_count {
-            let o = endpoint_base + i * 8;
-            let x = i16::from_le_bytes([bytes[o], bytes[o + 1]]) as f32 * G_CURVE_SHORT4_SCALE;
-            let y = i16::from_le_bytes([bytes[o + 2], bytes[o + 3]]) as f32 * G_CURVE_SHORT4_SCALE;
-            let z = i16::from_le_bytes([bytes[o + 4], bytes[o + 5]]) as f32 * G_CURVE_SHORT4_SCALE;
-            max_abs = max_abs.max(x.abs()).max(y.abs()).max(z.abs());
-            out.push(Vec3 { x, y, z });
-        }
-    } else {
-        return Err(error::Error::InvalidData);
-    }
-
-    if !max_abs.is_finite() || max_abs > 1.0e6 {
-        return Err(error::Error::InvalidData);
-    }
-
     Ok(out)
+}
+
+/// Read the header of a single-block residual curve (`0x3408` / `0x4408`).
+///
+/// Returns `(base_scale, endpoints_offset, residual_offset, key_count)`.
+pub(super) fn read_single_block_header(
+    bytes: &[u8],
+    magic: u32,
+) -> Result<(f32, usize, usize, usize), error::Error> {
+    let components = if (magic & 0xF000) == 0x4000 { 4 } else { 3 };
+    if bytes.len() < 16 || read_u32_le(bytes, 0)? != magic {
+        return Err(error::Error::InvalidData);
+    }
+    let key_count = read_u32_le(bytes, 4)? as usize;
+    // A single residual block spans at most 33 interpolation steps, so this
+    // family never stores more than 34 keys.
+    if key_count == 0 || key_count > 34 {
+        return Err(error::Error::InvalidData);
+    }
+    let base_scale = read_f32_le(bytes, 12)?;
+    let endpoints_offset = 16;
+    let residual_offset = endpoints_offset + 2 * 4 * components;
+    if residual_offset > bytes.len() {
+        return Err(error::Error::InvalidData);
+    }
+    Ok((base_scale, endpoints_offset, residual_offset, key_count))
+}
+
+/// Decode a `0x3409` vector curve: one Vector3 per frame, stored as a per-block
+/// endpoint interpolation plus a compressed residual.
+pub fn decode_vector3_3409(bytes: &[u8]) -> Result<Vec<Vec3>, error::Error> {
+    let header = read_blocked_header(bytes, 0x3409, false, 3)?;
+    decode_blocked_vec3_keys(bytes, &header)
 }
 
 #[cfg(test)]
@@ -779,36 +369,61 @@ mod tests {
         assert!((frames[0].y - 1.35).abs() < 0.1 || frames.iter().any(|v| v.y.is_finite()));
     }
 
+    fn read_vec3(bytes: &[u8], offset: usize) -> Vec3 {
+        Vec3 {
+            x: f32::from_le_bytes(bytes[offset..offset + 4].try_into().unwrap()),
+            y: f32::from_le_bytes(bytes[offset + 4..offset + 8].try_into().unwrap()),
+            z: f32::from_le_bytes(bytes[offset + 8..offset + 12].try_into().unwrap()),
+        }
+    }
+
+    /// VS2 `charzk_ex62a`: 117 keys, `block_count = 4`, and every block after the
+    /// first carries a zero word offset — those blocks store no residual and are
+    /// sampled as pure endpoint interpolations.
     #[test]
-    fn decode_vs2_3409_flags4_single_residual() {
+    fn decode_vs2_3409_four_blocks_with_empty_tail() {
         let bytes = include_bytes!("fixtures/charzk_ex62a_3409_b6.bin");
         assert_eq!(0x3409, u32::from_le_bytes(bytes[0..4].try_into().unwrap()));
-        assert_eq!(117, u32::from_le_bytes(bytes[4..8].try_into().unwrap()) as usize);
+        assert_eq!(117, u32::from_le_bytes(bytes[4..8].try_into().unwrap()));
         assert_eq!(4, u16::from_le_bytes([bytes[16], bytes[17]]));
+        for offset in [18, 20, 22] {
+            assert_eq!(0, u16::from_le_bytes([bytes[offset], bytes[offset + 1]]));
+        }
 
-        // Direct single-residual path (same as flags=4 inference).
-        let endpoints = try_parse_endpoints_3409(bytes, 0x18, 5, 12).expect("endpoints@0x18");
-        assert_eq!(5, endpoints.len());
-        let (comp_bits, residual_off) = {
-            let r = infer_3409_single_residual(bytes, 0x18, 5, {
-                f32::from_le_bytes(bytes[12..16].try_into().unwrap())
-            }, 117);
-            let (eps, off, cb) = r.expect("infer single residual");
-            assert_eq!(5, eps.len());
-            (cb, off)
-        };
-        assert_eq!(84, residual_off, "residual should start immediately after 5×f32×3");
-        assert!(comp_bits >= 1);
-
-        let frames = decode_vector3_3409(bytes).expect("0x3409 flags=4 must decode");
+        let frames = decode_vector3_3409(bytes).expect("0x3409 block_count=4 must decode");
         assert_eq!(117, frames.len());
-        // first endpoint @0x18
-        let ep0x = f32::from_le_bytes(bytes[0x18..0x1c].try_into().unwrap());
-        let ep0y = f32::from_le_bytes(bytes[0x1c..0x20].try_into().unwrap());
-        let ep0z = f32::from_le_bytes(bytes[0x20..0x24].try_into().unwrap());
-        assert!((frames[0].x - ep0x).abs() < 1e-4);
-        assert!((frames[0].y - ep0y).abs() < 1e-4);
-        assert!((frames[0].z - ep0z).abs() < 1e-4);
+
+        // 5 endpoints of 3 f32 start at 0x18, so the residual starts at 84.
+        let ep0 = read_vec3(bytes, 0x18);
+        assert!((frames[0] - ep0).length() < 1e-4);
+        // Keys 33.. fall in the residual-free blocks and follow the endpoints exactly.
+        assert!((frames[33] - read_vec3(bytes, 0x18 + 12)).length() < 1e-4);
+        assert!((frames[66] - read_vec3(bytes, 0x18 + 24)).length() < 1e-4);
+    }
+
+    /// EXVS2 `001hito_028gunwtv_..._stepend_stk_air_bk` BASE Translate.
+    ///
+    /// `0x3408` is single-block: `base_scale` is the f32 at offset 12 and the two
+    /// endpoints follow at 16. The previous decoder scanned for a layout and always
+    /// settled on endpoints at 12 with a `base_scale` read out of the residual bytes.
+    #[test]
+    fn decode_exvs2_gunwtv_3408_uses_declared_layout() {
+        let bytes = include_bytes!("fixtures/gunwtv_base_3408.bin");
+        assert_eq!(15, u32::from_le_bytes(bytes[4..8].try_into().unwrap()));
+
+        let frames = decode_translate_3408(bytes).expect("0x3408 must decode");
+        assert_eq!(15, frames.len());
+
+        // The curve starts on endpoint0@16 and ends on endpoint1@28.
+        assert!((frames[0] - read_vec3(bytes, 16)).length() < 1e-4);
+        assert!((frames[14] - read_vec3(bytes, 28)).length() < 1e-4);
+        // The 4-byte-shifted layout the old scan picked would start the curve on
+        // (base_scale, endpoint0.x, endpoint0.y) instead.
+        let shifted = read_vec3(bytes, 12);
+        assert!(
+            (frames[0] - shifted).length() > 1e-3,
+            "frame[0] matches the misaligned endpoints@12 layout"
+        );
     }
 
     /// Extracted from VS2 `20headgrab_stk_air_bk` BASE Translate (flags/type=3, 100 keys).

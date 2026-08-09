@@ -124,18 +124,10 @@ pub fn encode_vector3_3409(values: &[Vec3]) -> Result<Vec<u8>, error::Error> {
     };
 
     // Step 4: Encode residuals using actual residual data
-    let residual_stream = encode_residuals(&residuals, key_count, base_scale);
+    let (residual_stream, block_words) = encode_residuals(&residuals, key_count, base_scale);
 
     // Step 5: Pack the buffer
-    let mut data = Vec::new();
-
-    // Header
-    data.extend_from_slice(&0x3409u32.to_le_bytes());
-    data.extend_from_slice(&(key_count as u32).to_le_bytes());
-    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
-    data.extend_from_slice(&base_scale.to_le_bytes());
-    data.extend_from_slice(&0u16.to_le_bytes()); // flags
-    data.extend_from_slice(&0u16.to_le_bytes()); // bits
+    let mut data = blocked_header(0x3409, key_count, base_scale, &block_words);
 
     // Endpoints (Vector3 f32 format, 12 bytes each)
     for ep in &endpoints {
@@ -150,6 +142,30 @@ pub fn encode_vector3_3409(values: &[Vec3]) -> Result<Vec<u8>, error::Error> {
     Ok(data)
 }
 
+/// Write the fixed header of a blocked residual curve (`0x3409` / `0x4409`).
+///
+/// `block_words` holds the u32-word offset of each block after the first, using
+/// 0 for blocks that store no residual. See `common::read_blocked_header`.
+fn blocked_header(magic: u32, key_count: usize, base_scale: f32, block_words: &[u16]) -> Vec<u8> {
+    let block_count = compute_block_count(key_count);
+    debug_assert_eq!(block_count - 1, block_words.len());
+
+    let mut data = Vec::new();
+    data.extend_from_slice(&magic.to_le_bytes());
+    data.extend_from_slice(&(key_count as u32).to_le_bytes());
+    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
+    data.extend_from_slice(&base_scale.to_le_bytes());
+    data.extend_from_slice(&(block_count as u16).to_le_bytes());
+    for word in block_words {
+        data.extend_from_slice(&word.to_le_bytes());
+    }
+    // Endpoints start on a 4-byte boundary.
+    while !data.len().is_multiple_of(4) {
+        data.push(0);
+    }
+    data
+}
+
 /// Encode residuals for 0x3409 format.
 ///
 /// This encodes actual residual data for each block using DCT-like coefficients.
@@ -162,17 +178,33 @@ pub fn encode_vector3_3409(values: &[Vec3]) -> Result<Vec<u8>, error::Error> {
 /// - `base_scale`: Scale factor for residual quantization
 ///
 /// # Returns
-/// Encoded residual stream (4-byte aligned)
+/// `(residual stream, block word offsets)` — the word offsets go in the header
+/// so the decoder can locate each block without scanning.
 #[allow(dead_code)]
-fn encode_residuals(residuals: &[Vector3], key_count: usize, base_scale: f32) -> Vec<u8> {
+fn encode_residuals(
+    residuals: &[Vector3],
+    key_count: usize,
+    base_scale: f32,
+) -> (Vec<u8>, Vec<u16>) {
     let blocks = compute_block_count(key_count);
     let mut stream = Vec::new();
+    let mut block_words = Vec::with_capacity(blocks.saturating_sub(1));
 
     // For each block, encode residuals for X, Y, Z components
     for block_idx in 0..blocks {
         let block_len = compute_block_len(key_count, block_idx);
+        // Blocks with no residual are marked with a 0 word offset and decode as
+        // a pure endpoint interpolation.
+        let word_offset = if block_len <= 1 {
+            0
+        } else {
+            (stream.len() / 4) as u16
+        };
+        if block_idx > 0 {
+            block_words.push(word_offset);
+        }
         if block_len <= 1 {
-            continue; // No residuals needed for single-key blocks
+            continue;
         }
 
         let start_key = block_idx * 33 + 1; // Skip first key (endpoint)
@@ -195,18 +227,12 @@ fn encode_residuals(residuals: &[Vector3], key_count: usize, base_scale: f32) ->
         encode_residual_component(&mut stream, &block_residuals_z, base_scale);
     }
 
-    // Ensure at least 4 bytes in the stream for decoder inference to work
-    // The decoder's inference logic requires residual_off < bytes.len()
-    if stream.is_empty() {
-        stream.extend_from_slice(&[0u8; 4]);
-    }
-
     // Ensure 4-byte alignment
-    while stream.len() % 4 != 0 {
+    while !stream.len().is_multiple_of(4) {
         stream.push(0);
     }
 
-    stream
+    (stream, block_words)
 }
 
 /// Encode a residual component using simplified DCT-like coefficients.
@@ -381,16 +407,10 @@ pub fn encode_rotate_4409(values: &[Quat]) -> Result<Vec<u8>, error::Error> {
     };
 
     // Step 4: Encode residual stream.
-    let residual_stream = encode_residuals_vec4(&residuals, key_count, base_scale);
+    let (residual_stream, block_words) = encode_residuals_vec4(&residuals, key_count, base_scale);
 
     // Step 5: Pack buffer.
-    let mut data = Vec::new();
-    data.extend_from_slice(&0x4409u32.to_le_bytes());
-    data.extend_from_slice(&(key_count as u32).to_le_bytes());
-    data.extend_from_slice(&1.0f32.to_le_bytes()); // unk1
-    data.extend_from_slice(&base_scale.to_le_bytes());
-    data.extend_from_slice(&0u16.to_le_bytes()); // flags
-    data.extend_from_slice(&0u16.to_le_bytes()); // bits
+    let mut data = blocked_header(0x4409, key_count, base_scale, &block_words);
 
     // Endpoints as vec4<f32>.
     for ep in &endpoints {
@@ -406,12 +426,25 @@ pub fn encode_rotate_4409(values: &[Quat]) -> Result<Vec<u8>, error::Error> {
 }
 
 #[allow(dead_code)]
-fn encode_residuals_vec4(residuals: &[Quat], key_count: usize, base_scale: f32) -> Vec<u8> {
+fn encode_residuals_vec4(
+    residuals: &[Quat],
+    key_count: usize,
+    base_scale: f32,
+) -> (Vec<u8>, Vec<u16>) {
     let blocks = compute_block_count(key_count);
     let mut stream = Vec::new();
+    let mut block_words = Vec::with_capacity(blocks.saturating_sub(1));
 
     for block_idx in 0..blocks {
         let block_len = compute_block_len(key_count, block_idx);
+        let word_offset = if block_len <= 1 {
+            0
+        } else {
+            (stream.len() / 4) as u16
+        };
+        if block_idx > 0 {
+            block_words.push(word_offset);
+        }
         if block_len <= 1 {
             continue;
         }
@@ -436,23 +469,53 @@ fn encode_residuals_vec4(residuals: &[Quat], key_count: usize, base_scale: f32) 
         encode_residual_component(&mut stream, &bw, base_scale);
     }
 
-    if stream.is_empty() {
-        stream.extend_from_slice(&[0u8; 4]);
-    }
-    while (stream.len() % 4) != 0 {
+    while !stream.len().is_multiple_of(4) {
         stream.push(0);
     }
-    stream
+    (stream, block_words)
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::anim_data::v1::common::read_blocked_header;
+    use crate::anim_data::v1::rotate_4409::decode_rotate_4409;
     use crate::anim_data::v1::translate::decode_vector3_3409;
 
     use super::*;
 
     use approx::assert_abs_diff_eq;
     use glam::vec3;
+
+    /// Every block after the first must be reachable from the header word table,
+    /// and the residual stream must end exactly at the end of the buffer.
+    fn assert_header_locates_every_block(bytes: &[u8], magic: u32, components: usize) {
+        let header = read_blocked_header(bytes, magic, false, components).expect("header");
+        assert_eq!(
+            header.block_count,
+            compute_block_count(header.key_count),
+            "block_count must be derivable from key_count"
+        );
+        let mut end = 0;
+        for block_idx in 0..header.block_count {
+            let block_len = compute_block_len(header.key_count, block_idx).max(1);
+            let Some(start) = header.block_starts[block_idx] else {
+                continue;
+            };
+            assert!(start >= header.endpoints_offset);
+            // Walking one key reports where the block's residual finishes.
+            let (_, block_end) = crate::anim_data::v1::common::decode_residual_vector(
+                bytes,
+                start,
+                header.base_scale,
+                1,
+                components,
+                block_len,
+            )
+            .expect("residual block must parse at its declared offset");
+            end = end.max(block_end);
+        }
+        assert_eq!(bytes.len(), end, "residual stream must fill the buffer");
+    }
 
     #[test]
     fn encode_decode_vector3_3409_simple() {
@@ -526,11 +589,60 @@ mod tests {
         assert!(result.is_err());
     }
 
-    // TODO: test 4409
-
     #[test]
     fn encode_rotate_4409_empty_fails() {
         let result = encode_rotate_4409(&[]);
         assert!(result.is_err());
+    }
+
+    #[test]
+    fn encode_decode_rotate_4409_multi_block() {
+        let original: Vec<Quat> = (0..100)
+            .map(|i| {
+                let t = i as f32 / 99.0;
+                Quat::from_rotation_y(t * std::f32::consts::PI * 0.5)
+            })
+            .collect();
+
+        let encoded = encode_rotate_4409(&original).unwrap();
+        assert_eq!(&encoded[0..4], &0x4409u32.to_le_bytes());
+        assert_header_locates_every_block(&encoded, 0x4409, 4);
+
+        let decoded = decode_rotate_4409(&encoded).unwrap();
+        assert_eq!(original.len(), decoded.len());
+        // Block endpoints are stored exactly; interior keys are lossy.
+        for key in [0usize, 33, 66, 99] {
+            assert!(
+                (original[key].dot(decoded[key]).abs() - 1.0).abs() < 1e-4,
+                "key {key}: expected {:?}, got {:?}",
+                original[key],
+                decoded[key]
+            );
+        }
+    }
+
+    /// The header must describe the block layout even when a block carries no
+    /// residual. Writing `block_count = 0` (the old placeholder) made the buffer
+    /// undecodable without offset guessing.
+    #[test]
+    fn encode_vector3_3409_writes_block_table() {
+        for key_count in [4usize, 35, 100, 158] {
+            let values: Vec<Vec3> = (0..key_count)
+                .map(|i| {
+                    let t = i as f32 / (key_count - 1) as f32;
+                    vec3(t * 10.0, (t * 6.0).sin(), (t * 6.0).cos())
+                })
+                .collect();
+
+            let encoded = encode_vector3_3409(&values).unwrap();
+            let block_count = compute_block_count(key_count);
+            assert_eq!(
+                block_count as u16,
+                u16::from_le_bytes([encoded[16], encoded[17]]),
+                "key_count {key_count}"
+            );
+            assert_header_locates_every_block(&encoded, 0x3409, 3);
+            assert_eq!(key_count, decode_vector3_3409(&encoded).unwrap().len());
+        }
     }
 }

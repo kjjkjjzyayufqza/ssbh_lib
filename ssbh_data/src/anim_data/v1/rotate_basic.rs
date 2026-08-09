@@ -2,10 +2,11 @@ use glam::{Quat, quat};
 
 use super::common::{
     align_up, block_index_for_key, compute_block_count_type9, compute_block_len_type9,
-    decode_residual_vector,
-    expand_sparse_quat, read_f32_le, read_u16_le, read_u32_le, read_vec3_f32_le, read_vec4_f32_le,
+    decode_residual_vector, expand_sparse_quat, quat_normalize, read_f32_le, read_u16_le,
+    read_u32_le, read_vec3_f32_le, read_vec4_f32_le,
 };
-use crate::anim_data::{Vector4, bitutils::BitReader, error::Error};
+use super::translate::read_single_block_header;
+use crate::anim_data::{Vector4, error::Error};
 
 pub fn decode_rotate_4300(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     if bytes.len() < 12 {
@@ -346,25 +347,6 @@ pub fn decode_rotate_4308(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     let quat0 = read_vec4_f32_le(bytes, pos + 4)?;
     let quat1 = read_vec4_f32_le(bytes, pos + 20)?;
     pos += 36;
-    let payload = &bytes[pos..];
-    let nibble_size = (key_count * 4).div_ceil(2);
-    if payload.len() == nibble_size {
-        let mut key_quats = Vec::with_capacity(key_count);
-        for i in 0..key_count {
-            let byte = payload[i / 2];
-            let raw = if i % 2 == 0 { byte & 0xF } else { byte >> 4 };
-            let t = 1.0 - (raw as f32 / 15.0);
-            let qx = quat0.x + (quat1.x - quat0.x) * t;
-            let qy = quat0.y + (quat1.y - quat0.y) * t;
-            let qz = quat0.z + (quat1.z - quat0.z) * t;
-            let qw = quat0.w + (quat1.w - quat0.w) * t;
-            let len2 = qx * qx + qy * qy + qz * qz + qw * qw;
-            let inv = if len2 > 0.0 { 1.0 / len2.sqrt() } else { 1.0 };
-            key_quats.push((qx * inv, qy * inv, qz * inv, qw * inv));
-        }
-        let total_frames = frame_indices.iter().copied().max().unwrap_or(0) + 1;
-        return Ok(expand_sparse_quat(&frame_indices, &key_quats, total_frames));
-    }
 
     let block_len = key_count.saturating_sub(1).max(1);
     let mut key_quats = Vec::with_capacity(key_count);
@@ -397,79 +379,75 @@ pub fn decode_rotate_4308(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
     Ok(expand_sparse_quat(&frame_indices, &key_quats, total_frames))
 }
 
+/// Decode a `0x4408` rotation curve: one quaternion per frame over a single
+/// residual block.
+///
+/// Layout: `magic | frame_count | unk1 | base_scale | endpoint0 | endpoint1 | residual`,
+/// matching `0x3408` with 4-component endpoints. `base_scale` is the f32 at
+/// offset 12, exactly as in the multi-block `0x4409` sibling.
 pub fn decode_rotate_4408(bytes: &[u8]) -> Result<Vec<Quat>, Error> {
-    if bytes.len() < 12 {
-        return Err(Error::InvalidData);
-    }
-    if read_u32_le(bytes, 0)? != 0x4408 {
-        return Err(Error::InvalidData);
-    }
-    let frame_count = read_u32_le(bytes, 4)? as usize;
-    let _unk1 = read_f32_le(bytes, 8)?;
-    let _unk2 = read_f32_le(bytes, 12)?;
-    if frame_count == 0 {
-        return Ok(vec![Quat::IDENTITY]);
-    }
-    let mut pos = 16;
-    if pos + 32 > bytes.len() {
-        return Err(Error::InvalidData);
-    }
-    let defaults = [
-        read_vec4_f32_le(bytes, pos)?,
-        read_vec4_f32_le(bytes, pos + 16)?,
-    ];
-    pos += 32;
-    let payload = &bytes[pos..];
+    let (base_scale, endpoints, residual_off, frame_count) =
+        read_single_block_header(bytes, 0x4408)?;
+    let e0 = read_vec4_f32_le(bytes, endpoints)?;
+    let e1 = read_vec4_f32_le(bytes, endpoints + 16)?;
 
-    if payload.len() == frame_count * 5 {
-        let mut br = BitReader::from_slice(payload);
-        let mut frames = Vec::with_capacity(frame_count);
-        for _ in 0..frame_count {
-            let ix = br.read_u32(10)? as f32 / 1023.0;
-            let iy = br.read_u32(10)? as f32 / 1023.0;
-            let iz = br.read_u32(10)? as f32 / 1023.0;
-            let iw = br.read_u32(10)? as f32 / 1023.0;
-            let x = defaults[0].x + (defaults[1].x - defaults[0].x) * ix;
-            let y = defaults[0].y + (defaults[1].y - defaults[0].y) * iy;
-            let z = defaults[0].z + (defaults[1].z - defaults[0].z) * iz;
-            let w = defaults[0].w + (defaults[1].w - defaults[0].w) * iw;
-            let len2 = x * x + y * y + z * z + w * w;
-            let inv = if len2 > 0.0 { 1.0 / len2.sqrt() } else { 1.0 };
-            frames.push(quat(x * inv, y * inv, z * inv, w * inv));
-        }
-        return Ok(frames);
-    }
-
-    if frame_count > 34 {
-        return Err(Error::InvalidData);
-    }
-    let base_scale = defaults[0].x;
     let block_len = frame_count.saturating_sub(1).max(1);
     let mut frames = Vec::with_capacity(frame_count);
     for local in 0..frame_count {
         let t = local as f32 / block_len as f32;
-        let k = quat(
-            defaults[0].x + (defaults[1].x - defaults[0].x) * t,
-            defaults[0].y + (defaults[1].y - defaults[0].y) * t,
-            defaults[0].z + (defaults[1].z - defaults[0].z) * t,
-            defaults[0].w + (defaults[1].w - defaults[0].w) * t,
-        );
-        let (r_vec, _) = decode_residual_vector(bytes, pos, base_scale, local, 4, block_len)?;
-        let mut q = quat(
-            k.x + r_vec[0],
-            k.y + r_vec[1],
-            k.z + r_vec[2],
-            k.w + r_vec[3],
-        );
-        let len2 = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
-        if len2 > 0.0 {
-            let inv = 1.0 / len2.sqrt();
-            q.x *= inv;
-            q.y *= inv;
-            q.z *= inv;
-            q.w *= inv;
-        }
-        frames.push(q);
+        let (residual, _) =
+            decode_residual_vector(bytes, residual_off, base_scale, local, 4, block_len)?;
+        frames.push(quat_normalize(
+            e0.x + (e1.x - e0.x) * t + residual[0],
+            e0.y + (e1.y - e0.y) * t + residual[1],
+            e0.z + (e1.z - e0.z) * t + residual[2],
+            e0.w + (e1.w - e0.w) * t + residual[3],
+        ));
     }
     Ok(frames)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// EXVS2 `001hito_028gunwtv_..._stepend_stk_air_bk` SAKOTSU_R.
+    ///
+    /// `0x4408` takes `base_scale` from offset 12, like its `0x4409` sibling. The
+    /// previous decoder used `endpoint0.x` instead, which for this clavicle is
+    /// -0.584 against a real scale of 0.0056 — a 104x residual amplification that
+    /// turned a 0.5 deg/frame curve into a 27 deg/frame flicker.
+    #[test]
+    fn decode_exvs2_gunwtv_4408_base_scale_from_offset_12() {
+        let bytes = include_bytes!("fixtures/gunwtv_sakotsu_r_4408.bin");
+        let base_scale = f32::from_le_bytes(bytes[12..16].try_into().unwrap());
+        let endpoint0_x = f32::from_le_bytes(bytes[16..20].try_into().unwrap());
+        assert!((base_scale - 0.005615).abs() < 1e-6);
+        assert!((endpoint0_x + 0.584274).abs() < 1e-5);
+
+        let frames = decode_rotate_4408(bytes).expect("0x4408 must decode");
+        assert_eq!(15, frames.len());
+
+        let endpoint0 = Quat::from_xyzw(
+            endpoint0_x,
+            f32::from_le_bytes(bytes[20..24].try_into().unwrap()),
+            f32::from_le_bytes(bytes[24..28].try_into().unwrap()),
+            f32::from_le_bytes(bytes[28..32].try_into().unwrap()),
+        );
+        assert!((frames[0].dot(endpoint0).abs() - 1.0).abs() < 1e-4);
+
+        let worst = frames
+            .windows(2)
+            .map(|w| 2.0 * w[0].dot(w[1]).abs().min(1.0).acos().to_degrees())
+            .fold(0.0f32, f32::max);
+        assert!(worst < 2.0, "max per-frame rotation step {worst} deg");
+    }
+
+    /// The 0x_408 family is single-block, so it never stores more than 34 keys.
+    #[test]
+    fn decode_rotate_4408_rejects_multi_block_key_count() {
+        let mut bytes = include_bytes!("fixtures/gunwtv_sakotsu_r_4408.bin").to_vec();
+        bytes[4..8].copy_from_slice(&100u32.to_le_bytes());
+        assert!(decode_rotate_4408(&bytes).is_err());
+    }
 }

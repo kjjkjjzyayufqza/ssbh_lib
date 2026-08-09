@@ -327,35 +327,146 @@ pub(super) fn block_index_for_key(key_idx: usize, block_count: usize) -> usize {
     (key_idx / 33).min(block_count.saturating_sub(1))
 }
 
-pub(super) fn compute_block_qcounts(
-    payload: &[u8],
-    residual_start0: usize,
-    base_scale: f32,
-    comp_bits: usize,
-    key_count: usize,
-) -> Result<Vec<usize>, error::Error> {
-    if key_count <= 1 {
-        return Ok(vec![0]);
+/// Parsed header of a blocked residual curve (`0x3309` / `0x4309` / `0x3409` / `0x4409`).
+///
+/// The layout is fully deterministic — no offset inference is required:
+///
+/// ```text
+/// magic        u32
+/// key_count    u32
+/// unk1         f32
+/// [0x_309]     frame_indices u8[key_count], align 4
+/// base_scale   f32
+/// block_count  u16
+/// block_words  u16[block_count - 1]  // u32-word offset of block b's residual
+///                                    // relative to the residual stream start;
+///                                    // 0 marks a block with no residual
+///              align 4
+/// endpoints    VecN[block_count + 1] // Vec3 for 0x3xxx, Vec4 for 0x4xxx
+/// residual     blocks
+/// ```
+pub(super) struct BlockedHeader {
+    pub key_count: usize,
+    /// Key → frame mapping for the `0x_309` variants; empty for `0x_409`,
+    /// where every key is a frame.
+    pub frame_indices: Vec<usize>,
+    pub base_scale: f32,
+    pub block_count: usize,
+    /// Byte offset of each block's residual stream. `None` marks a block that
+    /// stores no residual and is sampled as a pure endpoint interpolation.
+    pub block_starts: Vec<Option<usize>>,
+    pub endpoints_offset: usize,
+}
+
+/// Read the header of a blocked residual curve.
+///
+/// `keyed` selects the `0x_309` variants, which carry a `u8` frame index per key.
+/// `components` is 3 for `0x3xxx` (vector) curves and 4 for `0x4xxx` (quaternion).
+pub(super) fn read_blocked_header(
+    bytes: &[u8],
+    magic: u32,
+    keyed: bool,
+    components: usize,
+) -> Result<BlockedHeader, error::Error> {
+    if bytes.len() < 12 || read_u32_le(bytes, 0)? != magic {
+        return Err(error::Error::InvalidData);
     }
-    let blocks = compute_block_count(key_count);
-    let mut q_counts = Vec::with_capacity(blocks);
-    let mut cursor = residual_start0;
-    for block_idx in 0..blocks {
-        let block_len = compute_block_len(key_count, block_idx);
-        if block_len <= 1 {
-            q_counts.push(0);
-            continue;
-        }
-        let (_, end_off) =
-            decode_residual_vector(payload, cursor, base_scale, 1, comp_bits, block_len)?;
-        let delta = end_off - cursor;
-        if delta == 0 || !delta.is_multiple_of(4) {
+    let key_count = read_u32_le(bytes, 4)? as usize;
+    if key_count == 0 {
+        return Err(error::Error::InvalidData);
+    }
+
+    let mut frame_indices = Vec::new();
+    let mut pos = 12;
+    if keyed {
+        if pos + key_count > bytes.len() {
             return Err(error::Error::InvalidData);
         }
-        q_counts.push(delta / 4);
-        cursor = end_off;
+        frame_indices = bytes[pos..pos + key_count]
+            .iter()
+            .map(|index| *index as usize)
+            .collect();
+        pos = align_up(pos + key_count, 4);
     }
-    Ok(q_counts)
+
+    if pos + 6 > bytes.len() {
+        return Err(error::Error::InvalidData);
+    }
+    let base_scale = read_f32_le(bytes, pos)?;
+    let block_count = read_u16_le(bytes, pos + 4)? as usize;
+    // The block count is redundant with the key count. A mismatch means the
+    // buffer is not the layout this decoder understands, so fail loudly rather
+    // than guess an offset and emit plausible-looking garbage.
+    if block_count != compute_block_count(key_count) {
+        return Err(error::Error::InvalidData);
+    }
+
+    let endpoints_offset = align_up(pos + 4 + 2 * block_count, 4);
+    let residual_offset = endpoints_offset + components * 4 * (block_count + 1);
+    if residual_offset > bytes.len() {
+        return Err(error::Error::InvalidData);
+    }
+
+    let mut block_starts = Vec::with_capacity(block_count);
+    block_starts.push(Some(residual_offset));
+    for block_idx in 1..block_count {
+        let words = read_u16_le(bytes, pos + 6 + 2 * (block_idx - 1))? as usize;
+        if words == 0 {
+            block_starts.push(None);
+            continue;
+        }
+        let start = residual_offset + 4 * words;
+        if start >= bytes.len() {
+            return Err(error::Error::InvalidData);
+        }
+        block_starts.push(Some(start));
+    }
+
+    Ok(BlockedHeader {
+        key_count,
+        frame_indices,
+        base_scale,
+        block_count,
+        block_starts,
+        endpoints_offset,
+    })
+}
+
+impl BlockedHeader {
+    /// Map a key index to its residual block, position within the block, and
+    /// the block's interpolation length.
+    pub(super) fn key_span(&self, key_idx: usize) -> (usize, usize, usize) {
+        let block_idx = block_index_for_key(key_idx, self.block_count);
+        let local = key_idx - 33 * block_idx;
+        let block_len = compute_block_len(self.key_count, block_idx).max(1);
+        (block_idx, local, block_len)
+    }
+
+    /// Decode the residual correction for one key. Blocks without a residual
+    /// stream contribute zero, leaving a pure endpoint interpolation.
+    pub(super) fn key_residual(
+        &self,
+        bytes: &[u8],
+        components: usize,
+        block_idx: usize,
+        local: usize,
+        block_len: usize,
+    ) -> Result<Vec<f32>, error::Error> {
+        match self.block_starts[block_idx] {
+            None => Ok(vec![0.0; components]),
+            Some(start) => {
+                let (values, _) = decode_residual_vector(
+                    bytes,
+                    start,
+                    self.base_scale,
+                    local,
+                    components,
+                    block_len,
+                )?;
+                Ok(values)
+            }
+        }
+    }
 }
 
 pub(super) fn expand_sparse_vec3(
@@ -439,9 +550,17 @@ pub(super) fn expand_sparse_quat(
         }
         let (x0, y0, z0, w0) = values[i];
         let (x1, y1, z1, w1) = values[i + 1];
+        // Interpolate along the shortest arc: q and -q are the same rotation,
+        // so an antipodal key pair would otherwise spin the long way around.
+        let sign = if x0 * x1 + y0 * y1 + z0 * z1 + w0 * w1 < 0.0 {
+            -1.0
+        } else {
+            1.0
+        };
+        let (x1, y1, z1, w1) = (sign * x1, sign * y1, sign * z1, sign * w1);
         for f in f0..=f1 {
             let t = (f - f0) as f32 / span as f32;
-            frames[f] = quat(
+            frames[f] = quat_normalize(
                 x0 + (x1 - x0) * t,
                 y0 + (y1 - y0) * t,
                 z0 + (z1 - z0) * t,
@@ -480,136 +599,6 @@ pub(super) fn compute_block_len_type9(key_count: usize, block_idx: usize) -> usi
     }
 }
 
-pub(super) fn compute_block_count_4309(key_count: usize) -> usize {
-    // Same 33-key segmentation as curve-level 0x3409/0x4409.
-    compute_block_count(key_count)
-}
-
-pub(super) fn compute_block_len_4309(key_count: usize, block_idx: usize) -> usize {
-    compute_block_len(key_count, block_idx)
-}
-
-pub(super) fn compute_block_qcounts_4309(
-    payload: &[u8],
-    residual_start0: usize,
-    base_scale: f32,
-    comp_bits: usize,
-    key_count: usize,
-) -> Result<Vec<usize>, error::Error> {
-    if key_count <= 1 {
-        return Ok(vec![0]);
-    }
-
-    let blocks = compute_block_count_4309(key_count);
-
-    let mut q_counts = Vec::with_capacity(blocks);
-    let mut cursor = residual_start0;
-    for block_idx in 0..blocks {
-        let block_len = compute_block_len_4309(key_count, block_idx);
-        if block_len <= 1 {
-            q_counts.push(0);
-            continue;
-        }
-
-        let (_, end_off) =
-            decode_residual_vector(payload, cursor, base_scale, 1, comp_bits, block_len)?;
-        let delta = end_off - cursor;
-        if delta == 0 || !delta.is_multiple_of(4) {
-            return Err(error::Error::InvalidData);
-        }
-        q_counts.push(delta / 4);
-        cursor = end_off;
-    }
-    Ok(q_counts)
-}
-
-pub(super) fn try_pick_comp_bits_4309(
-    payload: &[u8],
-    residual_start0: usize,
-    base_scale: f32,
-    key_count: usize,
-) -> Result<(usize, Vec<usize>, usize), error::Error> {
-    let mut best: Option<(usize, Vec<usize>, usize)> = None;
-    let mut best_key: Option<(usize, i32)> = None;
-
-    for comp_bits in [4, 3, 2, 1] {
-        let q_counts = match compute_block_qcounts_4309(
-            payload,
-            residual_start0,
-            base_scale,
-            comp_bits,
-            key_count,
-        ) {
-            Ok(q) => q,
-            Err(_) => continue,
-        };
-
-        let sum: usize = q_counts.iter().sum();
-        let end_off = residual_start0 + 4 * sum;
-        if end_off > payload.len() {
-            continue;
-        }
-        let slack = payload.len() - end_off;
-        let cand_key = (slack, -(comp_bits as i32));
-        if best_key.is_none() || cand_key < best_key.unwrap() {
-            best = Some((comp_bits, q_counts, end_off));
-            best_key = Some(cand_key);
-        }
-    }
-
-    best.ok_or(error::Error::InvalidData)
-}
-
-pub(super) fn try_parse_endpoints_4309(
-    curve_bytes: &[u8],
-    endpoints_off: usize,
-    endpoint_count: usize,
-    elem_size: usize,
-) -> Result<Vec<Quat>, error::Error> {
-    let end = endpoints_off + endpoint_count * elem_size;
-    if endpoints_off >= curve_bytes.len() || end > curve_bytes.len() {
-        return Err(error::Error::InvalidData);
-    }
-    if !endpoints_off.is_multiple_of(4) {
-        return Err(error::Error::InvalidData);
-    }
-
-    let mut out = Vec::with_capacity(endpoint_count);
-    let mut max_abs = 0.0f32;
-
-    if elem_size == 16 {
-        for i in 0..endpoint_count {
-            let q = read_vec4_f32_le(curve_bytes, endpoints_off + i * 16)?;
-            max_abs = max_abs
-                .max(q.x.abs())
-                .max(q.y.abs())
-                .max(q.z.abs())
-                .max(q.w.abs());
-            out.push(quat_normalize(q.x, q.y, q.z, q.w));
-        }
-    } else if elem_size == 12 {
-        for i in 0..endpoint_count {
-            let v = read_vec3_f32_le(curve_bytes, endpoints_off + i * 12)?;
-            max_abs = max_abs.max(v.x.abs()).max(v.y.abs()).max(v.z.abs());
-            out.push(reconstruct_quat_from_xyz(v.x, v.y, v.z, 1.0));
-        }
-    } else {
-        return Err(error::Error::InvalidData);
-    }
-
-    if !max_abs.is_finite() || max_abs > 1.0e6 {
-        return Err(error::Error::InvalidData);
-    }
-
-    for i in 1..out.len() {
-        if out[i - 1].dot(out[i]) < 0.0 {
-            out[i] = -out[i];
-        }
-    }
-
-    Ok(out)
-}
-
 pub(super) fn quat_normalize(x: f32, y: f32, z: f32, w: f32) -> Quat {
     let n2 = x * x + y * y + z * z + w * w;
     if n2 <= 0.0 {
@@ -617,20 +606,6 @@ pub(super) fn quat_normalize(x: f32, y: f32, z: f32, w: f32) -> Quat {
     }
     let inv = 1.0 / n2.sqrt();
     quat(x * inv, y * inv, z * inv, w * inv)
-}
-
-pub(super) fn quat_nlerp(q0: Quat, q1: Quat, t: f32) -> Quat {
-    let x = q0.x + (q1.x - q0.x) * t;
-    let y = q0.y + (q1.y - q0.y) * t;
-    let z = q0.z + (q1.z - q0.z) * t;
-    let w = q0.w + (q1.w - q0.w) * t;
-    quat_normalize(x, y, z, w)
-}
-
-pub(super) fn reconstruct_quat_from_xyz(x: f32, y: f32, z: f32, sign: f32) -> Quat {
-    let s = x * x + y * y + z * z;
-    let w = sign * (1.0 - s).max(0.0).sqrt();
-    quat_normalize(x, y, z, w)
 }
 
 #[cfg(test)]
@@ -696,10 +671,49 @@ mod tests {
         assert_eq!(2, compute_block_count(67));
         assert_eq!(3, compute_block_count(100));
         assert_eq!(3, compute_block_count_type9(100));
-        assert_eq!(3, compute_block_count_4309(100));
         // Last block for 100 keys spans keys 66..99 → block_len 33.
         assert_eq!(33, compute_block_len(100, 0));
         assert_eq!(33, compute_block_len(100, 1));
         assert_eq!(33, compute_block_len(100, 2));
+    }
+
+    /// The endpoint table starts on a 4-byte boundary after the block word list,
+    /// so `block_count` alone determines where the endpoints begin.
+    #[test]
+    fn blocked_header_endpoint_offset_follows_block_count() {
+        // key_count, block_count, endpoints offset for a dense 0x_409 curve.
+        for (key_count, block_count, expected) in [
+            (35usize, 2usize, 20usize),
+            (100, 3, 24),
+            (133, 4, 24),
+            (158, 5, 28),
+        ] {
+            assert_eq!(block_count, compute_block_count(key_count));
+            assert_eq!(expected, align_up(12 + 4 + 2 * block_count, 4));
+        }
+    }
+
+    /// A zero word offset marks a block with no residual stream, which must decode
+    /// as a pure endpoint interpolation rather than aliasing onto block 0.
+    #[test]
+    fn blocked_header_zero_word_marks_empty_block() {
+        let mut bytes = Vec::new();
+        bytes.extend_from_slice(&0x4409u32.to_le_bytes());
+        bytes.extend_from_slice(&100u32.to_le_bytes());
+        bytes.extend_from_slice(&1.0f32.to_le_bytes());
+        bytes.extend_from_slice(&0.5f32.to_le_bytes());
+        bytes.extend_from_slice(&3u16.to_le_bytes());
+        bytes.extend_from_slice(&7u16.to_le_bytes());
+        bytes.extend_from_slice(&0u16.to_le_bytes());
+        bytes.resize(24 + 4 * 16 + 64, 0);
+
+        let header = read_blocked_header(&bytes, 0x4409, false, 4).unwrap();
+        assert_eq!(3, header.block_count);
+        assert_eq!(24, header.endpoints_offset);
+        assert_eq!(vec![Some(88), Some(88 + 4 * 7), None], header.block_starts);
+        assert_eq!(
+            vec![0.0; 4],
+            header.key_residual(&bytes, 4, 2, 1, 33).unwrap()
+        );
     }
 }

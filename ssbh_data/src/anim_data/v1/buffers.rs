@@ -11,7 +11,7 @@ use crate::{
     anim_data::{
         TrackValues, Transform, TransformFlags, UvTransform,
         error::Error,
-        v1::{rotate_4409::*, rotate_basic::*, rotate_inferred::*, translate::*},
+        v1::{rotate_4309::*, rotate_4409::*, rotate_basic::*, translate::*},
     },
     read_vec3,
 };
@@ -84,44 +84,40 @@ pub struct Unk3300 {
     pub values: Vec<Vec3>,
 }
 
+// Single-block residual curves (`0x_308` / `0x_408`): two endpoints, one
+// residual stream, at most 34 keys. The `0x_308` variants add a `u8` frame
+// index per key. Decoded by `translate::read_single_block_header`.
+
 #[allow(dead_code)]
 #[derive(Debug, BinRead)]
-#[br(magic(0x3308u32))]
 pub struct Unk3308 {
-    pub frame_count: u32,
+    pub key_count: u32,
     pub unk1: f32,
 
-    #[br(count = frame_count, align_after = 4)] // align to float boundary
+    #[br(count = key_count, align_after = 4)]
     pub frame_indices: Vec<u8>,
 
     pub base_scale: f32,
-
-    #[br(parse_with = read_vec3)]
-    pub endpoint0: Vec3,
-
-    #[br(parse_with = read_vec3)]
-    pub endpoint1: Vec3,
+    pub endpoints: [Vector3; 2],
 
     #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
+    pub residual: Vec<u8>,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, BinRead)]
-pub struct Unk3309 {
-    pub frame_count: u32,
+pub struct Unk4308 {
+    pub key_count: u32,
     pub unk1: f32,
 
-    #[br(count = frame_count, align_after = 4)] // align to float boundary
+    #[br(count = key_count, align_after = 4)]
     pub frame_indices: Vec<u8>,
 
-    pub unk3: f32,
-    pub unk4: u16,
-    pub unk5: u16, // TODO: bits per entry?
-    pub unk6: [Vector3; 3],
+    pub base_scale: f32,
+    pub endpoints: [Vector4; 2],
 
     #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
+    pub residual: Vec<u8>,
 }
 
 #[allow(dead_code)]
@@ -129,138 +125,109 @@ pub struct Unk3309 {
 pub struct Unk3408 {
     pub frame_count: u32,
     pub unk1: f32,
-    pub unk2: f32,
-    pub unk3: [Vector3; 2],
+    pub base_scale: f32,
+    pub endpoints: [Vector3; 2],
 
     #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
+    pub residual: Vec<u8>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, BinRead)]
+pub struct Unk4408 {
+    pub frame_count: u32,
+    pub unk1: f32,
+    pub base_scale: f32,
+    pub endpoints: [Vector4; 2],
+
+    #[br(parse_with = until_eof)]
+    pub residual: Vec<u8>,
+}
+
+// Blocked residual curves (`0x_309` / `0x_409`): the clip is split into 33-key
+// blocks, `block_count == ceil((key_count - 1) / 33)`. `block_words` gives the
+// u32-word offset of every block after the first, relative to the residual
+// stream, with 0 marking a block that stores no residual. Decoded by
+// `common::read_blocked_header`.
+
+#[allow(dead_code)]
+#[derive(Debug, BinRead)]
+pub struct Unk3309 {
+    pub key_count: u32,
+    pub unk1: f32,
+
+    #[br(count = key_count, align_after = 4)]
+    pub frame_indices: Vec<u8>,
+
+    pub base_scale: f32,
+    pub block_count: u16,
+
+    #[br(count = block_count.saturating_sub(1), align_after = 4)]
+    pub block_words: Vec<u16>,
+
+    #[br(count = block_count as usize + 1)]
+    pub endpoints: Vec<Vector3>,
+
+    #[br(parse_with = until_eof)]
+    pub residual: Vec<u8>,
+}
+
+#[allow(dead_code)]
+#[derive(Debug, BinRead)]
+pub struct Unk4309 {
+    pub key_count: u32,
+    pub unk1: f32,
+
+    #[br(count = key_count, align_after = 4)]
+    pub frame_indices: Vec<u8>,
+
+    pub base_scale: f32,
+    pub block_count: u16,
+
+    #[br(count = block_count.saturating_sub(1), align_after = 4)]
+    pub block_words: Vec<u16>,
+
+    #[br(count = block_count as usize + 1)]
+    pub endpoints: Vec<Vector4>,
+
+    #[br(parse_with = until_eof)]
+    pub residual: Vec<u8>,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, BinRead)]
 pub struct Unk3409 {
-    pub frame_count: u32,
+    pub key_count: u32,
     pub unk1: f32,
-    pub unk2: f32,
-    pub unk3: u16, // 2, 3
-    pub unk4: u16, // TODO: bits per entry?
+    pub base_scale: f32,
+    pub block_count: u16,
 
-    #[br(if(unk3 == 3))]
-    pub unk5: Option<u32>,
+    #[br(count = block_count.saturating_sub(1), align_after = 4)]
+    pub block_words: Vec<u16>,
 
-    pub unk6: [Vector3; 3],
-
-    #[br(if(unk3 == 3))]
-    pub unk7: Option<Vector3>,
+    #[br(count = block_count as usize + 1)]
+    pub endpoints: Vec<Vector3>,
 
     #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
+    pub residual: Vec<u8>,
 }
 
 #[allow(dead_code)]
 #[derive(Debug, BinRead)]
-pub struct V12CompressedBlock {
-    pub unk1: u32,
-    pub unk2: u32,
+pub struct Unk4409 {
+    pub key_count: u32,
+    pub unk1: f32,
+    pub base_scale: f32,
+    pub block_count: u16,
 
-    #[br(count = v12_compressed_block_value_count(unk2))]
-    pub values: Vec<u32>,
-}
+    #[br(count = block_count.saturating_sub(1), align_after = 4)]
+    pub block_words: Vec<u16>,
 
-fn v12_compressed_block_value_count(unk2: u32) -> usize {
-    // TODO: 0x00FFFF00 mask determines the count?
-    let value = unk2 & 0xFFFFFF00;
-    match value {
-        0x10000100 => 1,
-        0x11002100 => 5,
-        0x11003000 => 6,
-        0x11020100 => 1,
-        0x12000400 => 4,
-        0x12000500 => 5,
-        0x12000600 => 6,
-        0x12000700 => 7,
-        0x12000800 => 8,
-        0x12001300 => 5,
-        0x12001400 => 6,
-        0x12001500 => 7,
-        0x12001600 => 8,
-        0x12001700 => 9,
-        0x12002200 => 6,
-        0x12002300 => 7,
-        0x12002400 => 8,
-        0x12002500 => 9,
-        0x12002600 => 10,
-        0x12003100 => 7,
-        0x12003200 => 8,
-        0x12003300 => 9,
-        0x12003400 => 10,
-        0x12003500 => 11,
-        0x12004100 => 9,
-        0x12004200 => 10,
-        0x12006000 => 12,
-        0x12004300 => 11,
-        0x12004400 => 12,
-        0x12005100 => 11,
-        0x12005200 => 12,
-        0x12005300 => 13,
-        0x12006100 => 13,
-        0x12006200 => 14,
-        0x12007000 => 14,
-        0x12007100 => 15,
-        0x12008000 => 16,
-        0x12040100 => 1,
-        0x12060100 => 1,
-        0x12200200 => 3,
-        0x12200300 => 4,
-        0x12200400 => 5,
-        0x12200500 => 6,
-        0x12200600 => 7,
-        0x12220000 => 1,
-        0x12220100 => 2,
-        0x12240000 => 1,
-        0x12240100 => 2,
-        0x12260000 => 1,
-        0x12400000 => 2,
-        0x12400100 => 3,
-        0x12400200 => 4,
-        0x12400300 => 5,
-        0x12400400 => 6,
-        0x12420000 => 2,
-        0x12420100 => 3,
-        0x12004000 => 8,
-        0x12005000 => 10,
-        0x12440000 => 2,
-        0x12600000 => 3,
-        0x12600100 => 4,
-        0x12600200 => 5,
-        0x12620000 => 3,
-        // TODO: Should these all match bytes like above?
-        _ => match unk2 {
-            0x100010FF => 2,
-            0x110002FF => 2,
-            0x110003FF => 3,
-            0x110011FF => 3,
-            0x110012FF => 4,
-            0x110020FF => 4,
-            0x11020001 => 0,
-            0x110200FF => 0,
-            0x112000FF => 1,
-            0x112001FF => 2,
-            0x12002542 => 9,
-            0x1200313A => 7,
-            0x12003141 => 6,
-            0x12003358 => 8,
-            0x12003442 => 10,
-            0x120043D1 => 11,
-            0x12006057 => 12,
-            0x12040001 => 0,
-            0x12080001 => 0,
-            0x12080050 => 0,
-            0x12080060 => 0,
-            0x1280002E => 4,
-            _ => 0,
-        },
-    }
+    #[br(count = block_count as usize + 1)]
+    pub endpoints: Vec<Vector4>,
+
+    #[br(parse_with = until_eof)]
+    pub residual: Vec<u8>,
 }
 
 #[allow(dead_code)]
@@ -269,85 +236,11 @@ pub struct Unk4300 {
     pub frame_count: u32,
     pub unk1: f32,
 
-    #[br(count = frame_count, align_after = 4)] // align to float boundary
+    #[br(count = frame_count, align_after = 4)]
     pub frame_indices: Vec<u8>,
 
     #[br(count = frame_count)]
     pub values: Vec<Vector4>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, BinRead)]
-pub struct Unk4308 {
-    pub frame_count: u32,
-    pub unk1: f32,
-
-    #[br(count = frame_count, align_after = 4)] // align to float boundary
-    pub frame_indices: Vec<u8>,
-
-    pub base_scale: f32,
-    pub endpoint0: Vector4,
-    pub endpoint1: Vector4,
-
-    #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, BinRead)]
-pub struct Unk4309 {
-    pub frame_count: u32,
-    pub unk1: f32,
-    #[br(count = frame_count, align_after = 4)] // align to float boundary
-    pub unk2: Vec<u8>,
-
-    pub unk3: f32,
-    pub unk4: u16, // 2, 3
-    pub unk5: u16, // TODO: bits per entry?
-
-    #[br(if(unk4 == 3))]
-    pub unk7: Option<u32>,
-
-    pub unk6: [Vector4; 3], // TODO: quaternions?
-
-    #[br(if(unk4 == 3))]
-    pub unk8: Option<Vector4>,
-
-    #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, BinRead)]
-pub struct Unk4408 {
-    pub frame_count: u32,
-    pub unk1: f32,
-    pub unk2: f32,
-    pub unk3: [Vector4; 2],
-
-    #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
-}
-
-#[allow(dead_code)]
-#[derive(Debug, BinRead)]
-pub struct Unk4409 {
-    pub frame_count: u32,
-    pub unk1: f32,
-    pub unk2: f32,
-    pub unk3: u16, // 2, 3
-    pub unk4: u16, // TODO: bits per entry?
-
-    #[br(if(unk3 == 3))]
-    pub unk5: Option<u32>,
-
-    pub unk6: [Vector4; 3],
-
-    #[br(if(unk3 == 3))]
-    pub unk7: Option<Vector4>,
-
-    #[br(parse_with = until_eof)]
-    pub values: Vec<V12CompressedBlock>,
 }
 
 #[allow(dead_code)]
@@ -365,11 +258,7 @@ enum V12Values {
 }
 
 /// Expand or shrink sample lists to match the VS2/EXVS2 animation frame count.
-fn reconcile_samples<T: Clone>(
-    samples: Vec<T>,
-    frame_count: usize,
-    default: T,
-) -> Vec<T> {
+fn reconcile_samples<T: Clone>(samples: Vec<T>, frame_count: usize, default: T) -> Vec<T> {
     let frame_count = frame_count.max(1);
     if samples.is_empty() {
         return vec![default; frame_count];
@@ -453,10 +342,16 @@ pub fn read_track_values_v12(
     let values = match track.track_type {
         TrackTypeV1::Transform => {
             let scales = reconcile_samples(property_data.scales, animation_frame_count, Vec3::ONE);
-            let rotations =
-                reconcile_samples(property_data.rotations, animation_frame_count, Quat::IDENTITY);
-            let translations =
-                reconcile_samples(property_data.translations, animation_frame_count, Vec3::ZERO);
+            let rotations = reconcile_samples(
+                property_data.rotations,
+                animation_frame_count,
+                Quat::IDENTITY,
+            );
+            let translations = reconcile_samples(
+                property_data.translations,
+                animation_frame_count,
+                Vec3::ZERO,
+            );
 
             let mut transforms = Vec::with_capacity(animation_frame_count.max(1));
             for frame_idx in 0..animation_frame_count.max(1) {
@@ -508,9 +403,7 @@ fn add_property(
                 *compensate_scale = f != 0.0;
             }
             _ => {
-                return Err(Error::UnexpectedV12PropertyValue {
-                    property_name,
-                });
+                return Err(Error::UnexpectedV12PropertyValue { property_name });
             }
         },
         "Scale" => match value {
@@ -518,9 +411,7 @@ fn add_property(
                 property_data.scales.extend(values);
             }
             _ => {
-                return Err(Error::UnexpectedV12PropertyValue {
-                    property_name,
-                });
+                return Err(Error::UnexpectedV12PropertyValue { property_name });
             }
         },
         "Rotate" => match value {
@@ -534,9 +425,7 @@ fn add_property(
                 property_data.rotations.extend(values);
             }
             _ => {
-                return Err(Error::UnexpectedV12PropertyValue {
-                    property_name,
-                });
+                return Err(Error::UnexpectedV12PropertyValue { property_name });
             }
         },
         "Translate" => match value {
@@ -544,9 +433,7 @@ fn add_property(
                 property_data.translations.extend(values);
             }
             _ => {
-                return Err(Error::UnexpectedV12PropertyValue {
-                    property_name,
-                });
+                return Err(Error::UnexpectedV12PropertyValue { property_name });
             }
         },
         "Visibility" => match value {
@@ -559,9 +446,7 @@ fn add_property(
                     .extend(values.into_iter().map(|v| v != 0));
             }
             _ => {
-                return Err(Error::UnexpectedV12PropertyValue {
-                    property_name,
-                });
+                return Err(Error::UnexpectedV12PropertyValue { property_name });
             }
         },
         "UvTransform" => match value {
@@ -569,9 +454,7 @@ fn add_property(
                 property_data.uv_transforms.extend(values);
             }
             _ => {
-                return Err(Error::UnexpectedV12PropertyValue {
-                    property_name,
-                });
+                return Err(Error::UnexpectedV12PropertyValue { property_name });
             }
         },
         // Unknown property names are ignored for forward compatibility with VS2 variants.
@@ -620,28 +503,36 @@ fn read_property_value_v12(bytes: &[u8], property_name: &str) -> Result<V12Value
             V12Values::Vec3(vec![scale.into()])
         }
         0x3200 => V12Values::Vec3(
-            decode_translate_3200(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3200(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3208 => V12Values::Vec3(
-            decode_translate_3208(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3208(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3209 => V12Values::Vec3(
-            decode_translate_3209(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3209(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3300 => V12Values::Vec3(
-            decode_translate_3300(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3300(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3308 => V12Values::Vec3(
-            decode_translate_3308(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3308(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3309 => V12Values::Vec3(
-            decode_translate_3309(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3309(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3400 => V12Values::Vec3(
-            decode_translate_3400(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3400(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3408 => V12Values::Vec3(
-            decode_translate_3408(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
+            decode_translate_3408(bytes)
+                .map_err(|e| map_v12_decode_err(e, header, property_name))?,
         ),
         0x3409 => V12Values::Vec3(
             decode_vector3_3409(bytes).map_err(|e| map_v12_decode_err(e, header, property_name))?,
@@ -739,6 +630,36 @@ mod tests {
     use glam::{quat, vec3};
     use hexlit::hex;
     use pretty_assertions::assert_eq;
+
+    /// Compare decoded property values with a tolerance.
+    ///
+    /// The residual codecs reconstruct each sample from a quantized DCT stream,
+    /// so the last f32 bit depends on the accumulation order. Exact equality
+    /// would make these goldens brittle without catching anything real.
+    fn assert_values_close(expected: V12Values, actual: V12Values) {
+        const EPS: f32 = 1e-5;
+        match (&expected, &actual) {
+            (V12Values::Vec3(a), V12Values::Vec3(b)) => {
+                assert_eq!(a.len(), b.len(), "frame count");
+                for (i, (e, g)) in a.iter().zip(b.iter()).enumerate() {
+                    assert!(
+                        (*e - *g).length() < EPS,
+                        "frame {i}: expected {e:?}, got {g:?}"
+                    );
+                }
+            }
+            (V12Values::Quat(a), V12Values::Quat(b)) => {
+                assert_eq!(a.len(), b.len(), "frame count");
+                for (i, (e, g)) in a.iter().zip(b.iter()).enumerate() {
+                    assert!(
+                        (e.dot(*g).abs() - 1.0).abs() < EPS,
+                        "frame {i}: expected {e:?}, got {g:?}"
+                    );
+                }
+            }
+            _ => panic!("value kind mismatch: expected {expected:?}, got {actual:?}"),
+        }
+    }
 
     // TODO: tests for entire 1.2 track with properties
     // TODO: One test for each anim 1.2 buffer variant.
@@ -989,20 +910,20 @@ mod tests {
             ffff5b22 ff020011d 77fd311814bae46
             01000100 01000211
         );
-        assert_eq!(
+        assert_values_close(
             V12Values::Vec3(vec![
-                vec3(0.26630595, 0.0, 2.958),
-                vec3(0.2367164, 0.0, 2.796),
-                vec3(0.20712686, 0.0, 2.6339998),
-                vec3(0.17753729, 0.0, 2.472),
-                vec3(0.14794776, 0.0, 2.31),
-                vec3(0.118358195, 0.0, 2.148),
-                vec3(0.088768646, 0.0, 1.986),
-                vec3(0.059179097, 0.0, 1.824),
-                vec3(0.029589549, 0.0, 1.662),
-                vec3(0.0, 0.0, 1.5),
+                vec3(0.0, 2.9579999446868896, 0.0),
+                vec3(0.0, 2.844062566757202, 0.0),
+                vec3(0.0, 2.675625801086426, 0.0),
+                vec3(0.0, 2.471597909927368, 0.0),
+                vec3(0.0, 2.2501068115234375, 0.0),
+                vec3(0.0, 2.028562545776367, 0.0),
+                vec3(0.0, 1.8239102363586426, 0.0),
+                vec3(0.0, 1.6552789211273193, 0.0),
+                vec3(0.0, 1.5416259765625, 0.0),
+                vec3(0.0, 1.5, 0.0),
             ]),
-            read_property_value_v12(&data, "test").unwrap()
+            read_property_value_v12(&data, "test").unwrap(),
         );
     }
 
@@ -1186,20 +1107,70 @@ mod tests {
             bacb020e 57900100 ff01001032811a07
             483d0100 ff010010 7f57e4fc
         );
-        assert_eq!(
+        assert_values_close(
             V12Values::Quat(vec![
-                quat(0.6963642, 0.12278804, -0.12278804, 0.6963642),
-                quat(0.696367, 0.12278788, -0.12279732, 0.6963598),
-                quat(0.69636977, 0.122787714, -0.1228066, 0.69635546),
-                quat(0.69637257, 0.12278756, -0.12281588, 0.69635105),
-                quat(0.6963753, 0.12278739, -0.12282516, 0.6963467),
-                quat(0.6963781, 0.12278723, -0.12283444, 0.6963423),
-                quat(0.74012196, 0.034967255, -0.08779142, 0.6658),
-                quat(0.7735146, -0.09664208, -0.038356192, 0.6251914),
-                quat(0.78298694, -0.15716107, -0.04652815, 0.60005593),
-                quat(0.7968891, -0.14653802, -0.062667005, 0.58272403)
+                quat(
+                    0.6963642239570618,
+                    0.12278803437948227,
+                    -0.12278803437948227,
+                    0.6963642239570618,
+                ),
+                quat(
+                    0.6963669657707214,
+                    0.12278787791728973,
+                    -0.12279731780290604,
+                    0.6963598132133484,
+                ),
+                quat(
+                    0.6963697671890259,
+                    0.1227877140045166,
+                    -0.1228065937757492,
+                    0.696355402469635,
+                ),
+                quat(
+                    0.6963725090026855,
+                    0.12278755009174347,
+                    -0.12281587719917297,
+                    0.6963510513305664,
+                ),
+                quat(
+                    0.69637531042099,
+                    0.12278739362955093,
+                    -0.12282515317201614,
+                    0.696346640586853,
+                ),
+                quat(
+                    0.6963780522346497,
+                    0.1227872297167778,
+                    -0.12283443659543991,
+                    0.6963422894477844,
+                ),
+                quat(
+                    0.7401219010353088,
+                    0.03496725484728813,
+                    -0.08779142051935196,
+                    0.6657999157905579,
+                ),
+                quat(
+                    0.7735146284103394,
+                    -0.09664206206798553,
+                    -0.03835618495941162,
+                    0.6251913905143738,
+                ),
+                quat(
+                    0.7829868793487549,
+                    -0.15716108679771423,
+                    -0.04652813822031021,
+                    0.6000558733940125,
+                ),
+                quat(
+                    0.796889066696167,
+                    -0.14653801918029785,
+                    -0.06266700476408005,
+                    0.5827240347862244,
+                ),
             ]),
-            read_property_value_v12(&data, "test").unwrap()
+            read_property_value_v12(&data, "test").unwrap(),
         );
     }
 
@@ -1226,80 +1197,80 @@ mod tests {
             9b089e0e ff010211 813e1005
             4f0f9f0e ff012011 7fc2f0fb158a469a
         );
-        assert_eq!(
+        assert_values_close(
             V12Values::Quat(vec![
-                quat(0.0, 0.872897, 0.487904, 0.00064593536),
-                quat(0.0, 0.8688187, 0.49510816, 0.0046872864),
-                quat(0.0, 0.8646663, 0.5022709, 0.008728582),
-                quat(0.0, 0.86044085, 0.5093904, 0.012768795),
-                quat(0.0, 0.8586344, 0.5124061, 0.013677419),
-                quat(0.0, 0.85681653, 0.51541525, 0.014585937),
-                quat(0.0, 0.85498714, 0.5184178, 0.015494309),
-                quat(0.0, 0.8531465, 0.5214136, 0.0164025),
-                quat(0.0, 0.8512945, 0.52440244, 0.017310474),
-                quat(0.0, 0.8494315, 0.5273844, 0.018218199),
-                quat(0.0, 0.8475573, 0.53035915, 0.019125633),
-                quat(0.0, 0.84567213, 0.53332675, 0.020032745),
-                quat(0.0, 0.8408638, 0.54069966, 0.024330245),
-                quat(0.0, 0.83597434, 0.5480215, 0.028625825),
-                quat(0.0, 0.8310051, 0.55529, 0.032918245),
-                quat(0.0, 0.8232663, 0.5662363, 0.04011462),
-                quat(0.0, 0.8153369, 0.5770515, 0.047301713),
-                quat(0.0, 0.8070291, 0.58796704, 0.054762125),
-                quat(0.0, 0.79852456, 0.59873915, 0.062209185),
-                quat(0.0, 0.78956157, 0.60967124, 0.06995359),
-                quat(0.0, 0.7803935, 0.6204449, 0.07767981),
-                quat(0.0, 0.7708237, 0.6312572, 0.08570428),
-                quat(0.0, 0.76104355, 0.6418972, 0.09370536),
-                quat(0.0, 0.7404698, 0.66289186, 0.110810235),
-                quat(0.0, 0.7185109, 0.68359363, 0.12822568),
-                quat(0.0, 0.6953205, 0.7037342, 0.1459028),
-                quat(0.0, 0.6706664, 0.7234575, 0.16375558),
-                quat(0.0, 0.6448937, 0.7423311, 0.18181539),
-                quat(0.0, 0.61778027, 0.76050836, 0.19993664),
-                quat(0.0, 0.5895789, 0.77771425, 0.2180762),
-                quat(0.0, 0.56032544, 0.7938988, 0.23613596),
-                quat(0.0, 0.5300951, 0.80899227, 0.25402915),
-                quat(0.0, 0.49907446, 0.8228529, 0.2717314),
-                quat(0.0, 0.4673435, 0.8354598, 0.28913134),
-                quat(0.0, 0.43504, 0.8467623, 0.30615994),
-                quat(0.0, 0.40235916, 0.8566783, 0.32281485),
-                quat(0.0, 0.36939037, 0.86526513, 0.33892062),
-                quat(0.0, 0.3363241, 0.8724802, 0.35449198),
-                quat(0.0, 0.30331138, 0.87834555, 0.3694745),
-                quat(0.0, 0.27042302, 0.88295436, 0.38374865),
-                quat(0.0, 0.25420725, 0.8845052, 0.3911896),
-                quat(0.0, 0.23790997, 0.8857723, 0.39850503),
-                quat(0.0, 0.22187188, 0.8867122, 0.4056035),
-                quat(0.0, 0.20576538, 0.8873787, 0.4125769),
-                quat(0.0, 0.19526592, 0.8874301, 0.4175395),
-                quat(0.0, 0.18473867, 0.88736165, 0.42244643),
-                quat(0.0, 0.17418794, 0.88717365, 0.42729574),
-                quat(0.0, 0.16646233, 0.88681215, 0.43110844),
-                quat(0.0, 0.1587232, 0.8863847, 0.4348897),
-                quat(0.0, 0.15097228, 0.8858913, 0.43863863),
-                quat(0.0, 0.14321129, 0.8853323, 0.4423544),
-                quat(0.0, 0.12808481, 0.884686, 0.44824666),
-                quat(0.0, 0.11292452, 0.88380617, 0.45402062),
-                quat(0.0, 0.09817763, 0.8827847, 0.4594042),
-                quat(0.0, 0.08340645, 0.8815449, 0.46467412),
-                quat(0.0, 0.054722697, 0.87909, 0.47350422),
-                quat(0.0, 0.026908446, 0.8760376, 0.48149166),
-                quat(0.0, 0.0, 0.872387, 0.48881587),
-                quat(0.042647254, 0.0, 0.8367617, 0.5459039),
-                quat(0.088832006, 0.0, 0.79201764, 0.60400087),
-                quat(0.13786158, 0.0, 0.7371303, 0.66153854),
-                quat(0.18861501, 0.0, 0.671916, 0.7162076),
-                quat(0.23956299, 0.0, 0.5970046, 0.7656339),
-                quat(0.2889903, 0.0, 0.5141156, 0.8075703),
-                quat(0.33521053, 0.0, 0.4257438, 0.84046185),
-                quat(0.37687343, 0.0, 0.33490375, 0.8636006),
-                quat(0.41314897, 0.0, 0.24463291, 0.87719023),
-                quat(0.44372296, 0.0, 0.15753129, 0.8822097),
-                quat(0.46877572, 0.0, 0.07553856, 0.8800814),
-                quat(0.488817, 0.0, 0.0, 0.87238634),
+                quat(0.0, 0.0, 0.872897207736969, 0.4879041314125061),
+                quat(0.0, 0.0, 0.873423159122467, 0.48696205019950867),
+                quat(0.0, 0.0, 0.8739480376243591, 0.48601940274238586),
+                quat(0.0, 0.0, 0.87447190284729, 0.4850761890411377),
+                quat(0.0, 0.0, 0.8750185966491699, 0.4840892553329468),
+                quat(0.0, 0.0, 0.8755642175674438, 0.4831017255783081),
+                quat(0.0, 0.0, 0.8761087656021118, 0.4821135401725769),
+                quat(0.0, 0.0, 0.8766521215438843, 0.48112475872039795),
+                quat(0.0, 0.0, 0.8771944046020508, 0.48013538122177124),
+                quat(0.0, 0.0, 0.8777355551719666, 0.4791453778743744),
+                quat(0.0, 0.0, 0.8782755732536316, 0.4781547784805298),
+                quat(0.0, 0.0, 0.8788145184516907, 0.47716355323791504),
+                quat(0.0, 0.0, 0.879309892654419, 0.4762500822544098),
+                quat(0.0, 0.0, 0.8798043131828308, 0.47533610463142395),
+                quat(0.0, 0.0, 0.8802977800369263, 0.4744216203689575),
+                quat(0.0, 0.0, 0.8807622194290161, 0.47355878353118896),
+                quat(0.0, 0.0, 0.8812258243560791, 0.4726954698562622),
+                quat(0.0, 0.0, 0.8816375732421875, 0.47192704677581787),
+                quat(0.0, 0.0, 0.8820486664772034, 0.4711582660675049),
+                quat(0.0, 0.0, 0.8824236392974854, 0.47045567631721497),
+                quat(0.0, 0.0, 0.8827980160713196, 0.46975281834602356),
+                quat(0.0, 0.0, 0.8831068873405457, 0.46917179226875305),
+                quat(0.0, 0.0, 0.8834154605865479, 0.4685905873775482),
+                quat(0.0, 0.0, 0.8836750388145447, 0.468100905418396),
+                quat(0.0, 0.0, 0.8839226365089417, 0.46763312816619873),
+                quat(0.0, 0.0, 0.884107768535614, 0.4672830104827881),
+                quat(0.0, 0.0, 0.884317934513092, 0.46688517928123474),
+                quat(0.0, 0.0, 0.8844209909439087, 0.46668997406959534),
+                quat(0.0, 0.0, 0.8845252990722656, 0.466492235660553),
+                quat(0.0, 0.0, 0.8845664262771606, 0.4664141833782196),
+                quat(0.0, 0.0, 0.884566605091095, 0.4664139151573181),
+                quat(0.0, 0.0, 0.884535014629364, 0.4664738178253174),
+                quat(0.0, 0.0, 0.8844327926635742, 0.4666675627231598),
+                quat(0.0, 0.0, 0.8842856287956238, 0.4669463634490967),
+                quat(0.0, 0.0, 0.8840916752815247, 0.4673135578632355),
+                quat(0.0, 0.0, 0.8838126063346863, 0.4678410291671753),
+                quat(0.0, 0.0, 0.8835089802742004, 0.4684142768383026),
+                quat(0.0, 0.0, 0.8831433653831482, 0.4691031277179718),
+                quat(0.0, 0.0, 0.8827191591262817, 0.4699009656906128),
+                quat(0.0, 0.0, 0.8822864294052124, 0.47071290016174316),
+                quat(0.0, 0.0, 0.8817771077156067, 0.47166627645492554),
+                quat(0.0, 0.0, 0.8812667727470398, 0.47261911630630493),
+                quat(0.0, 0.0, 0.8807283043861389, 0.47362178564071655),
+                quat(0.0, 0.0, 0.8801887035369873, 0.4746238589286804),
+                quat(0.0, 0.0, 0.8795900344848633, 0.4757324159145355),
+                quat(0.0, 0.0, 0.8789899945259094, 0.47684022784233093),
+                quat(0.0, 0.0, 0.878388524055481, 0.47794726490974426),
+                quat(0.0, 0.0, 0.8777865767478943, 0.47905194759368896),
+                quat(0.0, 0.0, 0.877183198928833, 0.4801558554172516),
+                quat(0.0, 0.0, 0.8765784502029419, 0.48125898838043213),
+                quat(0.0, 0.0, 0.875972330570221, 0.482361376285553),
+                quat(0.0, 0.0, 0.8753864765167236, 0.48342370986938477),
+                quat(0.0, 0.0, 0.874799370765686, 0.48448535799980164),
+                quat(0.0, 0.0, 0.8742668032646179, 0.4854457378387451),
+                quat(0.0, 0.0, 0.8737331628799438, 0.48640555143356323),
+                quat(0.0, 0.0, 0.873228132724762, 0.48731160163879395),
+                quat(0.0, 0.0, 0.8728049993515015, 0.488069087266922),
+                quat(0.0, 0.0, 0.8723865151405334, 0.4888167381286621),
+                quat(0.0, 0.0, 0.872004508972168, 0.4894978404045105),
+                quat(0.0, 0.0, 0.8717290163040161, 0.4899882376194),
+                quat(0.0, 0.0, 0.8714519739151001, 0.49048084020614624),
+                quat(0.0, 0.0, 0.8712426424026489, 0.49085259437561035),
+                quat(0.0, 0.0, 0.8710882067680359, 0.49112656712532043),
+                quat(0.0, 0.0, 0.8710342049598694, 0.4912223517894745),
+                quat(0.0, 0.0, 0.8710559606552124, 0.4911837577819824),
+                quat(0.0, 0.0, 0.8711516261100769, 0.49101412296295166),
+                quat(0.0, 0.0, 0.871336042881012, 0.49068671464920044),
+                quat(0.0, 0.0, 0.8715908527374268, 0.49023404717445374),
+                quat(0.0, 0.0, 0.8719247579574585, 0.48963987827301025),
+                quat(0.0, 0.0, 0.8723886609077454, 0.4888128340244293),
             ]),
-            read_property_value_v12(&data, "test").unwrap()
+            read_property_value_v12(&data, "test").unwrap(),
         );
     }
 
@@ -1318,35 +1289,160 @@ mod tests {
             5705f70c 29000612
             9208940d 78002412 71f16674
         );
-        assert_eq!(
+        assert_values_close(
             V12Values::Quat(vec![
-                quat(0.031073315, -0.017403208, 0.0005411182, 0.99936545),
-                quat(0.03054142, -0.017799487, 0.000539159, 0.9993748),
-                quat(0.030624479, -0.01764455, 0.0005372265, 0.9993751),
-                quat(0.031447694, -0.017574375, 0.0005352738, 0.9993507),
-                quat(0.0328979, -0.017424677, 0.00053331564, 0.99930674),
-                quat(0.034844197, -0.017086914, 0.00053136237, 0.9992466),
-                quat(0.036971185, -0.016558824, 0.00052942, 0.99917895),
-                quat(0.039496582, -0.015917545, 0.00052747846, 0.99909276),
-                quat(0.04217451, -0.015247832, 0.0005255359, 0.9989938),
-                quat(0.045002557, -0.014583862, 0.00052358897, 0.99888027),
-                quat(0.047768462, -0.013906293, 0.0005216427, 0.99876153),
-                quat(0.050444707, -0.013183726, 0.0005196983, 0.99863964),
-                quat(0.052918985, -0.012415022, 0.00051775714, 0.99852157),
-                quat(0.055207033, -0.011634497, 0.0005158149, 0.998407),
-                quat(0.057179917, -0.010882226, 0.0005138721, 0.9983044),
-                quat(0.058870815, -0.01017324, 0.0005119271, 0.9982137),
-                quat(0.060107682, -0.009498919, 0.0005099869, 0.9981466),
-                quat(0.060942836, -0.00885883, 0.00050805166, 0.9981018),
-                quat(0.06143587, -0.00829116, 0.0005061192, 0.99807644),
-                quat(0.061567903, -0.007867997, 0.0005041876, 0.99807173),
-                quat(0.061233427, -0.0076538944, 0.00050225813, 0.9980941),
-                quat(0.06061798, -0.0076605165, 0.00050032657, 0.9981315),
-                quat(0.059618436, -0.007836375, 0.00049840077, 0.9981904),
-                quat(0.05829708, -0.00809982, 0.0004964837, 0.9982663),
-                quat(0.056671984, -0.008712358, 0.0004945599, 0.99835473),
+                quat(
+                    0.0310733150690794,
+                    -0.01740320771932602,
+                    0.0005411182064563036,
+                    0.9993654489517212,
+                ),
+                quat(
+                    0.031552549451589584,
+                    -0.017320076003670692,
+                    0.0005391763988882303,
+                    0.9993518590927124,
+                ),
+                quat(
+                    0.032257866114377975,
+                    -0.017034273594617844,
+                    0.0005372439627535641,
+                    0.9993342757225037,
+                ),
+                quat(
+                    0.03323525935411453,
+                    -0.016779618337750435,
+                    0.0005353034939616919,
+                    0.9993065595626831,
+                ),
+                quat(
+                    0.03444314002990723,
+                    -0.016495708376169205,
+                    0.0005333604058250785,
+                    0.9992703795433044,
+                ),
+                quat(
+                    0.035833410918712616,
+                    -0.01614263281226158,
+                    0.0005314184818416834,
+                    0.9992272257804871,
+                ),
+                quat(
+                    0.037290122359991074,
+                    -0.01571955531835556,
+                    0.0005294801667332649,
+                    0.9991806745529175,
+                ),
+                quat(
+                    0.038893312215805054,
+                    -0.015254848636686802,
+                    0.0005275419098325074,
+                    0.9991267919540405,
+                ),
+                quat(
+                    0.04055259749293327,
+                    -0.014779679477214813,
+                    0.0005256031290628016,
+                    0.9990679621696472,
+                ),
+                quat(
+                    0.04226710647344589,
+                    -0.014306616969406605,
+                    0.0005236627184785903,
+                    0.9990037679672241,
+                ),
+                quat(
+                    0.04395878314971924,
+                    -0.013828546740114689,
+                    0.0005217224243097007,
+                    0.9989374876022339,
+                ),
+                quat(
+                    0.045617494732141495,
+                    -0.013333922252058983,
+                    0.0005197827122174203,
+                    0.9988698363304138,
+                ),
+                quat(
+                    0.04720192030072212,
+                    -0.012822321616113186,
+                    0.0005178438150323927,
+                    0.9988029599189758,
+                ),
+                quat(
+                    0.04871785268187523,
+                    -0.01230636052787304,
+                    0.0005159042193554342,
+                    0.9987366199493408,
+                ),
+                quat(
+                    0.0501178540289402,
+                    -0.011800768785178661,
+                    0.0005139636341482401,
+                    0.9986734390258789,
+                ),
+                quat(
+                    0.05141410604119301,
+                    -0.011311073787510395,
+                    0.0005120215937495232,
+                    0.9986132383346558,
+                ),
+                quat(
+                    0.0525432825088501,
+                    -0.010834107175469398,
+                    0.0005100803100503981,
+                    0.9985597729682922,
+                ),
+                quat(
+                    0.053524620831012726,
+                    -0.01036971528083086,
+                    0.0005081399576738477,
+                    0.9985125660896301,
+                ),
+                quat(
+                    0.05438004434108734,
+                    -0.009931942448019981,
+                    0.0005061996635049582,
+                    0.9984707832336426,
+                ),
+                quat(
+                    0.055102623999118805,
+                    -0.009547295048832893,
+                    0.0005042588454671204,
+                    0.9984349012374878,
+                ),
+                quat(
+                    0.05565357208251953,
+                    -0.009239507839083672,
+                    0.0005023180856369436,
+                    0.998407244682312,
+                ),
+                quat(
+                    0.05610117316246033,
+                    -0.00901286955922842,
+                    0.0005003760452382267,
+                    0.9983842968940735,
+                ),
+                quat(
+                    0.05640750750899315,
+                    -0.008848452940583229,
+                    0.000498435867484659,
+                    0.998368501663208,
+                ),
+                quat(
+                    0.056595537811517715,
+                    -0.008716239593923092,
+                    0.0004964989493601024,
+                    0.9983590245246887,
+                ),
+                quat(
+                    0.05667198449373245,
+                    -0.008712357841432095,
+                    0.0004945598775520921,
+                    0.9983547329902649,
+                ),
             ]),
-            read_property_value_v12(&data, "test").unwrap()
+            read_property_value_v12(&data, "test").unwrap(),
         );
     }
 

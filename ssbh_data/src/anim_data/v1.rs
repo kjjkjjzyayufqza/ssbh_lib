@@ -18,9 +18,9 @@ use crate::anim_data::{UvTransform, error::Error};
 mod buffers;
 mod common;
 mod encode;
+mod rotate_4309;
 mod rotate_4409;
 mod rotate_basic;
-mod rotate_inferred;
 mod translate;
 
 fn group_type_v12(track_type: TrackTypeV1) -> GroupType {
@@ -545,9 +545,7 @@ fn translation_varying_axis_count(values: &[Vec3]) -> usize {
         maxs[1] = maxs[1].max(v.y);
         maxs[2] = maxs[2].max(v.z);
     }
-    (0..3)
-        .filter(|&i| (maxs[i] - mins[i]).abs() > 1e-6)
-        .count()
+    (0..3).filter(|&i| (maxs[i] - mins[i]).abs() > 1e-6).count()
 }
 
 /// Raw multi-frame Vector3 stream (0x3400) used for 1D Translate on VS2/EXVS2.
